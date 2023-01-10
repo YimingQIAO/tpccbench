@@ -7,8 +7,9 @@
 
 using std::set;
 
-TPCCGenerator::TPCCGenerator(tpcc::RandomGenerator* random, const char* now, int num_items,
-        int districts_per_warehouse, int customers_per_district, int new_orders_per_district) :
+TPCCGenerator::TPCCGenerator(tpcc::RandomGenerator *random, const char *now, int num_items,
+                             int districts_per_warehouse, int customers_per_district,
+                             int new_orders_per_district) :
         random_(random),
         num_items_(num_items),
         districts_per_warehouse_(districts_per_warehouse),
@@ -19,11 +20,11 @@ TPCCGenerator::TPCCGenerator(tpcc::RandomGenerator* random, const char* now, int
 
     assert(1 <= num_items_ && num_items_ <= Item::NUM_ITEMS);
     assert(1 <= districts_per_warehouse_ &&
-            districts_per_warehouse_ <= District::NUM_PER_WAREHOUSE);
+           districts_per_warehouse_ <= District::NUM_PER_WAREHOUSE);
     assert(1 <= customers_per_district_ &&
-                customers_per_district_ <= Customer::NUM_PER_DISTRICT);
+           customers_per_district_ <= Customer::NUM_PER_DISTRICT);
     assert(1 <= new_orders_per_district_ &&
-            new_orders_per_district_ <= NewOrder::INITIAL_NUM_PER_DISTRICT);
+           new_orders_per_district_ <= NewOrder::INITIAL_NUM_PER_DISTRICT);
     assert(new_orders_per_district_ <= customers_per_district_);
 }
 
@@ -31,13 +32,13 @@ TPCCGenerator::~TPCCGenerator() {
     delete random_;
 }
 
-static void setOriginal(tpcc::RandomGenerator* random, char* s) {
+static void setOriginal(tpcc::RandomGenerator *random, char *s) {
     int length = static_cast<int>(strlen(s));
-    int position = random->number(0, length-8);
+    int position = random->number(0, length - 8);
     memcpy(s + position, "ORIGINAL", 8);
 }
 
-void TPCCGenerator::generateItem(int32_t id, bool original, Item* item) {
+void TPCCGenerator::generateItem(int32_t id, bool original, Item *item) {
     assert(1 <= id && id <= num_items_);
     item->i_id = id;
     item->i_im_id = random_->number(Item::MIN_IM, Item::MAX_IM);
@@ -50,8 +51,8 @@ void TPCCGenerator::generateItem(int32_t id, bool original, Item* item) {
     }
 }
 
-static set<int> selectUniqueIds(tpcc::RandomGenerator* random, int num_unique, int lower_id,
-        int upper_id) {
+static set<int> selectUniqueIds(tpcc::RandomGenerator *random, int num_unique, int lower_id,
+                                int upper_id) {
     set<int> rows;
     for (int i = 0; i < num_unique; ++i) {
         int index = -1;
@@ -65,11 +66,11 @@ static set<int> selectUniqueIds(tpcc::RandomGenerator* random, int num_unique, i
 }
 
 // Generates num_items items and inserts them into tables.
-void TPCCGenerator::makeItemsTable(TPCCTables* tables) {
+void TPCCGenerator::makeItemsTable(TPCCTables *tables) {
     tables->reserveItems(num_items_);
 
     // Select 10% of the rows to be marked "original"
-    set<int> original_rows = selectUniqueIds(random_, num_items_/10, 1, num_items_);
+    set<int> original_rows = selectUniqueIds(random_, num_items_ / 10, 1, num_items_);
 
     for (int i = 1; i <= num_items_; ++i) {
         Item item;
@@ -79,18 +80,18 @@ void TPCCGenerator::makeItemsTable(TPCCTables* tables) {
     }
 }
 
-static float makeTax(tpcc::RandomGenerator* random) {
+static float makeTax(tpcc::RandomGenerator *random) {
     assert(Warehouse::MIN_TAX == District::MIN_TAX);
     assert(Warehouse::MAX_TAX == District::MAX_TAX);
     return random->fixedPoint(4, Warehouse::MIN_TAX, Warehouse::MAX_TAX);
 }
 
-static void makeZip(tpcc::RandomGenerator* random, char* zip) {
+static void makeZip(tpcc::RandomGenerator *random, char *zip) {
     random->nstring(zip, 4, 4);
-    memcpy(zip+4, "11111", 6);
+    memcpy(zip + 4, "11111", 6);
 }
 
-void TPCCGenerator::generateWarehouse(int32_t id, Warehouse* warehouse) {
+void TPCCGenerator::generateWarehouse(int32_t id, Warehouse *warehouse) {
     assert(1 <= id && id <= Warehouse::MAX_WAREHOUSE_ID);
     warehouse->w_id = id;
     warehouse->w_tax = makeTax(random_);
@@ -103,7 +104,7 @@ void TPCCGenerator::generateWarehouse(int32_t id, Warehouse* warehouse) {
     makeZip(random_, warehouse->w_zip);
 }
 
-void TPCCGenerator::generateStock(int32_t id, int32_t w_id, bool original, Stock* stock) {
+void TPCCGenerator::generateStock(int32_t id, int32_t w_id, bool original, Stock *stock) {
     assert(1 <= id && id <= num_items_);
     stock->s_i_id = id;
     stock->s_w_id = w_id;
@@ -112,7 +113,8 @@ void TPCCGenerator::generateStock(int32_t id, int32_t w_id, bool original, Stock
     stock->s_order_cnt = 0;
     stock->s_remote_cnt = 0;
     for (int i = 0; i < District::NUM_PER_WAREHOUSE; ++i) {
-        random_->astring(stock->s_dist[i], sizeof(stock->s_dist[i])-1, sizeof(stock->s_dist[i])-1);
+        random_->astring(stock->s_dist[i], sizeof(stock->s_dist[i]) - 1,
+                         sizeof(stock->s_dist[i]) - 1);
     }
     random_->astring(stock->s_data, Stock::MIN_DATA, Stock::MAX_DATA);
 
@@ -121,13 +123,15 @@ void TPCCGenerator::generateStock(int32_t id, int32_t w_id, bool original, Stock
     }
 }
 
-void TPCCGenerator::generateDistrict(int32_t id, int32_t w_id, District* district) {
+void TPCCGenerator::generateDistrict(int32_t id, int32_t w_id, District *district) {
     assert(1 <= id && id <= districts_per_warehouse_);
     district->d_id = id;
     district->d_w_id = w_id;
     district->d_tax = makeTax(random_);
     district->d_ytd = District::INITIAL_YTD;
-    district->d_next_o_id = customers_per_district_ + 1;
+    // district->d_next_o_id = customers_per_district_ + 1;
+    // one customer may have several orders.
+    district->d_next_o_id = Order::INITIAL_ORDERS_PER_DISTRICT + 1;
     random_->astring(district->d_name, District::MIN_NAME, District::MAX_NAME);
     random_->astring(district->d_street_1, Address::MIN_STREET, Address::MAX_STREET);
     random_->astring(district->d_street_2, Address::MIN_STREET, Address::MAX_STREET);
@@ -137,7 +141,7 @@ void TPCCGenerator::generateDistrict(int32_t id, int32_t w_id, District* distric
 }
 
 void TPCCGenerator::generateCustomer(int32_t id, int32_t d_id, int32_t w_id, bool bad_credit,
-        Customer* customer) {
+                                     Customer *customer) {
     assert(1 <= id && id <= customers_per_district_);
     customer->c_id = id;
     customer->c_d_id = d_id;
@@ -152,7 +156,7 @@ void TPCCGenerator::generateCustomer(int32_t id, int32_t d_id, int32_t w_id, boo
     strcpy(customer->c_middle, "OE");
 
     if (id <= 1000) {
-        tpcc::makeLastName(id-1, customer->c_last);
+        tpcc::makeLastName(id - 1, customer->c_last);
     } else {
         random_->lastName(customer->c_last, customers_per_district_);
     }
@@ -174,7 +178,7 @@ void TPCCGenerator::generateCustomer(int32_t id, int32_t d_id, int32_t w_id, boo
 }
 
 void TPCCGenerator::generateOrder(int32_t id, int32_t c_id, int32_t d_id, int32_t w_id,
-        bool new_order, Order* order) {
+                                  bool new_order, Order *order) {
     order->o_id = id;
     order->o_c_id = c_id;
     order->o_d_id = d_id;
@@ -191,7 +195,7 @@ void TPCCGenerator::generateOrder(int32_t id, int32_t c_id, int32_t d_id, int32_
 }
 
 void TPCCGenerator::generateOrderLine(int32_t number, int32_t o_id, int32_t d_id, int32_t w_id,
-        bool new_order, OrderLine* orderline) {
+                                      bool new_order, OrderLine *orderline) {
     orderline->ol_o_id = o_id;
     orderline->ol_d_id = d_id;
     orderline->ol_w_id = w_id;
@@ -207,11 +211,11 @@ void TPCCGenerator::generateOrderLine(int32_t number, int32_t o_id, int32_t d_id
         // HACK: Empty delivery date == null
         orderline->ol_delivery_d[0] = '\0';
     }
-    random_->astring(orderline->ol_dist_info, sizeof(orderline->ol_dist_info)-1,
-            sizeof(orderline->ol_dist_info)-1);
+    random_->astring(orderline->ol_dist_info, sizeof(orderline->ol_dist_info) - 1,
+                     sizeof(orderline->ol_dist_info) - 1);
 }
 
-void TPCCGenerator::generateHistory(int32_t c_id, int32_t d_id, int32_t w_id, History* history) {
+void TPCCGenerator::generateHistory(int32_t c_id, int32_t d_id, int32_t w_id, History *history) {
     history->h_c_id = c_id;
     history->h_c_d_id = d_id;
     history->h_d_id = d_id;
@@ -223,9 +227,9 @@ void TPCCGenerator::generateHistory(int32_t c_id, int32_t d_id, int32_t w_id, Hi
     random_->astring(history->h_data, History::MIN_DATA, History::MAX_DATA);
 }
 
-void TPCCGenerator::makeStock(TPCCTables* tables, int32_t w_id) {
+void TPCCGenerator::makeStock(TPCCTables *tables, int32_t w_id) {
     // Select 10% of the stock to be marked "original"
-    set<int> selected_rows = selectUniqueIds(random_, num_items_/10, 1, num_items_);
+    set<int> selected_rows = selectUniqueIds(random_, num_items_ / 10, 1, num_items_);
 
     for (int i = 1; i <= num_items_; ++i) {
         Stock s;
@@ -235,12 +239,12 @@ void TPCCGenerator::makeStock(TPCCTables* tables, int32_t w_id) {
     }
 }
 
-void TPCCGenerator::makeWarehouse(TPCCTables* tables, int32_t w_id) {
+void TPCCGenerator::makeWarehouse(TPCCTables *tables, int32_t w_id) {
     makeStock(tables, w_id);
     makeWarehouseWithoutStock(tables, w_id);
 }
 
-void TPCCGenerator::makeWarehouseWithoutStock(TPCCTables* tables, int32_t w_id) {
+void TPCCGenerator::makeWarehouseWithoutStock(TPCCTables *tables, int32_t w_id) {
     Warehouse w;
     generateWarehouse(w_id, &w);
     tables->insertWarehouse(w);
@@ -251,8 +255,8 @@ void TPCCGenerator::makeWarehouseWithoutStock(TPCCTables* tables, int32_t w_id) 
         tables->insertDistrict(d);
 
         // Select 10% of the customers to have bad credit
-        set<int> selected_rows = selectUniqueIds(random_, customers_per_district_/10, 1,
-                customers_per_district_);
+        set<int> selected_rows = selectUniqueIds(random_, customers_per_district_ / 10, 1,
+                                                 customers_per_district_);
         for (int c_id = 1; c_id <= customers_per_district_; ++c_id) {
             Customer c;
             bool bad_credit = selected_rows.find(c_id) != selected_rows.end();
@@ -267,12 +271,16 @@ void TPCCGenerator::makeWarehouseWithoutStock(TPCCTables* tables, int32_t w_id) 
         // TODO: TPC-C 4.3.3.1. says that this should be a permutation of [1, 3000]. But since it is
         // for a c_id field, it seems to make sense to have it be a permutation of the customers.
         // For the "real" thing this will be equivalent
-        int* permutation = random_->makePermutation(1, customers_per_district_);
-        for (int o_id = 1; o_id <= customers_per_district_; ++o_id) {
+        //
+        // 2023.01.10 by yiqiao: now one customer may have several orders.
+        int scaling = Order::INITIAL_ORDERS_PER_DISTRICT;
+        int *permutation = random_->makePermutation(1, scaling);
+        for (int o_id = 1; o_id <= scaling; ++o_id) {
             // The last new_orders_per_district_ orders are new
-            bool new_order = customers_per_district_ - new_orders_per_district_ < o_id;
+            bool new_order = scaling - new_orders_per_district_ < o_id;
             Order o;
-            generateOrder(o_id, permutation[o_id-1], d_id, w_id, new_order, &o);
+            generateOrder(o_id, permutation[o_id - 1] % customers_per_district_ + 1,
+                          d_id, w_id, new_order, &o);
             tables->insertOrder(o);
 
             // Generate each OrderLine for the order

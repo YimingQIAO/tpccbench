@@ -7,12 +7,17 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include <string>
 
 namespace tpcc {
 // was used to select between various non-standard implementations: now use std
-template <typename T>
-class Set : public std::unordered_set<T> {};
+    template<typename T>
+    class Set : public std::unordered_set<T> {
+    };
 }
+
+// get used size of char[]
+uint32_t stringSize(const char data[], uint32_t max_size);
 
 // Just a container for constants
 struct Address {
@@ -25,9 +30,9 @@ struct Address {
     static const int STATE = 2;
     static const int ZIP = 9;
 
-    static void copy(char* street1, char* street2, char* city, char* state, char* zip,
-            const char* src_street1, const char* src_street2, const char* src_city,
-            const char* src_state, const char* src_zip);
+    static void copy(char *street1, char *street2, char *city, char *state, char *zip,
+                     const char *src_street1, const char *src_street2, const char *src_city,
+                     const char *src_state, const char *src_zip);
 
 private:
     Address();
@@ -47,8 +52,18 @@ struct Item {
     int32_t i_id;
     int32_t i_im_id;
     float i_price;
-    char i_name[MAX_NAME+1];
-    char i_data[MAX_DATA+1];
+    char i_name[MAX_NAME + 1];
+    char i_data[MAX_DATA + 1];
+
+    uint32_t Size() {
+        uint32_t ret = 0;
+        ret += std::to_string(i_id).size();
+        ret += std::to_string(i_im_id).size();
+        ret += std::to_string(i_price).size();
+        ret += stringSize(i_name, MAX_NAME + 1);
+        ret += stringSize(i_data, MAX_DATA + 1);
+        return ret;
+    }
 };
 
 struct Warehouse {
@@ -64,12 +79,26 @@ struct Warehouse {
     int32_t w_id;
     float w_tax;
     float w_ytd;
-    char w_name[MAX_NAME+1];
-    char w_street_1[Address::MAX_STREET+1];
-    char w_street_2[Address::MAX_STREET+1];
-    char w_city[Address::MAX_CITY+1];
-    char w_state[Address::STATE+1];
-    char w_zip[Address::ZIP+1];
+    char w_name[MAX_NAME + 1];
+    char w_street_1[Address::MAX_STREET + 1];
+    char w_street_2[Address::MAX_STREET + 1];
+    char w_city[Address::MAX_CITY + 1];
+    char w_state[Address::STATE + 1];
+    char w_zip[Address::ZIP + 1];
+
+    uint32_t size() {
+        uint32_t ret = 0;
+        ret += std::to_string(w_id).size();
+        ret += std::to_string(w_tax).size();
+        ret += std::to_string(w_ytd).size();
+        ret += stringSize(w_name, MAX_NAME + 1);
+        ret += stringSize(w_street_1, Address::MAX_STREET + 1);
+        ret += stringSize(w_street_2, Address::MAX_STREET + 1);
+        ret += stringSize(w_city, Address::MAX_CITY + 1);
+        ret += stringSize(w_state, Address::STATE + 1);
+        ret += stringSize(w_zip, Address::ZIP + 1);
+        return ret;
+    }
 };
 
 struct District {
@@ -86,12 +115,28 @@ struct District {
     float d_tax;
     float d_ytd;
     int32_t d_next_o_id;
-    char d_name[MAX_NAME+1];
-    char d_street_1[Address::MAX_STREET+1];
-    char d_street_2[Address::MAX_STREET+1];
-    char d_city[Address::MAX_CITY+1];
-    char d_state[Address::STATE+1];
-    char d_zip[Address::ZIP+1];
+    char d_name[MAX_NAME + 1];
+    char d_street_1[Address::MAX_STREET + 1];
+    char d_street_2[Address::MAX_STREET + 1];
+    char d_city[Address::MAX_CITY + 1];
+    char d_state[Address::STATE + 1];
+    char d_zip[Address::ZIP + 1];
+
+    uint32_t size() {
+        uint32_t ret = 0;
+        ret += std::to_string(d_id).size();
+        ret += std::to_string(d_w_id).size();
+        ret += std::to_string(d_tax).size();
+        ret += std::to_string(d_ytd).size();
+        ret += std::to_string(d_next_o_id).size();
+        ret += stringSize(d_name, MAX_NAME + 1);
+        ret += stringSize(d_street_1, Address::MAX_STREET + 1);
+        ret += stringSize(d_street_2, Address::MAX_STREET + 1);
+        ret += stringSize(d_city, Address::MAX_CITY + 1);
+        ret += stringSize(d_state, Address::STATE + 1);
+        ret += stringSize(d_zip, Address::ZIP + 1);
+        return ret;
+    }
 };
 
 struct Stock {
@@ -108,8 +153,22 @@ struct Stock {
     int32_t s_ytd;
     int32_t s_order_cnt;
     int32_t s_remote_cnt;
-    char s_dist[District::NUM_PER_WAREHOUSE][DIST+1];
-    char s_data[MAX_DATA+1];
+    char s_dist[District::NUM_PER_WAREHOUSE][DIST + 1];
+    char s_data[MAX_DATA + 1];
+
+    uint32_t size() {
+        uint32_t ret = 0;
+        ret += std::to_string(s_i_id).size();
+        ret += std::to_string(s_w_id).size();
+        ret += std::to_string(s_quantity).size();
+        ret += std::to_string(s_ytd).size();
+        ret += std::to_string(s_order_cnt).size();
+        ret += std::to_string(s_remote_cnt).size();
+        for (int32_t i = 0; i < District::NUM_PER_WAREHOUSE; i++)
+            ret += stringSize(s_dist[i], DIST + 1);
+        ret += stringSize(s_data, MAX_DATA + 1);
+        return ret;
+    }
 };
 
 // YYYY-MM-DD HH:MM:SS This is supposed to be a date/time field from Jan 1st 1900 -
@@ -145,18 +204,44 @@ struct Customer {
     float c_ytd_payment;
     int32_t c_payment_cnt;
     int32_t c_delivery_cnt;
-    char c_first[MAX_FIRST+1];
-    char c_middle[MIDDLE+1];
-    char c_last[MAX_LAST+1];
-    char c_street_1[Address::MAX_STREET+1];
-    char c_street_2[Address::MAX_STREET+1];
-    char c_city[Address::MAX_CITY+1];
-    char c_state[Address::STATE+1];
-    char c_zip[Address::ZIP+1];
-    char c_phone[PHONE+1];
-    char c_since[DATETIME_SIZE+1];
-    char c_credit[CREDIT+1];
-    char c_data[MAX_DATA+1];
+    char c_first[MAX_FIRST + 1];
+    char c_middle[MIDDLE + 1];
+    char c_last[MAX_LAST + 1];
+    char c_street_1[Address::MAX_STREET + 1];
+    char c_street_2[Address::MAX_STREET + 1];
+    char c_city[Address::MAX_CITY + 1];
+    char c_state[Address::STATE + 1];
+    char c_zip[Address::ZIP + 1];
+    char c_phone[PHONE + 1];
+    char c_since[DATETIME_SIZE + 1];
+    char c_credit[CREDIT + 1];
+    char c_data[MAX_DATA + 1];
+
+    uint32_t size() {
+        uint32_t ret = 0;
+        ret += std::to_string(c_id).size();
+        ret += std::to_string(c_d_id).size();
+        ret += std::to_string(c_w_id).size();
+        ret += std::to_string(c_credit_lim).size();
+        ret += std::to_string(c_discount).size();
+        ret += std::to_string(c_balance).size();
+        ret += std::to_string(c_ytd_payment).size();
+        ret += std::to_string(c_payment_cnt).size();
+        ret += std::to_string(c_delivery_cnt).size();
+        ret += stringSize(c_first, Customer::MAX_FIRST + 1);
+        ret += stringSize(c_middle, Customer::MIDDLE + 1);
+        ret += stringSize(c_last, Customer::MAX_LAST + 1);
+        ret += stringSize(c_street_1, Address::MAX_STREET + 1);
+        ret += stringSize(c_street_2, Address::MAX_STREET + 1);
+        ret += stringSize(c_city, Address::MAX_CITY + 1);
+        ret += stringSize(c_state, Address::STATE + 1);
+        ret += stringSize(c_zip, Address::ZIP + 1);
+        ret += stringSize(c_phone, Customer::PHONE + 1);
+        ret += stringSize(c_since, DATETIME_SIZE + 1);
+        ret += stringSize(c_credit, Customer::CREDIT + 1);
+        ret += stringSize(c_data, Customer::MAX_DATA + 1);
+        return ret;
+    }
 };
 
 struct Order {
@@ -169,7 +254,7 @@ struct Order {
     static const int MIN_OL_CNT = 5;
     static const int MAX_OL_CNT = 15;
     static const int INITIAL_ALL_LOCAL = 1;
-    static const int INITIAL_ORDERS_PER_DISTRICT = 3000;
+    static const int INITIAL_ORDERS_PER_DISTRICT = 5000;
     // See TPC-C 1.3.1 (page 15)
     static const int MAX_ORDER_ID = 10000000;
 
@@ -180,7 +265,20 @@ struct Order {
     int32_t o_carrier_id;
     int32_t o_ol_cnt;
     int32_t o_all_local;
-    char o_entry_d[DATETIME_SIZE+1];
+    char o_entry_d[DATETIME_SIZE + 1];
+
+    uint32_t size() {
+        uint32_t ret = 0;
+        ret += std::to_string(o_id).size();
+        ret += std::to_string(o_c_id).size();
+        ret += std::to_string(o_d_id).size();
+        ret += std::to_string(o_w_id).size();
+        ret += std::to_string(o_carrier_id).size();
+        ret += std::to_string(o_ol_cnt).size();
+        ret += std::to_string(o_all_local).size();
+        ret += stringSize(o_entry_d, DATETIME_SIZE + 1);
+        return ret;
+    }
 };
 
 struct OrderLine {
@@ -200,8 +298,23 @@ struct OrderLine {
     int32_t ol_supply_w_id;
     int32_t ol_quantity;
     float ol_amount;
-    char ol_delivery_d[DATETIME_SIZE+1];
-    char ol_dist_info[Stock::DIST+1];
+    char ol_delivery_d[DATETIME_SIZE + 1];
+    char ol_dist_info[Stock::DIST + 1];
+
+    uint32_t size() {
+        uint32_t ret = 0;
+        ret += std::to_string(ol_o_id).size();
+        ret += std::to_string(ol_d_id).size();
+        ret += std::to_string(ol_w_id).size();
+        ret += std::to_string(ol_number).size();
+        ret += std::to_string(ol_i_id).size();
+        ret += std::to_string(ol_supply_w_id).size();
+        ret += std::to_string(ol_quantity).size();
+        ret += std::to_string(ol_amount).size();
+        ret += stringSize(ol_delivery_d, DATETIME_SIZE + 1);
+        ret += stringSize(ol_dist_info, Stock::DIST + 1);
+        return ret;
+    }
 };
 
 struct NewOrder {
@@ -210,6 +323,14 @@ struct NewOrder {
     int32_t no_w_id;
     int32_t no_d_id;
     int32_t no_o_id;
+
+    uint32_t size() {
+        uint32_t ret = 0;
+        ret += std::to_string(no_w_id).size();
+        ret += std::to_string(no_d_id).size();
+        ret += std::to_string(no_o_id).size();
+        return ret;
+    }
 };
 
 struct History {
@@ -223,8 +344,21 @@ struct History {
     int32_t h_d_id;
     int32_t h_w_id;
     float h_amount;
-    char h_date[DATETIME_SIZE+1];
-    char h_data[MAX_DATA+1];
+    char h_date[DATETIME_SIZE + 1];
+    char h_data[MAX_DATA + 1];
+
+    uint32_t size() const {
+        uint32_t ret = 0;
+        ret += std::to_string(h_c_id).size();
+        ret += std::to_string(h_c_d_id).size();
+        ret += std::to_string(h_c_w_id).size();
+        ret += std::to_string(h_d_id).size();
+        ret += std::to_string(h_w_id).size();
+        ret += std::to_string(h_amount).size();
+        ret += stringSize(h_date, DATETIME_SIZE + 1);
+        ret += stringSize(h_data, MAX_DATA + 1);
+        return ret;
+    }
 };
 
 // Data returned by the "order status" transaction.
@@ -242,18 +376,18 @@ struct OrderStatusOutput {
         int32_t ol_supply_w_id;
         int32_t ol_quantity;
         float ol_amount;
-        char ol_delivery_d[DATETIME_SIZE+1];
+        char ol_delivery_d[DATETIME_SIZE + 1];
     };
 
     std::vector<OrderLineSubset> lines;
 
     // From customer
-    char c_first[Customer::MAX_FIRST+1];
-    char c_middle[Customer::MIDDLE+1];
-    char c_last[Customer::MAX_LAST+1];
+    char c_first[Customer::MAX_FIRST + 1];
+    char c_middle[Customer::MIDDLE + 1];
+    char c_last[Customer::MAX_LAST + 1];
 
     // From order
-    char o_entry_d[DATETIME_SIZE+1];
+    char o_entry_d[DATETIME_SIZE + 1];
 };
 
 struct NewOrderItem {
@@ -291,47 +425,47 @@ struct NewOrderOutput {
         // TODO: Client can compute this from other values.
         float ol_amount;
         char brand_generic;
-        char i_name[Item::MAX_NAME+1];
+        char i_name[Item::MAX_NAME + 1];
     };
 
     std::vector<ItemInfo> items;
-    char c_last[Customer::MAX_LAST+1];
-    char c_credit[Customer::CREDIT+1];
+    char c_last[Customer::MAX_LAST + 1];
+    char c_credit[Customer::CREDIT + 1];
 
     static const int MAX_STATUS = 25;
     static const char INVALID_ITEM_STATUS[];
-    char status[MAX_STATUS+1];
+    char status[MAX_STATUS + 1];
 };
 
 struct PaymentOutput {
     // TPC-C 2.5.3.4 specifies these output fields
-    char w_street_1[Address::MAX_STREET+1];
-    char w_street_2[Address::MAX_STREET+1];
-    char w_city[Address::MAX_CITY+1];
-    char w_state[Address::STATE+1];
-    char w_zip[Address::ZIP+1];
+    char w_street_1[Address::MAX_STREET + 1];
+    char w_street_2[Address::MAX_STREET + 1];
+    char w_city[Address::MAX_CITY + 1];
+    char w_state[Address::STATE + 1];
+    char w_zip[Address::ZIP + 1];
 
-    char d_street_1[Address::MAX_STREET+1];
-    char d_street_2[Address::MAX_STREET+1];
-    char d_city[Address::MAX_CITY+1];
-    char d_state[Address::STATE+1];
-    char d_zip[Address::ZIP+1];
+    char d_street_1[Address::MAX_STREET + 1];
+    char d_street_2[Address::MAX_STREET + 1];
+    char d_city[Address::MAX_CITY + 1];
+    char d_state[Address::STATE + 1];
+    char d_zip[Address::ZIP + 1];
 
     float c_credit_lim;
     float c_discount;
     float c_balance;
-    char c_first[Customer::MAX_FIRST+1];
-    char c_middle[Customer::MIDDLE+1];
-    char c_last[Customer::MAX_LAST+1];
-    char c_street_1[Address::MAX_STREET+1];
-    char c_street_2[Address::MAX_STREET+1];
-    char c_city[Address::MAX_CITY+1];
-    char c_state[Address::STATE+1];
-    char c_zip[Address::ZIP+1];
-    char c_phone[Customer::PHONE+1];
-    char c_since[DATETIME_SIZE+1];
-    char c_credit[Customer::CREDIT+1];
-    char c_data[Customer::MAX_DATA+1];
+    char c_first[Customer::MAX_FIRST + 1];
+    char c_middle[Customer::MIDDLE + 1];
+    char c_last[Customer::MAX_LAST + 1];
+    char c_street_1[Address::MAX_STREET + 1];
+    char c_street_2[Address::MAX_STREET + 1];
+    char c_city[Address::MAX_CITY + 1];
+    char c_state[Address::STATE + 1];
+    char c_zip[Address::ZIP + 1];
+    char c_phone[Customer::PHONE + 1];
+    char c_since[DATETIME_SIZE + 1];
+    char c_credit[Customer::CREDIT + 1];
+    char c_data[Customer::MAX_DATA + 1];
 };
 
 struct DeliveryOrderInfo {
@@ -345,55 +479,75 @@ class TPCCUndo {
 public:
     ~TPCCUndo();
 
-    void save(Warehouse* w);
-    void save(District* d);
-    void save(Customer* c);
-    void save(Stock* s);
-    void save(Order* o);
-    void save(OrderLine* o);
+    void save(Warehouse *w);
 
-    void inserted(const Order* o);
-    void inserted(const OrderLine* ol);
-    void inserted(const NewOrder* no);
-    void inserted(const History* h);
+    void save(District *d);
 
-    void deleted(NewOrder* no);
+    void save(Customer *c);
+
+    void save(Stock *s);
+
+    void save(Order *o);
+
+    void save(OrderLine *o);
+
+    void inserted(const Order *o);
+
+    void inserted(const OrderLine *ol);
+
+    void inserted(const NewOrder *no);
+
+    void inserted(const History *h);
+
+    void deleted(NewOrder *no);
 
     // Marks this undo buffer as applied. This prevents the destructor from deleting tuples
     // marked as deleted.
     void applied();
 
-    typedef std::unordered_map<Warehouse*, Warehouse*> WarehouseMap;
-    const WarehouseMap& modified_warehouses() const { return modified_warehouses_; }
+    typedef std::unordered_map<Warehouse *, Warehouse *> WarehouseMap;
 
-    typedef std::unordered_map<District*, District*> DistrictMap;
-    const DistrictMap& modified_districts() const { return modified_districts_; }
+    const WarehouseMap &modified_warehouses() const { return modified_warehouses_; }
 
-    typedef std::unordered_map<Customer*, Customer*> CustomerMap;
-    const CustomerMap& modified_customers() const { return modified_customers_; }
+    typedef std::unordered_map<District *, District *> DistrictMap;
 
-    typedef std::unordered_map<Stock*, Stock*> StockMap;
-    const StockMap& modified_stock() const { return modified_stock_; }
+    const DistrictMap &modified_districts() const { return modified_districts_; }
 
-    typedef std::unordered_map<Order*, Order*> OrderMap;
-    const OrderMap& modified_orders() const { return modified_orders_; }
+    typedef std::unordered_map<Customer *, Customer *> CustomerMap;
 
-    typedef std::unordered_map<OrderLine*, OrderLine*> OrderLineMap;
-    const OrderLineMap& modified_order_lines() const { return modified_order_lines_; }
+    const CustomerMap &modified_customers() const { return modified_customers_; }
 
-    typedef tpcc::Set<const Order*> OrderSet;
-    const OrderSet& inserted_orders() const { return inserted_orders_; }
+    typedef std::unordered_map<Stock *, Stock *> StockMap;
 
-    typedef tpcc::Set<const OrderLine*> OrderLineSet;
-    const OrderLineSet& inserted_order_lines() const { return inserted_order_lines_; }
+    const StockMap &modified_stock() const { return modified_stock_; }
 
-    typedef tpcc::Set<const NewOrder*> NewOrderSet;
-    const NewOrderSet& inserted_new_orders() const { return inserted_new_orders_; }
-    typedef tpcc::Set<NewOrder*> NewOrderDeletedSet;
-    const NewOrderDeletedSet& deleted_new_orders() const { return deleted_new_orders_; }
+    typedef std::unordered_map<Order *, Order *> OrderMap;
 
-    typedef tpcc::Set<const History*> HistorySet;
-    const HistorySet& inserted_history() const { return inserted_history_; }
+    const OrderMap &modified_orders() const { return modified_orders_; }
+
+    typedef std::unordered_map<OrderLine *, OrderLine *> OrderLineMap;
+
+    const OrderLineMap &modified_order_lines() const { return modified_order_lines_; }
+
+    typedef tpcc::Set<const Order *> OrderSet;
+
+    const OrderSet &inserted_orders() const { return inserted_orders_; }
+
+    typedef tpcc::Set<const OrderLine *> OrderLineSet;
+
+    const OrderLineSet &inserted_order_lines() const { return inserted_order_lines_; }
+
+    typedef tpcc::Set<const NewOrder *> NewOrderSet;
+
+    const NewOrderSet &inserted_new_orders() const { return inserted_new_orders_; }
+
+    typedef tpcc::Set<NewOrder *> NewOrderDeletedSet;
+
+    const NewOrderDeletedSet &deleted_new_orders() const { return deleted_new_orders_; }
+
+    typedef tpcc::Set<const History *> HistorySet;
+
+    const HistorySet &inserted_history() const { return inserted_history_; }
 
 private:
     WarehouseMap modified_warehouses_;
@@ -430,23 +584,23 @@ public:
     // Executes the TPC-C order status transaction. Find the customer's last order and check the
     // delivery date of each item on the order. See TPC-C 2.6 (page 36).
     virtual void orderStatus(int32_t warehouse_id, int32_t district_id, int32_t customer_id,
-            OrderStatusOutput* output) = 0;
+                             OrderStatusOutput *output) = 0;
 
     // Executes the TPC-C order status transaction. Find the customer's last order and check the
     // delivery date of each item on the order. See TPC-C 2.6 (page 36).
-    virtual void orderStatus(int32_t warehouse_id, int32_t district_id, const char* c_last,
-            OrderStatusOutput* output) = 0;
+    virtual void orderStatus(int32_t warehouse_id, int32_t district_id, const char *c_last,
+                             OrderStatusOutput *output) = 0;
 
     // Executes the TPC-C new order transaction. Enter the new order for customer_id into the
     // database. See TPC-C 2.4 (page 27). Returns true if the transaction commits.
     virtual bool newOrder(int32_t warehouse_id, int32_t district_id, int32_t customer_id,
-            const std::vector<NewOrderItem>& items, const char* now,
-            NewOrderOutput* output, TPCCUndo** undo) = 0;
+                          const std::vector<NewOrderItem> &items, const char *now,
+                          NewOrderOutput *output, TPCCUndo **undo) = 0;
 
     // Executes the "home warehouse" portion of the new order transaction.
     virtual bool newOrderHome(int32_t warehouse_id, int32_t district_id, int32_t customer_id,
-            const std::vector<NewOrderItem>& items, const char* now,
-            NewOrderOutput* output, TPCCUndo** undo) = 0;
+                              const std::vector<NewOrderItem> &items, const char *now,
+                              NewOrderOutput *output, TPCCUndo **undo) = 0;
 
     // Executes the "remote warehouse" portion of the new order transaction. Modifies the stock
     // for remote_warehouse. Needs access to all the items in order to reach the same commit/abort
@@ -455,59 +609,68 @@ public:
     // TODO: home_warehouse could be replaced with "bool is_remote", which would not need to be
     // part of the RPC
     virtual bool newOrderRemote(int32_t home_warehouse, int32_t remote_warehouse,
-            const std::vector<NewOrderItem>& items, std::vector<int32_t>* out_quantities,
-            TPCCUndo** undo) = 0;
+                                const std::vector<NewOrderItem> &items,
+                                std::vector<int32_t> *out_quantities,
+                                TPCCUndo **undo) = 0;
 
     typedef tpcc::Set<int32_t> WarehouseSet;
+
     static WarehouseSet newOrderRemoteWarehouses(int32_t home_warehouse,
-            const std::vector<NewOrderItem>& items);
+                                                 const std::vector<NewOrderItem> &items);
 
     static const int32_t INVALID_QUANTITY = -1;
+
     // Combines valid quantities into output.
-    static void newOrderCombine(const std::vector<int32_t>& remote_quantities,
-            NewOrderOutput* output);
-    static void newOrderCombine(const std::vector<int32_t>& quantities,
-            std::vector<int32_t>* output);
+    static void newOrderCombine(const std::vector<int32_t> &remote_quantities,
+                                NewOrderOutput *output);
+
+    static void newOrderCombine(const std::vector<int32_t> &quantities,
+                                std::vector<int32_t> *output);
 
     // Executes the TPC-C payment transaction. Add h_amount to the customer's account.
     // See TPC-C 2.5 (page 32).
     virtual void payment(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
-            int32_t c_district_id, int32_t customer_id, float h_amount, const char* now,
-            PaymentOutput* output, TPCCUndo** undo) = 0;
+                         int32_t c_district_id, int32_t customer_id, float h_amount,
+                         const char *now,
+                         PaymentOutput *output, TPCCUndo **undo) = 0;
 
     // Executes the TPC-C payment transaction. Add h_amount to the customer's account.
     // See TPC-C 2.5 (page 32).
     virtual void payment(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
-            int32_t c_district_id, const char* c_last, float h_amount, const char* now,
-            PaymentOutput* output, TPCCUndo** undo) = 0;
+                         int32_t c_district_id, const char *c_last, float h_amount, const char *now,
+                         PaymentOutput *output, TPCCUndo **undo) = 0;
 
     // TODO: See CHEATS: c_id is invalid for customer by last name transactions
     virtual void paymentHome(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
-            int32_t c_district_id, int32_t c_id, float h_amount, const char* now,
-            PaymentOutput* output, TPCCUndo** undo) = 0;
+                             int32_t c_district_id, int32_t c_id, float h_amount, const char *now,
+                             PaymentOutput *output, TPCCUndo **undo) = 0;
+
     virtual void paymentRemote(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
-            int32_t c_district_id, int32_t c_id, float h_amount, PaymentOutput* output,
-            TPCCUndo** undo) = 0;
+                               int32_t c_district_id, int32_t c_id, float h_amount,
+                               PaymentOutput *output,
+                               TPCCUndo **undo) = 0;
+
     virtual void paymentRemote(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
-            int32_t c_district_id, const char* c_last, float h_amount, PaymentOutput* output,
-            TPCCUndo** undo) = 0;
+                               int32_t c_district_id, const char *c_last, float h_amount,
+                               PaymentOutput *output,
+                               TPCCUndo **undo) = 0;
 
     // Combines results from paymentRemote in remote into the results from paymentHome in home.
-    static void paymentCombine(const PaymentOutput& remote, PaymentOutput* home);
+    static void paymentCombine(const PaymentOutput &remote, PaymentOutput *home);
 
     // Executes the TPC-C delivery transaction. Delivers the oldest undelivered transaction in each
     // district in warehouse_id. See TPC-C 2.7 (page 39).
-    virtual void delivery(int32_t warehouse_id, int32_t carrier_id, const char* now,
-            std::vector<DeliveryOrderInfo>* orders, TPCCUndo** undo) = 0;
+    virtual void delivery(int32_t warehouse_id, int32_t carrier_id, const char *now,
+                          std::vector<DeliveryOrderInfo> *orders, TPCCUndo **undo) = 0;
 
     // Returns true if warehouse_id is present on this partition.
     virtual bool hasWarehouse(int32_t warehouse_id) = 0;
 
     // Applies the undo buffer to undo the writes of a transaction.
-    virtual void applyUndo(TPCCUndo* undo) = 0;
+    virtual void applyUndo(TPCCUndo *undo) = 0;
 
     // Frees the undo buffer in undo.
-    virtual void freeUndo(TPCCUndo* undo) = 0;
+    virtual void freeUndo(TPCCUndo *undo) = 0;
 };
 
 #endif

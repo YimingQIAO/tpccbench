@@ -67,7 +67,6 @@ def valleak(executable):
 
     return (error, stdout, stderr)
 
-
 if __name__ == "__main__":
     if len(sys.argv) != 2:
         sys.stderr.write("valleak.py [executable]\n")

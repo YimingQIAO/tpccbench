@@ -10,7 +10,7 @@
 
 using std::vector;
 
-bool CustomerByNameOrdering::operator()(const Customer* a, const Customer* b) {
+bool CustomerByNameOrdering::operator()(const Customer *a, const Customer *b) const {
     if (a->c_w_id < b->c_w_id) return true;
     if (a->c_w_id > b->c_w_id) return false;
     assert(a->c_w_id == b->c_w_id);
@@ -28,10 +28,11 @@ bool CustomerByNameOrdering::operator()(const Customer* a, const Customer* b) {
     return strcmp(a->c_first, b->c_first) < 0;
 }
 
-template <typename KeyType, typename ValueType>
-static void deleteBTreeValues(BPlusTree<KeyType, ValueType*, TPCCTables::KEYS_PER_INTERNAL, TPCCTables::KEYS_PER_LEAF>* btree) {
+template<typename KeyType, typename ValueType>
+static void deleteBTreeValues(
+        BPlusTree<KeyType, ValueType *, TPCCTables::KEYS_PER_INTERNAL, TPCCTables::KEYS_PER_LEAF> *btree) {
     KeyType key = std::numeric_limits<KeyType>::max();
-    ValueType* value = NULL;
+    ValueType *value = NULL;
     while (btree->findLastLessThan(key, &value, &key)) {
         assert(value != NULL);
         delete value;
@@ -55,14 +56,14 @@ int32_t TPCCTables::stockLevel(int32_t warehouse_id, int32_t district_id, int32_
     /* EXEC SQL SELECT d_next_o_id INTO :o_id FROM district
         WHERE d_w_id=:w_id AND d_id=:d_id; */
     //~ printf("stock level %d %d %d\n", warehouse_id, district_id, threshold);
-    District* d = findDistrict(warehouse_id, district_id);
+    District *d = findDistrict(warehouse_id, district_id);
     int32_t o_id = d->d_next_o_id;
 
     /* EXEC SQL SELECT COUNT(DISTINCT (s_i_id)) INTO :stock_count FROM order_line, stock
         WHERE ol_w_id=:w_id AND ol_d_id=:d_id AND ol_o_id<:o_id AND ol_o_id>=:o_id-20
             AND s_w_id=:w_id AND s_i_id=ol_i_id AND s_quantity < :threshold;*/
 
-    
+
     // retrieve up to 300 tuples from order line, using ( [o_id-20, o_id), d_id, w_id, [1, 15])
     //   and for each retrieved tuple, read the corresponding stock tuple using (ol_i_id, w_id)
     // NOTE: This is a cheat because it hard codes the maximum number of orders.
@@ -81,20 +82,22 @@ int32_t TPCCTables::stockLevel(int32_t warehouse_id, int32_t district_id, int32_
     for (int order_id = o_id - STOCK_LEVEL_ORDERS; order_id < o_id; ++order_id) {
         // HACK: We shouldn't rely on MAX_OL_CNT. See comment above.
         for (int line_number = 1; line_number <= Order::MAX_OL_CNT; ++line_number) {
-            OrderLine* line = findOrderLine(warehouse_id, district_id, order_id, line_number);
+            OrderLine *line = findOrderLine(warehouse_id, district_id, order_id, line_number);
             if (line == NULL) {
                 // We can break since we have reached the end of the lines for this order.
                 // TODO: A btree iterate in (w_id, d_id, o_id) order would be a clean way to do this
 #ifndef NDEBUG
-                for (int test_line_number = line_number + 1; line_number < Order::MAX_OL_CNT; ++line_number) {
-                    assert(findOrderLine(warehouse_id, district_id, order_id, test_line_number) == NULL);
+                for (int test_line_number = line_number + 1;
+                     line_number < Order::MAX_OL_CNT; ++line_number) {
+                    assert(findOrderLine(warehouse_id, district_id, order_id, test_line_number) ==
+                           NULL);
                 }
 #endif
                 break;
             }
 
             // Check if s_quantity < threshold
-            Stock* stock = findStock(warehouse_id, line->ol_i_id);
+            Stock *stock = findStock(warehouse_id, line->ol_i_id);
             if (stock->s_quantity < threshold) {
                 s_i_ids.push_back(line->ol_i_id);
             }
@@ -115,18 +118,20 @@ int32_t TPCCTables::stockLevel(int32_t warehouse_id, int32_t district_id, int32_
     return num_distinct;
 }
 
-void TPCCTables::orderStatus(int32_t warehouse_id, int32_t district_id, int32_t customer_id, OrderStatusOutput* output) {
+void TPCCTables::orderStatus(int32_t warehouse_id, int32_t district_id, int32_t customer_id,
+                             OrderStatusOutput *output) {
     //~ printf("order status %d %d %d\n", warehouse_id, district_id, customer_id);
     internalOrderStatus(findCustomer(warehouse_id, district_id, customer_id), output);
 }
 
-void TPCCTables::orderStatus(int32_t warehouse_id, int32_t district_id, const char* c_last, OrderStatusOutput* output) {
+void TPCCTables::orderStatus(int32_t warehouse_id, int32_t district_id, const char *c_last,
+                             OrderStatusOutput *output) {
     //~ printf("order status %d %d %s\n", warehouse_id, district_id, c_last);
-    Customer* customer = findCustomerByName(warehouse_id, district_id, c_last);
+    Customer *customer = findCustomerByName(warehouse_id, district_id, c_last);
     internalOrderStatus(customer, output);
 }
 
-void TPCCTables::internalOrderStatus(Customer* customer, OrderStatusOutput* output) {
+void TPCCTables::internalOrderStatus(Customer *customer, OrderStatusOutput *output) {
     output->c_id = customer->c_id;
     // retrieve from customer: balance, first, middle, last
     output->c_balance = customer->c_balance;
@@ -135,31 +140,34 @@ void TPCCTables::internalOrderStatus(Customer* customer, OrderStatusOutput* outp
     strcpy(output->c_last, customer->c_last);
 
     // Find the row in the order table with largest o_id
-    Order* order = findLastOrderByCustomer(customer->c_w_id, customer->c_d_id, customer->c_id);
+    Order *order = findLastOrderByCustomer(customer->c_w_id, customer->c_d_id, customer->c_id);
     output->o_id = order->o_id;
     output->o_carrier_id = order->o_carrier_id;
     strcpy(output->o_entry_d, order->o_entry_d);
 
     output->lines.resize(order->o_ol_cnt);
     for (int32_t line_number = 1; line_number <= order->o_ol_cnt; ++line_number) {
-        OrderLine* line = findOrderLine(customer->c_w_id, customer->c_d_id, order->o_id, line_number);
-        output->lines[line_number-1].ol_i_id = line->ol_i_id;
-        output->lines[line_number-1].ol_supply_w_id = line->ol_supply_w_id;
-        output->lines[line_number-1].ol_quantity = line->ol_quantity;
-        output->lines[line_number-1].ol_amount = line->ol_amount;
-        strcpy(output->lines[line_number-1].ol_delivery_d, line->ol_delivery_d);
+        OrderLine *line = findOrderLine(customer->c_w_id, customer->c_d_id, order->o_id,
+                                        line_number);
+        output->lines[line_number - 1].ol_i_id = line->ol_i_id;
+        output->lines[line_number - 1].ol_supply_w_id = line->ol_supply_w_id;
+        output->lines[line_number - 1].ol_quantity = line->ol_quantity;
+        output->lines[line_number - 1].ol_amount = line->ol_amount;
+        strcpy(output->lines[line_number - 1].ol_delivery_d, line->ol_delivery_d);
     }
 #ifndef NDEBUG
     // Verify that none of the other OrderLines exist.
-    for (int32_t line_number = order->o_ol_cnt+1; line_number <= Order::MAX_OL_CNT; ++line_number) {
+    for (int32_t line_number = order->o_ol_cnt + 1;
+         line_number <= Order::MAX_OL_CNT; ++line_number) {
         assert(findOrderLine(customer->c_w_id, customer->c_d_id, order->o_id, line_number) == NULL);
     }
 #endif
 }
 
 bool TPCCTables::newOrder(int32_t warehouse_id, int32_t district_id, int32_t customer_id,
-        const std::vector<NewOrderItem>& items, const char* now, NewOrderOutput* output,
-        TPCCUndo** undo) {
+                          const std::vector<NewOrderItem> &items, const char *now,
+                          NewOrderOutput *output,
+                          TPCCUndo **undo) {
     // perform the home part
     bool result = newOrderHome(warehouse_id, district_id, customer_id, items, now, output, undo);
     if (!result) {
@@ -179,24 +187,24 @@ bool TPCCTables::newOrder(int32_t warehouse_id, int32_t district_id, int32_t cus
 }
 
 bool TPCCTables::newOrderHome(int32_t warehouse_id, int32_t district_id, int32_t customer_id,
-        const vector<NewOrderItem>& items, const char* now,
-        NewOrderOutput* output, TPCCUndo** undo) {
+                              const vector<NewOrderItem> &items, const char *now,
+                              NewOrderOutput *output, TPCCUndo **undo) {
     //~ printf("new order %d %d %d %d %s\n", warehouse_id, district_id, customer_id, items.size(), now);
     // 2.4.3.4. requires that we display c_last, c_credit, and o_id for rolled back transactions:
     // read those values first
-    District* d = findDistrict(warehouse_id, district_id);
+    District *d = findDistrict(warehouse_id, district_id);
     output->d_tax = d->d_tax;
     output->o_id = d->d_next_o_id;
     assert(findOrder(warehouse_id, district_id, output->o_id) == NULL);
 
-    Customer* c = findCustomer(warehouse_id, district_id, customer_id);
+    Customer *c = findCustomer(warehouse_id, district_id, customer_id);
     assert(sizeof(output->c_last) == sizeof(c->c_last));
     memcpy(output->c_last, c->c_last, sizeof(output->c_last));
     memcpy(output->c_credit, c->c_credit, sizeof(output->c_credit));
     output->c_discount = c->c_discount;
 
     // CHEAT: Validate all items to see if we will need to abort
-    vector<Item*> item_tuples(items.size());
+    vector<Item *> item_tuples(items.size());
     if (!findAndValidateItems(items, &item_tuples)) {
         strcpy(output->status, NewOrderOutput::INVALID_ITEM_STATUS);
         return false;
@@ -222,7 +230,7 @@ bool TPCCTables::newOrderHome(int32_t warehouse_id, int32_t district_id, int32_t
     }
     d->d_next_o_id += 1;
 
-    Warehouse* w = findWarehouse(warehouse_id);
+    Warehouse *w = findWarehouse(warehouse_id);
     output->w_tax = w->w_tax;
 
     Order order;
@@ -235,8 +243,8 @@ bool TPCCTables::newOrderHome(int32_t warehouse_id, int32_t district_id, int32_t
     order.o_all_local = all_local ? 1 : 0;
     strcpy(order.o_entry_d, now);
     assert(strlen(order.o_entry_d) == DATETIME_SIZE);
-    Order* o = insertOrder(order);
-    NewOrder* no = insertNewOrder(warehouse_id, district_id, output->o_id);
+    Order *o = insertOrder(order);
+    NewOrder *no = insertNewOrder(warehouse_id, district_id, output->o_id);
     if (undo != NULL) {
         (*undo)->inserted(o);
         (*undo)->inserted(no);
@@ -246,12 +254,12 @@ bool TPCCTables::newOrderHome(int32_t warehouse_id, int32_t district_id, int32_t
     line.ol_o_id = output->o_id;
     line.ol_d_id = district_id;
     line.ol_w_id = warehouse_id;
-    memset(line.ol_delivery_d, 0, DATETIME_SIZE+1);
+    memset(line.ol_delivery_d, 0, DATETIME_SIZE + 1);
 
     output->items.resize(items.size());
     output->total = 0;
     for (int i = 0; i < items.size(); ++i) {
-        line.ol_number = i+1;
+        line.ol_number = i + 1;
         line.ol_i_id = items[i].i_id;
         line.ol_supply_w_id = items[i].ol_supply_w_id;
         line.ol_quantity = items[i].ol_quantity;
@@ -260,7 +268,7 @@ bool TPCCTables::newOrderHome(int32_t warehouse_id, int32_t district_id, int32_t
         // these columns are replicated everywhere.
         // TODO: I think this is unrealistic, since it will occupy ~23 MB per warehouse on all
         // replicas. Try the "two round" version in the future.
-        Stock* stock = findStock(items[i].ol_supply_w_id, items[i].i_id);
+        Stock *stock = findStock(items[i].ol_supply_w_id, items[i].i_id);
         assert(sizeof(line.ol_dist_info) == sizeof(stock->s_dist[district_id]));
         memcpy(line.ol_dist_info, stock->s_dist[district_id], sizeof(line.ol_dist_info));
         // Since we *need* to replicate s_dist_xx columns, might as well replicate s_data
@@ -279,7 +287,7 @@ bool TPCCTables::newOrderHome(int32_t warehouse_id, int32_t district_id, int32_t
                 static_cast<float>(items[i].ol_quantity) * item_tuples[i]->i_price;
         line.ol_amount = output->items[i].ol_amount;
         output->total += output->items[i].ol_amount;
-        OrderLine* ol = insertOrderLine(line);
+        OrderLine *ol = insertOrderLine(line);
         if (undo != NULL) {
             (*undo)->inserted(ol);
         }
@@ -296,10 +304,11 @@ bool TPCCTables::newOrderHome(int32_t warehouse_id, int32_t district_id, int32_t
 }
 
 bool TPCCTables::newOrderRemote(int32_t home_warehouse, int32_t remote_warehouse,
-        const vector<NewOrderItem>& items, std::vector<int32_t>* out_quantities, TPCCUndo** undo) {
+                                const vector<NewOrderItem> &items,
+                                std::vector<int32_t> *out_quantities, TPCCUndo **undo) {
     // Validate all the items: needed so that we don't need to undo in order to execute this
     // TODO: item_tuples is unused. Remove?
-    vector<Item*> item_tuples;
+    vector<Item *> item_tuples;
     if (!findAndValidateItems(items, &item_tuples)) {
         return false;
     }
@@ -316,7 +325,7 @@ bool TPCCTables::newOrderRemote(int32_t home_warehouse, int32_t remote_warehouse
         }
 
         // update stock
-        Stock* stock = findStock(items[i].ol_supply_w_id, items[i].i_id);
+        Stock *stock = findStock(items[i].ol_supply_w_id, items[i].i_id);
         if (undo != NULL) {
             (*undo)->save(stock);
         }
@@ -338,8 +347,8 @@ bool TPCCTables::newOrderRemote(int32_t home_warehouse, int32_t remote_warehouse
     return true;
 }
 
-bool TPCCTables::findAndValidateItems(const vector<NewOrderItem>& items,
-        vector<Item*>* item_tuples) {
+bool TPCCTables::findAndValidateItems(const vector<NewOrderItem> &items,
+                                      vector<Item *> *item_tuples) {
     // CHEAT: Validate all items to see if we will need to abort
     item_tuples->resize(items.size());
     for (int i = 0; i < items.size(); ++i) {
@@ -353,22 +362,23 @@ bool TPCCTables::findAndValidateItems(const vector<NewOrderItem>& items,
 
 
 void TPCCTables::payment(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
-        int32_t c_district_id, int32_t customer_id, float h_amount, const char* now,
-        PaymentOutput* output, TPCCUndo** undo) {
+                         int32_t c_district_id, int32_t customer_id, float h_amount,
+                         const char *now,
+                         PaymentOutput *output, TPCCUndo **undo) {
     //~ printf("payment %d %d %d %d %d %f %s\n", warehouse_id, district_id, c_warehouse_id, c_district_id, customer_id, h_amount, now);
-    Customer* customer = findCustomer(c_warehouse_id, c_district_id, customer_id);
+    Customer *customer = findCustomer(c_warehouse_id, c_district_id, customer_id);
     paymentHome(warehouse_id, district_id, c_warehouse_id, c_district_id, customer_id, h_amount,
-            now, output, undo);
+                now, output, undo);
     internalPaymentRemote(warehouse_id, district_id, customer, h_amount, output, undo);
 }
 
 void TPCCTables::payment(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
-        int32_t c_district_id, const char* c_last, float h_amount, const char* now,
-        PaymentOutput* output, TPCCUndo** undo) {
+                         int32_t c_district_id, const char *c_last, float h_amount, const char *now,
+                         PaymentOutput *output, TPCCUndo **undo) {
     //~ printf("payment %d %d %d %d %s %f %s\n", warehouse_id, district_id, c_warehouse_id, c_district_id, c_last, h_amount, now);
-    Customer* customer = findCustomerByName(c_warehouse_id, c_district_id, c_last);
+    Customer *customer = findCustomerByName(c_warehouse_id, c_district_id, c_last);
     paymentHome(warehouse_id, district_id, c_warehouse_id, c_district_id, customer->c_id, h_amount,
-            now, output, undo);
+                now, output, undo);
     internalPaymentRemote(warehouse_id, district_id, customer, h_amount, output, undo);
 }
 
@@ -386,7 +396,7 @@ void TPCCTables::payment(int32_t warehouse_id, int32_t district_id, int32_t c_wa
     output->prefix ## state[0] = '\0'; \
     output->prefix ## zip[0] = '\0'
 
-static void zeroWarehouseDistrict(PaymentOutput* output) {
+static void zeroWarehouseDistrict(PaymentOutput *output) {
     // Zero the warehouse and district data
     // TODO: I should split this structure, but I'm lazy
     ZERO_ADDRESS(output, w_);
@@ -394,24 +404,28 @@ static void zeroWarehouseDistrict(PaymentOutput* output) {
 }
 
 void TPCCTables::paymentRemote(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
-        int32_t c_district_id, int32_t c_id, float h_amount, PaymentOutput* output,
-        TPCCUndo** undo) {
-    Customer* customer = findCustomer(c_warehouse_id, c_district_id, c_id);
+                               int32_t c_district_id, int32_t c_id, float h_amount,
+                               PaymentOutput *output,
+                               TPCCUndo **undo) {
+    Customer *customer = findCustomer(c_warehouse_id, c_district_id, c_id);
     internalPaymentRemote(warehouse_id, district_id, customer, h_amount, output, undo);
     zeroWarehouseDistrict(output);
 }
+
 void TPCCTables::paymentRemote(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
-        int32_t c_district_id, const char* c_last, float h_amount, PaymentOutput* output,
-        TPCCUndo** undo) {
-    Customer* customer = findCustomerByName(c_warehouse_id, c_district_id, c_last);
+                               int32_t c_district_id, const char *c_last, float h_amount,
+                               PaymentOutput *output,
+                               TPCCUndo **undo) {
+    Customer *customer = findCustomerByName(c_warehouse_id, c_district_id, c_last);
     internalPaymentRemote(warehouse_id, district_id, customer, h_amount, output, undo);
     zeroWarehouseDistrict(output);
 }
 
 void TPCCTables::paymentHome(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
-        int32_t c_district_id, int32_t customer_id, float h_amount, const char* now,
-        PaymentOutput* output, TPCCUndo** undo) {
-    Warehouse* w = findWarehouse(warehouse_id);
+                             int32_t c_district_id, int32_t customer_id, float h_amount,
+                             const char *now,
+                             PaymentOutput *output, TPCCUndo **undo) {
+    Warehouse *w = findWarehouse(warehouse_id);
     if (undo != NULL) {
         allocateUndo(undo);
         (*undo)->save(w);
@@ -419,7 +433,7 @@ void TPCCTables::paymentHome(int32_t warehouse_id, int32_t district_id, int32_t 
     w->w_ytd += h_amount;
     COPY_ADDRESS(w, output, w_);
 
-    District* d = findDistrict(warehouse_id, district_id);
+    District *d = findDistrict(warehouse_id, district_id);
     if (undo != NULL) {
         (*undo)->save(d);
     }
@@ -438,7 +452,7 @@ void TPCCTables::paymentHome(int32_t warehouse_id, int32_t district_id, int32_t 
     strcpy(h.h_data, w->w_name);
     strcat(h.h_data, "    ");
     strcat(h.h_data, d->d_name);
-    History* history = insertHistory(h);
+    History *history = insertHistory(h);
     if (undo != NULL) {
         (*undo)->inserted(history);
     }
@@ -457,8 +471,8 @@ void TPCCTables::paymentHome(int32_t warehouse_id, int32_t district_id, int32_t 
     output->c_data[0] = '\0';
 }
 
-void TPCCTables::internalPaymentRemote(int32_t warehouse_id, int32_t district_id, Customer* c,
-        float h_amount, PaymentOutput* output, TPCCUndo** undo) {
+void TPCCTables::internalPaymentRemote(int32_t warehouse_id, int32_t district_id, Customer *c,
+                                       float h_amount, PaymentOutput *output, TPCCUndo **undo) {
     if (undo != NULL) {
         allocateUndo(undo);
         (*undo)->save(c);
@@ -468,10 +482,11 @@ void TPCCTables::internalPaymentRemote(int32_t warehouse_id, int32_t district_id
     c->c_payment_cnt += 1;
     if (strcmp(c->c_credit, Customer::BAD_CREDIT) == 0) {
         // Bad credit: insert history into c_data
-        static const int HISTORY_SIZE = Customer::MAX_DATA+1;
+        static const int HISTORY_SIZE = Customer::MAX_DATA + 1;
         char history[HISTORY_SIZE];
         int characters = snprintf(history, HISTORY_SIZE, "(%d, %d, %d, %d, %d, %.2f)\n",
-                c->c_id, c->c_d_id, c->c_w_id, district_id, warehouse_id, h_amount);
+                                  c->c_id, c->c_d_id, c->c_w_id, district_id, warehouse_id,
+                                  h_amount);
         assert(characters < HISTORY_SIZE);
 
         // Perform the insert with a move and copy
@@ -480,7 +495,7 @@ void TPCCTables::internalPaymentRemote(int32_t warehouse_id, int32_t district_id
             current_keep = Customer::MAX_DATA - characters;
         }
         assert(current_keep + characters <= Customer::MAX_DATA);
-        memmove(c->c_data+characters, c->c_data, current_keep);
+        memmove(c->c_data + characters, c->c_data, current_keep);
         memcpy(c->c_data, history, characters);
         c->c_data[characters + current_keep] = '\0';
         assert(strlen(c->c_data) == characters + current_keep);
@@ -507,8 +522,8 @@ void TPCCTables::internalPaymentRemote(int32_t warehouse_id, int32_t district_id
 // forward declaration for delivery
 static int64_t makeNewOrderKey(int32_t w_id, int32_t d_id, int32_t o_id);
 
-void TPCCTables::delivery(int32_t warehouse_id, int32_t carrier_id, const char* now,
-        std::vector<DeliveryOrderInfo>* orders, TPCCUndo** undo) {
+void TPCCTables::delivery(int32_t warehouse_id, int32_t carrier_id, const char *now,
+                          std::vector<DeliveryOrderInfo> *orders, TPCCUndo **undo) {
     //~ printf("delivery %d %d %s\n", warehouse_id, carrier_id, now);
     allocateUndo(undo);
     orders->clear();
@@ -516,7 +531,7 @@ void TPCCTables::delivery(int32_t warehouse_id, int32_t carrier_id, const char* 
         // Find and remove the lowest numbered order for the district
         int64_t key = makeNewOrderKey(warehouse_id, d_id, 1);
         NewOrderMap::iterator iterator = neworders_.lower_bound(key);
-        NewOrder* neworder = NULL;
+        NewOrder *neworder = NULL;
         if (iterator != neworders_.end()) {
             neworder = iterator->second;
             assert(neworder != NULL);
@@ -540,7 +555,7 @@ void TPCCTables::delivery(int32_t warehouse_id, int32_t carrier_id, const char* 
         order.o_id = o_id;
         orders->push_back(order);
 
-        Order* o = findOrder(warehouse_id, d_id, o_id);
+        Order *o = findOrder(warehouse_id, d_id, o_id);
         assert(o->o_carrier_id == Order::NULL_CARRIER_ID);
         if (undo != NULL) {
             (*undo)->save(o);
@@ -550,7 +565,7 @@ void TPCCTables::delivery(int32_t warehouse_id, int32_t carrier_id, const char* 
         float total = 0;
         // TODO: Select based on (w_id, d_id, o_id) rather than using ol_number?
         for (int32_t i = 1; i <= o->o_ol_cnt; ++i) {
-            OrderLine* line = findOrderLine(warehouse_id, d_id, o_id, i);
+            OrderLine *line = findOrderLine(warehouse_id, d_id, o_id, i);
             if (undo != NULL) {
                 (*undo)->save(line);
             }
@@ -560,7 +575,7 @@ void TPCCTables::delivery(int32_t warehouse_id, int32_t carrier_id, const char* 
             total += line->ol_amount;
         }
 
-        Customer* c = findCustomer(warehouse_id, d_id, o->o_c_id);
+        Customer *c = findCustomer(warehouse_id, d_id, o->o_c_id);
         if (undo != NULL) {
             (*undo)->save(c);
         }
@@ -569,17 +584,17 @@ void TPCCTables::delivery(int32_t warehouse_id, int32_t carrier_id, const char* 
     }
 }
 
-template <typename T>
-static void restoreFromMap(const T& map) {
+template<typename T>
+static void restoreFromMap(const T &map) {
     for (typename T::const_iterator i = map.begin(); i != map.end(); ++i) {
         // Copy the original data back
         *(i->first) = *(i->second);
     }
 }
 
-template <typename T>
-static void eraseTuple(const T& set, TPCCTables* tables,
-        void (TPCCTables::*eraseFPtr)(typename T::value_type)) {
+template<typename T>
+static void eraseTuple(const T &set, TPCCTables *tables,
+                       void (TPCCTables::*eraseFPtr)(typename T::value_type)) {
     for (typename T::const_iterator i = set.begin(); i != set.end(); ++i) {
         // Invoke eraseFPtr on each value
         (tables->*eraseFPtr)(*i);
@@ -587,14 +602,14 @@ static void eraseTuple(const T& set, TPCCTables* tables,
 }
 
 // Used by both applyUndo and insertNewOrder to put allocated NewOrder tuples in the map.
-static NewOrder* insertNewOrderObject(std::map<int64_t, NewOrder*>* map, NewOrder* neworder) {
+static NewOrder *insertNewOrderObject(std::map<int64_t, NewOrder *> *map, NewOrder *neworder) {
     int64_t key = makeNewOrderKey(neworder->no_w_id, neworder->no_d_id, neworder->no_o_id);
     assert(map->find(key) == map->end());
     map->insert(std::make_pair(key, neworder));
     return neworder;
 }
 
-void TPCCTables::applyUndo(TPCCUndo* undo) {
+void TPCCTables::applyUndo(TPCCUndo *undo) {
     restoreFromMap(undo->modified_warehouses());
     restoreFromMap(undo->modified_districts());
     restoreFromMap(undo->modified_customers());
@@ -609,9 +624,9 @@ void TPCCTables::applyUndo(TPCCUndo* undo) {
 
     // Transfer deleted new orders back to the database
     for (TPCCUndo::NewOrderDeletedSet::const_iterator i = undo->deleted_new_orders().begin();
-            i != undo->deleted_new_orders().end();
-            ++i) {
-        NewOrder* neworder = *i;
+         i != undo->deleted_new_orders().end();
+         ++i) {
+        NewOrder *neworder = *i;
         insertNewOrderObject(&neworders_, neworder);
     }
 
@@ -619,27 +634,32 @@ void TPCCTables::applyUndo(TPCCUndo* undo) {
     delete undo;
 }
 
-template <typename T>
-static T* insert(BPlusTree<int32_t, T*, TPCCTables::KEYS_PER_INTERNAL, TPCCTables::KEYS_PER_LEAF>* tree, int32_t key, const T& item) {
+template<typename T>
+static T *
+insert(BPlusTree<int32_t, T *, TPCCTables::KEYS_PER_INTERNAL, TPCCTables::KEYS_PER_LEAF> *tree,
+       int32_t key, const T &item) {
     assert(!tree->find(key));
-    T* copy = new T(item);
+    T *copy = new T(item);
     tree->insert(key, copy);
     return copy;
 }
 
-template <typename T>
-static T* find(const BPlusTree<int32_t, T*, TPCCTables::KEYS_PER_INTERNAL, TPCCTables::KEYS_PER_LEAF>& tree, int32_t key) {
-    T* output = NULL;
+template<typename T>
+static T *
+find(const BPlusTree<int32_t, T *, TPCCTables::KEYS_PER_INTERNAL, TPCCTables::KEYS_PER_LEAF> &tree,
+     int32_t key) {
+    T *output = NULL;
     if (tree.find(key, &output)) {
         return output;
     }
     return NULL;
 }
 
-template <typename T, typename KeyType>
-static void erase(BPlusTree<KeyType, T*, TPCCTables::KEYS_PER_INTERNAL, TPCCTables::KEYS_PER_LEAF>* tree,
-        KeyType key, const T* value) {
-    T* out = NULL;
+template<typename T, typename KeyType>
+static void
+erase(BPlusTree<KeyType, T *, TPCCTables::KEYS_PER_INTERNAL, TPCCTables::KEYS_PER_LEAF> *tree,
+      KeyType key, const T *value) {
+    T *out = NULL;
     ASSERT(tree->find(key, &out));
     ASSERT(out == value);
     bool result = tree->del(key);
@@ -647,21 +667,23 @@ static void erase(BPlusTree<KeyType, T*, TPCCTables::KEYS_PER_INTERNAL, TPCCTabl
     ASSERT(!tree->find(key));
 }
 
-void TPCCTables::insertItem(const Item& item) {
+void TPCCTables::insertItem(const Item &item) {
     assert(item.i_id == items_.size() + 1);
     items_.push_back(item);
 }
-Item* TPCCTables::findItem(int32_t id) {
+
+Item *TPCCTables::findItem(int32_t id) {
     assert(1 <= id);
     id -= 1;
     if (id >= items_.size()) return NULL;
     return &items_[id];
 }
 
-void TPCCTables::insertWarehouse(const Warehouse& w) {
+void TPCCTables::insertWarehouse(const Warehouse &w) {
     insert(&warehouses_, w.w_id, w);
 }
-Warehouse* TPCCTables::findWarehouse(int32_t id) {
+
+Warehouse *TPCCTables::findWarehouse(int32_t id) {
     return find(warehouses_, id);
 }
 
@@ -673,10 +695,11 @@ static int32_t makeStockKey(int32_t w_id, int32_t s_id) {
     return id;
 }
 
-void TPCCTables::insertStock(const Stock& stock) {
+void TPCCTables::insertStock(const Stock &stock) {
     insert(&stock_, makeStockKey(stock.s_w_id, stock.s_i_id), stock);
 }
-Stock* TPCCTables::findStock(int32_t w_id, int32_t s_id) {
+
+Stock *TPCCTables::findStock(int32_t w_id, int32_t s_id) {
     return find(stock_, makeStockKey(w_id, s_id));
 }
 
@@ -688,10 +711,11 @@ static int32_t makeDistrictKey(int32_t w_id, int32_t d_id) {
     return id;
 }
 
-void TPCCTables::insertDistrict(const District& district) {
+void TPCCTables::insertDistrict(const District &district) {
     insert(&districts_, makeDistrictKey(district.d_w_id, district.d_id), district);
 }
-District* TPCCTables::findDistrict(int32_t w_id, int32_t d_id) {
+
+District *TPCCTables::findDistrict(int32_t w_id, int32_t d_id) {
     return find(districts_, makeDistrictKey(w_id, d_id));
 }
 
@@ -700,21 +724,24 @@ static int32_t makeCustomerKey(int32_t w_id, int32_t d_id, int32_t c_id) {
     assert(1 <= d_id && d_id <= District::NUM_PER_WAREHOUSE);
     assert(1 <= c_id && c_id <= Customer::NUM_PER_DISTRICT);
     int32_t id = (w_id * District::NUM_PER_WAREHOUSE + d_id)
-            * Customer::NUM_PER_DISTRICT + c_id;
+                 * Customer::NUM_PER_DISTRICT + c_id;
     assert(id >= 0);
     return id;
 }
 
-void TPCCTables::insertCustomer(const Customer& customer) {
-    Customer* c = insert(&customers_, makeCustomerKey(customer.c_w_id, customer.c_d_id, customer.c_id), customer);
+void TPCCTables::insertCustomer(const Customer &customer) {
+    Customer *c = insert(&customers_,
+                         makeCustomerKey(customer.c_w_id, customer.c_d_id, customer.c_id),
+                         customer);
     assert(customers_by_name_.find(c) == customers_by_name_.end());
     customers_by_name_.insert(c);
 }
-Customer* TPCCTables::findCustomer(int32_t w_id, int32_t d_id, int32_t c_id) {
+
+Customer *TPCCTables::findCustomer(int32_t w_id, int32_t d_id, int32_t c_id) {
     return find(customers_, makeCustomerKey(w_id, d_id, c_id));
 }
 
-Customer* TPCCTables::findCustomerByName(int32_t w_id, int32_t d_id, const char* c_last) {
+Customer *TPCCTables::findCustomerByName(int32_t w_id, int32_t d_id, const char *c_last) {
     // select (w_id, d_id, *, c_last) order by c_first
     Customer c;
     c.c_w_id = w_id;
@@ -729,14 +756,14 @@ Customer* TPCCTables::findCustomerByName(int32_t w_id, int32_t d_id, const char*
     // TODO: This is a GROSS hack. Can we do better?
     int length = static_cast<int>(strlen(c_last));
     if (length == Customer::MAX_LAST) {
-        c.c_last[length-1] = static_cast<char>(c.c_last[length-1] + 1);
+        c.c_last[length - 1] = static_cast<char>(c.c_last[length - 1] + 1);
     } else {
         c.c_last[length] = 'A';
-        c.c_last[length+1] = '\0';
+        c.c_last[length + 1] = '\0';
     }
     CustomerByNameSet::const_iterator stop = customers_by_name_.lower_bound(&c);
 
-    Customer* customer = NULL;
+    Customer *customer = NULL;
     // Choose position n/2 rounded up (1 based addressing) = floor((n-1)/2)
     if (it != stop) {
         CustomerByNameSet::const_iterator middle = it;
@@ -754,9 +781,9 @@ Customer* TPCCTables::findCustomerByName(int32_t w_id, int32_t d_id, const char*
         // There were i+1 matching last names
         customer = *middle;
     }
-    
+
     assert(customer->c_w_id == w_id && customer->c_d_id == d_id &&
-            strcmp(customer->c_last, c_last) == 0);
+           strcmp(customer->c_last, c_last) == 0);
     return customer;
 }
 
@@ -766,7 +793,7 @@ static int32_t makeOrderKey(int32_t w_id, int32_t d_id, int32_t o_id) {
     assert(1 <= o_id && o_id <= Order::MAX_ORDER_ID);
     // TODO: This is bad for locality since o_id is in the most significant position. Larger keys?
     int32_t id = (o_id * District::NUM_PER_WAREHOUSE + d_id)
-            * Warehouse::MAX_WAREHOUSE_ID + w_id;
+                 * Warehouse::MAX_WAREHOUSE_ID + w_id;
     assert(id >= 0);
     return id;
 }
@@ -777,37 +804,41 @@ static int64_t makeOrderByCustomerKey(int32_t w_id, int32_t d_id, int32_t c_id, 
     assert(1 <= c_id && c_id <= Customer::NUM_PER_DISTRICT);
     assert(1 <= o_id && o_id <= Order::MAX_ORDER_ID);
     int32_t top_id = (w_id * District::NUM_PER_WAREHOUSE + d_id) * Customer::NUM_PER_DISTRICT
-            + c_id;
+                     + c_id;
     assert(top_id >= 0);
     int64_t id = (((int64_t) top_id) << 32) | o_id;
     assert(id > 0);
     return id;
 }
 
-Order* TPCCTables::insertOrder(const Order& order) {
-    Order* tuple = insert(&orders_, makeOrderKey(order.o_w_id, order.o_d_id, order.o_id), order);
+Order *TPCCTables::insertOrder(const Order &order) {
+    Order *tuple = insert(&orders_, makeOrderKey(order.o_w_id, order.o_d_id, order.o_id), order);
     // Secondary index based on customer id
     int64_t key = makeOrderByCustomerKey(order.o_w_id, order.o_d_id, order.o_c_id, order.o_id);
     assert(!orders_by_customer_.find(key));
     orders_by_customer_.insert(key, tuple);
     return tuple;
 }
-Order* TPCCTables::findOrder(int32_t w_id, int32_t d_id, int32_t o_id) {
+
+Order *TPCCTables::findOrder(int32_t w_id, int32_t d_id, int32_t o_id) {
     return find(orders_, makeOrderKey(w_id, d_id, o_id));
 }
-Order* TPCCTables::findLastOrderByCustomer(const int32_t w_id, const int32_t d_id, const int32_t c_id) {
-    Order* order = NULL;
+
+Order *
+TPCCTables::findLastOrderByCustomer(const int32_t w_id, const int32_t d_id, const int32_t c_id) {
+    Order *order = NULL;
 
     // Increment the (w_id, d_id, c_id) tuple
     int64_t key = makeOrderByCustomerKey(w_id, d_id, c_id, 1);
-    key += ((int64_t)1) << 32;
+    key += ((int64_t) 1) << 32;
     ASSERT(key > 0);
 
     bool found = orders_by_customer_.findLastLessThan(key, &order);
     ASSERT(!found || (order->o_w_id == w_id && order->o_d_id == d_id && order->o_c_id == c_id));
     return order;
 }
-void TPCCTables::eraseOrder(const Order* order) {
+
+void TPCCTables::eraseOrder(const Order *order) {
     int32_t primary = makeOrderKey(order->o_w_id, order->o_d_id, order->o_id);
     erase(&orders_, primary, order);
 
@@ -827,20 +858,22 @@ static int32_t makeOrderLineKey(int32_t w_id, int32_t d_id, int32_t o_id, int32_
     // Order status fetches all rows for one (w_id, d_id, o_id) tuple, so it may be fine,
     // but stock level fetches order lines for a range of (w_id, d_id, o_id) values
     int32_t id = ((o_id * District::NUM_PER_WAREHOUSE + d_id)
-            * Warehouse::MAX_WAREHOUSE_ID + w_id) * Order::MAX_OL_CNT + number;
+                  * Warehouse::MAX_WAREHOUSE_ID + w_id) * Order::MAX_OL_CNT + number;
     assert(id >= 0);
     return id;
 }
 
-OrderLine* TPCCTables::insertOrderLine(const OrderLine& orderline) {
+OrderLine *TPCCTables::insertOrderLine(const OrderLine &orderline) {
     int32_t key = makeOrderLineKey(
             orderline.ol_w_id, orderline.ol_d_id, orderline.ol_o_id, orderline.ol_number);
     return insert(&orderlines_, key, orderline);
 }
-OrderLine* TPCCTables::findOrderLine(int32_t w_id, int32_t d_id, int32_t o_id, int32_t number) {
+
+OrderLine *TPCCTables::findOrderLine(int32_t w_id, int32_t d_id, int32_t o_id, int32_t number) {
     return find(orderlines_, makeOrderLineKey(w_id, d_id, o_id, number));
 }
-void TPCCTables::eraseOrderLine(const OrderLine* order_line) {
+
+void TPCCTables::eraseOrderLine(const OrderLine *order_line) {
     int32_t key = makeOrderLineKey(
             order_line->ol_w_id, order_line->ol_d_id, order_line->ol_o_id, order_line->ol_number);
     erase(&orderlines_, key, order_line);
@@ -858,8 +891,8 @@ static int64_t makeNewOrderKey(int32_t w_id, int32_t d_id, int32_t o_id) {
     return id;
 }
 
-NewOrder* TPCCTables::insertNewOrder(int32_t w_id, int32_t d_id, int32_t o_id) {
-    NewOrder* neworder = new NewOrder();
+NewOrder *TPCCTables::insertNewOrder(int32_t w_id, int32_t d_id, int32_t o_id) {
+    NewOrder *neworder = new NewOrder();
     neworder->no_w_id = w_id;
     neworder->no_d_id = d_id;
     neworder->no_o_id = o_id;
@@ -867,13 +900,14 @@ NewOrder* TPCCTables::insertNewOrder(int32_t w_id, int32_t d_id, int32_t o_id) {
     return insertNewOrderObject(&neworders_, neworder);
 }
 
-NewOrder* TPCCTables::findNewOrder(int32_t w_id, int32_t d_id, int32_t o_id) {
+NewOrder *TPCCTables::findNewOrder(int32_t w_id, int32_t d_id, int32_t o_id) {
     NewOrderMap::const_iterator it = neworders_.find(makeNewOrderKey(w_id, d_id, o_id));
     if (it == neworders_.end()) return NULL;
     assert(it->second != NULL);
     return it->second;
 }
-void TPCCTables::eraseNewOrder(const NewOrder* new_order) {
+
+void TPCCTables::eraseNewOrder(const NewOrder *new_order) {
     NewOrderMap::iterator it = neworders_.find(
             makeNewOrderKey(new_order->no_w_id, new_order->no_d_id, new_order->no_o_id));
     assert(it != neworders_.end());
@@ -882,15 +916,16 @@ void TPCCTables::eraseNewOrder(const NewOrder* new_order) {
     delete new_order;
 }
 
-History* TPCCTables::insertHistory(const History& history) {
-    History* h = new History(history);
+History *TPCCTables::insertHistory(const History &history) {
+    History *h = new History(history);
     history_.push_back(h);
     return h;
 }
-void TPCCTables::eraseHistory(const History* history) {
+
+void TPCCTables::eraseHistory(const History *history) {
     // Search backwards to find the history: it likely was inserted recently (or last)
     bool found = false;
-    for (int i = static_cast<int>(history_.size())-1; i >= 0; --i) {
+    for (int i = static_cast<int>(history_.size()) - 1; i >= 0; --i) {
         if (history == history_[i]) {
             if (i != history_.size() - 1) {
                 // erase not at end: move the last element here
