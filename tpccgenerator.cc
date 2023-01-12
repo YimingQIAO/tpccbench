@@ -274,13 +274,15 @@ void TPCCGenerator::makeWarehouseWithoutStock(TPCCTables *tables, int32_t w_id) 
         //
         // 2023.01.10 by yiqiao: now one customer may have several orders.
         int scaling = Order::INITIAL_ORDERS_PER_DISTRICT;
+        // int scaling = customers_per_district_;
         int *permutation = random_->makePermutation(1, scaling);
         for (int o_id = 1; o_id <= scaling; ++o_id) {
             // The last new_orders_per_district_ orders are new
             bool new_order = scaling - new_orders_per_district_ < o_id;
             Order o;
-            generateOrder(o_id, permutation[o_id - 1] % customers_per_district_ + 1,
-                          d_id, w_id, new_order, &o);
+            int32_t customer_id = permutation[o_id - 1];
+            if (customer_id > customers_per_district_) customer_id %= customers_per_district_;
+            generateOrder(o_id, customer_id, d_id, w_id, new_order, &o);
             tables->insertOrder(o);
 
             // Generate each OrderLine for the order

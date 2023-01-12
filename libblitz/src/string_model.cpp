@@ -5,11 +5,11 @@
 namespace db_compress {
 StringModel::StringModel(size_t target_var)
     : SquIDModel(std::vector<size_t>(), target_var),
-      global_dictionary_(8192),
-      markov_char_dist_(kMarkovModel),
+      squid_(kLocalDictSize),
       word_length_(true, 1),
+      global_dictionary_(8192),
       local_dict_(kLocalDictSize),
-      squid_(kLocalDictSize) {}
+      markov_char_dist_(kMarkovModel) {}
 
 StringSquID *StringModel::GetSquID(const AttrVector &tuple) {
   squid_.Init(GenerateStringStats());

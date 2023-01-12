@@ -156,10 +156,10 @@ db_compress::TableTimeSeries::TableTimeSeries(const std::vector<int> &attr_type,
       predictor_interpreter_(predictor_list_size_),
       target_int_(target_int),
       bin_size_(bin_size),
+      model_cost_(0),
       dynamic_list_(GetPredictorCap(predictor_list)),
       dynamic_list_index_(predictor_list.size()),
-      squid_(bin_size, target_int_),
-      model_cost_(0) {
+      squid_(bin_size, target_int_) {
   QuantizationToFloat32Bit(&bin_size_);
   for (int i = 0; i < dynamic_list_.Size(); ++i) {
     dynamic_list_[i].SetBinSize(bin_size_);

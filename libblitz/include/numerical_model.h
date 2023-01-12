@@ -217,14 +217,14 @@ class TableNumerical : public SquIDModel {
    */
   explicit TableNumerical(bool target_int, double bin_size)
       : SquIDModel(std::vector<size_t>(), 0),
+        target_int_(target_int),
+        base_squid_(bin_size, target_int),
         predictor_interpreter_(0),
+        bin_size_(bin_size),
+        model_cost_(0),
         dynamic_list_(std::vector<size_t>()),
         dynamic_list_index_(0),
-        bin_size_(bin_size),
-        squid_(bin_size, target_int),
-        base_squid_(bin_size, target_int),
-        target_int_(target_int),
-        model_cost_(0) {
+        squid_(bin_size, target_int) {
     dynamic_list_[0].SetBinSize(bin_size_);
   };
 

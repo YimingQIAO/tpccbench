@@ -402,14 +402,14 @@ TableNumerical::TableNumerical(const std::vector<int> &attr_type,
                                const std::vector<size_t> &predictor_list, size_t target_var,
                                double bin_size, bool target_int)
     : SquIDModel(predictor_list, target_var),
-      predictor_interpreter_(predictor_list_size_),
       target_int_(target_int),
+      base_squid_(bin_size, target_int_),
+      predictor_interpreter_(predictor_list_size_),
       bin_size_(bin_size),
+      model_cost_(0),
       dynamic_list_(GetPredictorCap(predictor_list)),
       dynamic_list_index_(predictor_list.size()),
-      squid_(bin_size_, target_int_),
-      base_squid_(bin_size, target_int_),
-      model_cost_(0) {
+      squid_(bin_size_, target_int_) {
   for (int i = 0; i < dynamic_list_.Size(); ++i) dynamic_list_[i].SetBinSize(bin_size_);
   for (size_t i = 0; i < predictor_list_size_; ++i)
     predictor_interpreter_[i] = GetAttrInterpreter(attr_type[predictor_list_[i]]);

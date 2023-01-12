@@ -105,7 +105,7 @@ struct District {
     static constexpr float MIN_TAX = 0;
     static constexpr float MAX_TAX = 0.2000f;
     static constexpr float INITIAL_YTD = 30000.00;  // different from Warehouse
-    static const int INITIAL_NEXT_O_ID = 3001;
+    static const int INITIAL_NEXT_O_ID = 3001; // Order::INITIAL_ORDERS_PER_DISTRICT + 1;
     static const int MIN_NAME = 6;
     static const int MAX_NAME = 10;
     static const int NUM_PER_WAREHOUSE = 10;
@@ -254,7 +254,7 @@ struct Order {
     static const int MIN_OL_CNT = 5;
     static const int MAX_OL_CNT = 15;
     static const int INITIAL_ALL_LOCAL = 1;
-    static const int INITIAL_ORDERS_PER_DISTRICT = 5000;
+    static const int INITIAL_ORDERS_PER_DISTRICT = 3000;
     // See TPC-C 1.3.1 (page 15)
     static const int MAX_ORDER_ID = 10000000;
 

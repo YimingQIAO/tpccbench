@@ -148,9 +148,9 @@ class TableCategorical : public SquIDModel {
   TableCategorical()
       : SquIDModel(std::vector<size_t>(), 0),
         predictor_interpreter_(0),
+        target_range_(0),
         dynamic_list_(std::vector<size_t>()),
-        dynamic_list_index_(0),
-        target_range_(0) {}
+        dynamic_list_index_(0) {}
 
   /**
    * For simple categorical attribute.

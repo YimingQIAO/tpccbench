@@ -36,10 +36,10 @@ void RelationModelLearner::StoreModelCost(const SquIDModel &model) {
 }
 RelationModelLearner::RelationModelLearner(Schema schema, const CompressionConfig &config)
     : schema_(std::move(schema)),
-      selected_model_(schema_.attr_type_.size()),
-      model_predictor_list_(schema_.attr_type_.size()),
+      learner_stage_(0),
       config_(config),
-      learner_stage_(0) {
+      selected_model_(schema_.attr_type_.size()),
+      model_predictor_list_(schema_.attr_type_.size()) {
   if (config_.skip_model_learning_) {
     ordered_attr_list_.resize(schema_.attr_type_.size());
     model_predictor_list_.resize(schema.attr_type_.size());

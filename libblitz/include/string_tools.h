@@ -240,7 +240,7 @@ class StringMonitor {
   }
 
  private:
-  int num_prob_interval_;
+  // int num_prob_interval_;
   // num_bits_base; num_bits_global; num_bits_local; num_bits_delimiter; total;
   std::vector<double> info_;
   std::vector<std::string> info_name_ = {"Size base",

@@ -4,15 +4,15 @@
 
 #include "stlutil.h"
 
-void Address::copy(char* street1, char* street2, char* city, char* state, char* zip,
-        const char* src_street1, const char* src_street2, const char* src_city,
-        const char* src_state, const char* src_zip) {
+void Address::copy(char *street1, char *street2, char *city, char *state, char *zip,
+                   const char *src_street1, const char *src_street2, const char *src_city,
+                   const char *src_state, const char *src_zip) {
     // TODO: Just do one copy since all the fields should be contiguous?
-    memcpy(street1, src_street1, MAX_STREET+1);
-    memcpy(street2, src_street2, MAX_STREET+1);
-    memcpy(city, src_city, MAX_CITY+1);
-    memcpy(state, src_state, STATE+1);
-    memcpy(zip, src_zip, ZIP+1);
+    memcpy(street1, src_street1, MAX_STREET + 1);
+    memcpy(street2, src_street2, MAX_STREET + 1);
+    memcpy(city, src_city, MAX_CITY + 1);
+    memcpy(state, src_state, STATE + 1);
+    memcpy(zip, src_zip, ZIP + 1);
 }
 
 // Non-integral constants must be defined in a .cc file according to the standard
@@ -30,9 +30,9 @@ TPCCUndo::~TPCCUndo() {
     STLDeleteElements(&deleted_new_orders_);
 }
 
-template <typename T>
-static void copyIfNeeded(typename std::unordered_map<T*, T*>* map, T* source) {
-    typedef typename std::unordered_map<T*, T*> MapType;
+template<typename T>
+static void copyIfNeeded(typename std::unordered_map<T *, T *> *map, T *source) {
+    typedef typename std::unordered_map<T *, T *> MapType;
     std::pair<typename MapType::iterator, bool> result = map->insert(
             typename MapType::value_type(source, NULL));
     if (result.second) {
@@ -41,45 +41,54 @@ static void copyIfNeeded(typename std::unordered_map<T*, T*>* map, T* source) {
         result.first->second = new T(*source);
     } else {
         assert(result.first->second != NULL);
-    }    
+    }
 }
 
-void TPCCUndo::save(Warehouse* w) {
+void TPCCUndo::save(Warehouse *w) {
     copyIfNeeded(&modified_warehouses_, w);
 }
-void TPCCUndo::save(District* d) {
+
+void TPCCUndo::save(District *d) {
     copyIfNeeded(&modified_districts_, d);
 }
-void TPCCUndo::save(Customer* c) {
+
+void TPCCUndo::save(Customer *c) {
     copyIfNeeded(&modified_customers_, c);
 }
-void TPCCUndo::save(Stock* s) {
+
+void TPCCUndo::save(Stock *s) {
     copyIfNeeded(&modified_stock_, s);
 }
-void TPCCUndo::save(Order* o) {
+
+void TPCCUndo::save(Order *o) {
     copyIfNeeded(&modified_orders_, o);
 }
-void TPCCUndo::save(OrderLine* ol) {
+
+void TPCCUndo::save(OrderLine *ol) {
     copyIfNeeded(&modified_order_lines_, ol);
 }
 
-void TPCCUndo::inserted(const Order* o) {
+void TPCCUndo::inserted(const Order *o) {
     assert(inserted_orders_.find(o) == inserted_orders_.end());
     inserted_orders_.insert(o);
 }
-void TPCCUndo::inserted(const OrderLine* ol) {
+
+void TPCCUndo::inserted(const OrderLine *ol) {
     assert(inserted_order_lines_.find(ol) == inserted_order_lines_.end());
     inserted_order_lines_.insert(ol);
 }
-void TPCCUndo::inserted(const NewOrder* no) {
+
+void TPCCUndo::inserted(const NewOrder *no) {
     assert(inserted_new_orders_.find(no) == inserted_new_orders_.end());
     inserted_new_orders_.insert(no);
 }
-void TPCCUndo::inserted(const History* h) {
+
+void TPCCUndo::inserted(const History *h) {
     assert(inserted_history_.find(h) == inserted_history_.end());
     inserted_history_.insert(h);
 }
-void TPCCUndo::deleted(NewOrder* no) {
+
+void TPCCUndo::deleted(NewOrder *no) {
     assert(deleted_new_orders_.find(no) == deleted_new_orders_.end());
     deleted_new_orders_.insert(no);
 }
@@ -89,7 +98,7 @@ void TPCCUndo::applied() {
 }
 
 TPCCDB::WarehouseSet TPCCDB::newOrderRemoteWarehouses(int32_t home_warehouse,
-        const std::vector<NewOrderItem>& items) {
+                                                      const std::vector<NewOrderItem> &items) {
     WarehouseSet out;
     for (size_t i = 0; i < items.size(); ++i) {
         if (items[i].ol_supply_w_id != home_warehouse) {
@@ -99,8 +108,8 @@ TPCCDB::WarehouseSet TPCCDB::newOrderRemoteWarehouses(int32_t home_warehouse,
     return out;
 }
 
-void TPCCDB::newOrderCombine(const std::vector<int32_t>& remote_quantities,
-        NewOrderOutput* output) {
+void TPCCDB::newOrderCombine(const std::vector<int32_t> &remote_quantities,
+                             NewOrderOutput *output) {
     assert(remote_quantities.size() == output->items.size());
     for (size_t i = 0; i < remote_quantities.size(); ++i) {
         if (remote_quantities[i] != INVALID_QUANTITY) {
@@ -110,8 +119,8 @@ void TPCCDB::newOrderCombine(const std::vector<int32_t>& remote_quantities,
     }
 }
 
-void TPCCDB::newOrderCombine(const std::vector<int32_t>& remote_quantities,
-        std::vector<int32_t>* output) {
+void TPCCDB::newOrderCombine(const std::vector<int32_t> &remote_quantities,
+                             std::vector<int32_t> *output) {
     assert(remote_quantities.size() == output->size());
     for (size_t i = 0; i < remote_quantities.size(); ++i) {
         if (remote_quantities[i] != INVALID_QUANTITY) {
@@ -132,7 +141,7 @@ void TPCCDB::newOrderCombine(const std::vector<int32_t>& remote_quantities,
 #define COPY_STRING(dest, src, field) memcpy(dest->field, src.field, sizeof(src.field))
 
 // Copy the customer fields from remote into local
-void TPCCDB::paymentCombine(const PaymentOutput& remote, PaymentOutput* home) {
+void TPCCDB::paymentCombine(const PaymentOutput &remote, PaymentOutput *home) {
     home->c_credit_lim = remote.c_credit_lim;
     home->c_discount = remote.c_discount;
     home->c_balance = remote.c_balance;
@@ -150,12 +159,13 @@ void TPCCDB::paymentCombine(const PaymentOutput& remote, PaymentOutput* home) {
 #undef COPY_ADDRESS
 
 uint32_t stringSize(const char *data, uint32_t max_size) {
-    uint32_t ret = 0;
-    int32_t i;
-    for (i = 0; i < max_size; ++i) {
-        if (data[i] == '\0') break;
-        ret++;
-    }
-    assert(data[i] == '\0');
-    return ret;
+//    uint32_t ret = 0;
+//    int32_t i;
+//    for (i = 0; i < max_size; ++i) {
+//        if (data[i] == '\0') break;
+//        ret++;
+//    }
+//    assert(data[i] == '\0');
+//    return ret;
+    return max_size;
 }

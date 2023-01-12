@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.0)
 project(tpcc)
 
 # c++ version
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 
 SET(WARNINGS "-Werror -Wall -Wextra -Wno-sign-compare -Wno-unused-parameter")
 
@@ -19,6 +19,9 @@ add_executable(btree_test btree_test.cc stupidunit.cc)
 add_executable(randomgenerator_test randomgenerator_test.cc randomgenerator.cc stupidunit.cc)
 add_executable(tpccclient_test tpccclient_test.cc tpccclient.cc randomgenerator.cc stupidunit.cc)
 add_executable(tpcctables_test tpcctables_test.cc tpcctables.cc tpccdb.cc randomgenerator.cc stupidunit.cc)
-add_executable(tpccgenerator tpccgenerator_test.cc tpccgenerator.cc tpcctables.cc tpccdb.cc randomgenerator.cc stupidunit.cc)
-add_executable(tpcc tpcc.cc tpccclient.cc tpccgenerator.cc tpcctables.cc tpccdb.cc clock.cc randomgenerator.cc stupidunit.cc)
+add_executable(tpccgenerator_test tpccgenerator_test.cc tpccgenerator.cc tpcctables.cc tpccdb.cc randomgenerator.cc stupidunit.cc)
+add_executable(tpcc tpcc.cc tpccclient.cc tpccgenerator.cc tpcctables.cc tpccdb.cc clock.cc randomgenerator.cc stupidunit.cc blitz.cc blitz.h)
+
+add_subdirectory(libblitz)
+target_link_libraries(tpcc PUBLIC db_compress)
 

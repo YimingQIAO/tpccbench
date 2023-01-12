@@ -22,13 +22,13 @@ void RelationCompressor::WriteProbInterval() {
 
 RelationCompressor::RelationCompressor(const char *output_file, const Schema &schema,
                                        const CompressionConfig &config, const int block_size)
-    : output_file_(output_file),
-      schema_(schema),
-      kBlockSizeThreshold_(block_size),
+    : schema_(schema),
       learner_(new RelationModelLearner(schema, config)),
-      bit_string_((block_size << 8) + kIntervalSize),
       num_tuples_(0),
+      output_file_(output_file),
+      kBlockSizeThreshold_(block_size),
       compressor_stage_(0),
+      bit_string_((block_size << 8) + kIntervalSize),
       prob_intervals_index_(0) {
   prob_intervals_.resize((block_size << 8) + kIntervalSize);
   is_virtual_.resize((block_size << 8) + kIntervalSize);

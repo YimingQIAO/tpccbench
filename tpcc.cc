@@ -6,7 +6,7 @@
 
 #include <climits>
 #include <cstdio>
-#include <inttypes.h>
+#include <cinttypes>
 
 #include "clock.h"
 #include "randomgenerator.h"
@@ -60,6 +60,17 @@ int main(int argc, const char *argv[]) {
     int64_t end = clock->getMicroseconds();
     printf("%" PRId64 " ms\n", (end - begin + 500) / 1000);
     tables->DBSize(num_warehouses);
+
+    // Transform table into blitz format and train compression model
+    OrderLineTable order_line_blitz;
+    tables->OrderLineBlitz(order_line_blitz, num_warehouses);
+    db_compress::CompressionConfig config = order_line_blitz.compressionConfig();
+    db_compress::Schema schema = order_line_blitz.schema();
+    db_compress::RelationCompressor compressor("model.blitz", schema, config, kBlockSize);
+    BlitzLearning(order_line_blitz, compressor);
+    db_compress::RelationDecompressor decompressor("model.blitz", schema, kBlockSize);
+    decompressor.InitWithoutIndex();
+    tables->InitOrderlineCompressor(compressor, decompressor, num_warehouses);
 
     // Change the constants for run
     random = new tpcc::RealRandomGenerator();

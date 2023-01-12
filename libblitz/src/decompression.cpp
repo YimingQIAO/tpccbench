@@ -14,11 +14,11 @@ SquIDModel *GetModelFromDescription(ByteReader *byte_reader, const Schema &schem
 
 RelationDecompressor::RelationDecompressor(const char *compressed_file_name, Schema schema,
                                            int block_size)
-    : byte_reader_(compressed_file_name),
-      kBlockSizeThreshold(block_size),
-      schema_(std::move(schema)),
+    : schema_(std::move(schema)),
       index_reader_(),
-      num_converted_tuples_(0) {}
+      num_converted_tuples_(0),
+      kBlockSizeThreshold(block_size),
+      byte_reader_(compressed_file_name) {}
 
 void RelationDecompressor::Init() {
   // Number of tuples
@@ -180,20 +180,20 @@ void RelationDecompressor::TransformBytesToTuple(std::vector<uint8_t> *bytes, At
         auto *model = static_cast<TableNumerical *>(model_[attr_index].get());
         NumericalSquID *squid = model->GetSquID(*tuple);
         squid->Decompress(&decoder_, &byte_reader_);
-        // tuple->attr_[attr_index] = squid->GetResultAttr(true);
+        tuple->attr_[attr_index] = squid->GetResultAttr(true);
         break;
       }
       case 2: {
         auto *model = static_cast<TableNumerical *>(model_[attr_index].get());
         NumericalSquID *squid = model->GetSquID(*tuple);
         squid->Decompress(&decoder_, &byte_reader_);
-        // tuple->attr_[attr_index] = squid->GetResultAttr(true);
+        tuple->attr_[attr_index] = squid->GetResultAttr(true);
         break;
       }
       case 3: {
         auto *model = static_cast<StringModel *>(model_[attr_index].get());
         model->squid_.Decompress(&decoder_, &byte_reader_);
-        // tuple->attr_[attr_index] = model->squid_.GetResultAttr();
+        tuple->attr_[attr_index] = model->squid_.GetResultAttr();
         break;
       }
     }

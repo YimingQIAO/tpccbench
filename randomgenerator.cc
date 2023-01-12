@@ -60,7 +60,7 @@ static void generateString(RandomGenerator* generator, char* s, int lower_length
 }
 
 void RandomGenerator::astring(char* s, int lower_length, int upper_length) {
-    generateString(this, s, lower_length, upper_length, 'a', 26);
+    generateString(this, s, lower_length, upper_length, 'a', 3);
 }
 
 void RandomGenerator::nstring(char* s, int lower_length, int upper_length) {

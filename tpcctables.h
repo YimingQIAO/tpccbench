@@ -7,6 +7,7 @@
 
 #include "btree.h"
 #include "tpccdb.h"
+#include "blitz.h"
 
 class CustomerByNameOrdering {
 public:
@@ -110,7 +111,11 @@ public:
     // Stores orderline in the database. Returns a pointer to the database's tuple.
     OrderLine *insertOrderLine(const OrderLine &orderline);
 
+    uint32_t insertOrderLineBlitz(const OrderLine &orderline);
+
     OrderLine *findOrderLine(int32_t w_id, int32_t d_id, int32_t o_id, int32_t number);
+
+    OrderLine *findOrderLineBlitz(int32_t w_id, int32_t d_id, int32_t o_id, int32_t number);
 
     // Creates a new order in the database. Returns a pointer to the database's tuple.
     NewOrder *insertNewOrder(int32_t w_id, int32_t d_id, int32_t o_id);
@@ -122,99 +127,28 @@ public:
     // Stores order in the database. Returns a pointer to the database's tuple.
     History *insertHistory(const History &history);
 
-    void DBSize(int32_t num_warehouses) {
-        // item
-        uint32_t item_size = 0;
-        for (Item &item: items_) item_size += item.Size();
-        printf("item size: %u byte\n", item_size);
+    void DBSize(int64_t num_warehouses);
 
-        // warehouse
-        uint32_t w_size = 0;
-        for (int32_t i = 1; i <= num_warehouses; ++i) {
-            Warehouse *w = findWarehouse(i);
-            assert(w != nullptr);
-            w_size += w->size();
-        }
-        printf("warehouse size: %u byte\n", w_size);
+    void OrderLineBlitz(OrderLineTable &table, int64_t num_warehouses);
 
-        // district
-        uint32_t district_size = 0;
-        for (int32_t i = 1; i <= num_warehouses; ++i) {
-            for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
-                District *d = findDistrict(i, j);
-                assert(d != nullptr);
-                district_size += d->size();
-            }
-        }
-        printf("district size: %u byte\n", district_size);
+    void InitOrderlineCompressor(db_compress::RelationCompressor &compressor,
+                                 db_compress::RelationDecompressor &decompressor,
+                                 int64_t num_warehouses) {
+        orderline_compressor_ = &compressor;
+        orderline_decompressor_ = &decompressor;
 
-        // stock
-        uint32_t stock_size = 0;
-        for (int32_t i = 1; i <= num_warehouses; ++i) {
-            for (int32_t j = 1; j <= Stock::NUM_STOCK_PER_WAREHOUSE; ++j) {
-                Stock *s = findStock(i, j);
-                assert(s != nullptr);
-                stock_size += s->size();
-            }
-        }
-        printf("stock size: %u byte\n", stock_size);
-
-        // customer
-        uint32_t customer_size = 0;
-        for (int32_t i = 1; i <= num_warehouses; ++i) {
-            for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
-                for (int32_t k = 1; k <= Customer::NUM_PER_DISTRICT; ++k) {
-                    Customer *c = findCustomer(i, j, k);
-                    assert(c != nullptr);
-                    customer_size += c->size();
-                }
-            }
-        }
-        printf("customer size: %u byte\n", customer_size);
-
-        // order
-        uint32_t order_size = 0;
-        for (int32_t i = 1; i <= num_warehouses; ++i) {
-            for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
-                for (int32_t k = 1; k <= Order::INITIAL_ORDERS_PER_DISTRICT; ++k) {
-                    Order *o = findOrder(i, j, k);
-                    assert(o != nullptr);
-                    order_size += o->size();
-                }
-            }
-        }
-        printf("order size: %u byte\n", order_size);
-
-        // orderline
-        uint32_t ol_size = 0;
+        uint32_t ol_blitz_size = 0;
         for (int32_t i = 1; i <= num_warehouses; ++i) {
             for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
                 for (int32_t k = 1; k <= Order::INITIAL_ORDERS_PER_DISTRICT; ++k) {
                     for (int32_t l = 1; l <= Order::MAX_OL_CNT; ++l) {
                         OrderLine *ol = findOrderLine(i, j, k, l);
-                        if (ol != nullptr) ol_size += ol->size();
+                        if (ol != nullptr) ol_blitz_size += insertOrderLineBlitz(*ol);
                     }
                 }
             }
         }
-        printf("orderline size: %u byte\n", ol_size);
-
-        // new order
-        uint32_t no_size = 0;
-        for (int32_t i = 1; i <= num_warehouses; ++i) {
-            for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
-                for (int32_t k = 1; k <= Order::INITIAL_ORDERS_PER_DISTRICT; ++k) {
-                    NewOrder *no = findNewOrder(i, j, k);
-                    if (no != nullptr) no_size += no->size();
-                }
-            }
-        }
-        printf("new order size: %u byte\n", no_size);
-
-        // history
-        uint32_t history_size = 0;
-        for (const History *h: history_) history_size += h->size();
-        printf("History size: %u byte\n", history_size);
+        printf("OrderLineBlitz size: %u\n", ol_blitz_size);
     }
 
     static const int KEYS_PER_INTERNAL = 8;
@@ -253,6 +187,40 @@ private:
         }
     }
 
+    static db_compress::AttrVector orderlineToAttrVector(const OrderLine &order_line) {
+        db_compress::AttrVector tuple(10);
+        tuple.attr_[0].value_ = order_line.ol_o_id;
+        tuple.attr_[1].value_ = order_line.ol_d_id;
+        tuple.attr_[2].value_ = order_line.ol_w_id;
+        tuple.attr_[3].value_ = order_line.ol_number;
+        tuple.attr_[4].value_ = std::to_string(order_line.ol_i_id);
+        tuple.attr_[5].value_ = order_line.ol_supply_w_id;
+        tuple.attr_[6].value_ = order_line.ol_quantity;
+        tuple.attr_[7].value_ = order_line.ol_amount;
+        tuple.attr_[8].value_ = std::string(order_line.ol_delivery_d,
+                                            order_line.ol_delivery_d + DATETIME_SIZE + 1);
+        tuple.attr_[9].value_ = std::string(order_line.ol_dist_info,
+                                            order_line.ol_dist_info + Stock::DIST + 1);
+        return tuple;
+    }
+
+    static OrderLine attrVectorToOrderLine(db_compress::AttrVector &attrVector) {
+        OrderLine order_line;
+        order_line.ol_o_id = std::get<int>(attrVector.attr_[0].value_);
+        order_line.ol_d_id = std::get<int>(attrVector.attr_[1].value_);
+        order_line.ol_w_id = std::get<int>(attrVector.attr_[2].value_);
+        order_line.ol_number = std::get<int>(attrVector.attr_[3].value_);
+        order_line.ol_i_id = std::stoi(std::get<std::string>(attrVector.attr_[4].value_));
+        order_line.ol_supply_w_id = std::get<int>(attrVector.attr_[5].value_);
+        order_line.ol_quantity = std::get<int>(attrVector.attr_[6].value_);
+        order_line.ol_amount = std::get<double>(attrVector.attr_[7].value_);
+        std::string delivery_d = std::get<std::string>(attrVector.attr_[8].value_);
+        std::string dist_info = std::get<std::string>(attrVector.attr_[9].value_);
+        memcpy(order_line.ol_delivery_d, delivery_d.c_str(), DATETIME_SIZE + 1);
+        memcpy(order_line.ol_dist_info, dist_info.c_str(), Stock::DIST + 1);
+        return order_line;
+    }
+
     // TODO: Use a data structure that supports deletes, appends, and sparse ranges.
     // Using a vector instead of a BPlusTree reduced the new order run time by 3.65us. This was an
     // improvement of 12%. It also saved 4141kB of RSS.
@@ -268,6 +236,10 @@ private:
     // TODO: Tune the size of this tree for the bigger keys?
     BPlusTree<int64_t, Order *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> orders_by_customer_;
     BPlusTree<int32_t, OrderLine *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> orderlines_;
+    BPlusTree<int32_t, std::vector<uint8_t> *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> orderlines_blitz_;
+    db_compress::RelationCompressor *orderline_compressor_;
+    db_compress::RelationDecompressor *orderline_decompressor_;
+    OrderLine ol_buffer_;
     // TODO: Implement btree lower_bound?
     typedef std::map<int64_t, NewOrder *> NewOrderMap;
     NewOrderMap neworders_;
