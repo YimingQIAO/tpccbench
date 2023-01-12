@@ -59,7 +59,8 @@ int main(int argc, const char *argv[]) {
     }
     int64_t end = clock->getMicroseconds();
     printf("%" PRId64 " ms\n", (end - begin + 500) / 1000);
-    tables->DBSize(num_warehouses);
+    uint32_t total_size, ol_size;
+    tables->DBSize(num_warehouses, total_size, ol_size);
 
     // Transform table into blitz format and train compression model
     OrderLineTable order_line_blitz;
@@ -70,7 +71,9 @@ int main(int argc, const char *argv[]) {
     BlitzLearning(order_line_blitz, compressor);
     db_compress::RelationDecompressor decompressor("model.blitz", schema, kBlockSize);
     decompressor.InitWithoutIndex();
-    tables->InitOrderlineCompressor(compressor, decompressor, num_warehouses);
+    uint32_t cm_ol_size = tables->InitOrderlineCompressor(compressor, decompressor, num_warehouses);
+    printf("Size: %u -> %u (%.3f)\n", total_size, total_size - ol_size + cm_ol_size,
+           (float) (total_size - ol_size + cm_ol_size) / total_size);
 
     // Change the constants for run
     random = new tpcc::RealRandomGenerator();

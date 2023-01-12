@@ -173,7 +173,7 @@ struct Stock {
 
 // YYYY-MM-DD HH:MM:SS This is supposed to be a date/time field from Jan 1st 1900 -
 // Dec 31st 2100 with a resolution of 1 second. See TPC-C 1.3.1.
-static const int DATETIME_SIZE = 14;
+static const int DATETIME_SIZE = 19;
 
 struct Customer {
     static constexpr float INITIAL_CREDIT_LIM = 50000.00;
@@ -254,7 +254,7 @@ struct Order {
     static const int MIN_OL_CNT = 5;
     static const int MAX_OL_CNT = 15;
     static const int INITIAL_ALL_LOCAL = 1;
-    static const int INITIAL_ORDERS_PER_DISTRICT = 3000;
+    static const int INITIAL_ORDERS_PER_DISTRICT = 30000;
     // See TPC-C 1.3.1 (page 15)
     static const int MAX_ORDER_ID = 10000000;
 

@@ -82,7 +82,8 @@ int32_t TPCCTables::stockLevel(int32_t warehouse_id, int32_t district_id, int32_
     for (int order_id = o_id - STOCK_LEVEL_ORDERS; order_id < o_id; ++order_id) {
         // HACK: We shouldn't rely on MAX_OL_CNT. See comment above.
         for (int line_number = 1; line_number <= Order::MAX_OL_CNT; ++line_number) {
-            OrderLine *line = findOrderLine(warehouse_id, district_id, order_id, line_number);
+            db_compress::AttrVector *line = findOrderLineBlitz(warehouse_id, district_id, order_id,
+                                                               line_number);
             if (line == NULL) {
                 // We can break since we have reached the end of the lines for this order.
                 // TODO: A btree iterate in (w_id, d_id, o_id) order would be a clean way to do this
@@ -97,9 +98,10 @@ int32_t TPCCTables::stockLevel(int32_t warehouse_id, int32_t district_id, int32_
             }
 
             // Check if s_quantity < threshold
-            Stock *stock = findStock(warehouse_id, line->ol_i_id);
+            int32_t ol_i_id = std::stoi(std::get<std::string>(line->attr_[4].value_));
+            Stock *stock = findStock(warehouse_id, ol_i_id);
             if (stock->s_quantity < threshold) {
-                s_i_ids.push_back(line->ol_i_id);
+                s_i_ids.push_back(ol_i_id);
             }
         }
     }
@@ -147,13 +149,16 @@ void TPCCTables::internalOrderStatus(Customer *customer, OrderStatusOutput *outp
 
     output->lines.resize(order->o_ol_cnt);
     for (int32_t line_number = 1; line_number <= order->o_ol_cnt; ++line_number) {
-        OrderLine *line = findOrderLine(customer->c_w_id, customer->c_d_id, order->o_id,
-                                        line_number);
-        output->lines[line_number - 1].ol_i_id = line->ol_i_id;
-        output->lines[line_number - 1].ol_supply_w_id = line->ol_supply_w_id;
-        output->lines[line_number - 1].ol_quantity = line->ol_quantity;
-        output->lines[line_number - 1].ol_amount = line->ol_amount;
-        strcpy(output->lines[line_number - 1].ol_delivery_d, line->ol_delivery_d);
+        db_compress::AttrVector *line = findOrderLineBlitz(customer->c_w_id, customer->c_d_id,
+                                                           order->o_id,
+                                                           line_number);
+        output->lines[line_number - 1].ol_i_id = std::stoi(
+                std::get<std::string>(line->attr_[4].value_));
+        output->lines[line_number - 1].ol_supply_w_id = std::get<int>(line->attr_[5].value_);
+        output->lines[line_number - 1].ol_quantity = std::get<int>(line->attr_[6].value_);
+        output->lines[line_number - 1].ol_amount = std::get<double>(line->attr_[7].value_);
+        strcpy(output->lines[line_number - 1].ol_delivery_d,
+               std::get<std::string>(line->attr_[8].value_).c_str());
     }
 #ifndef NDEBUG
     // Verify that none of the other OrderLines exist.
@@ -250,19 +255,30 @@ bool TPCCTables::newOrderHome(int32_t warehouse_id, int32_t district_id, int32_t
         (*undo)->inserted(no);
     }
 
+    // Replace orderline with db_compress::AttrVector
+    ol_buffer_.attr_[0].value_ = output->o_id;
+    ol_buffer_.attr_[1].value_ = district_id;
+    ol_buffer_.attr_[2].value_ = warehouse_id;
+    ol_buffer_.attr_[8].value_ = "";
+
     OrderLine line;
-    line.ol_o_id = output->o_id;
-    line.ol_d_id = district_id;
-    line.ol_w_id = warehouse_id;
-    memset(line.ol_delivery_d, 0, DATETIME_SIZE + 1);
+//    line.ol_o_id = output->o_id;
+//    line.ol_d_id = district_id;
+//    line.ol_w_id = warehouse_id;
+//    memset(line.ol_delivery_d, 0, DATETIME_SIZE + 1);
 
     output->items.resize(items.size());
     output->total = 0;
     for (int i = 0; i < items.size(); ++i) {
-        line.ol_number = i + 1;
-        line.ol_i_id = items[i].i_id;
-        line.ol_supply_w_id = items[i].ol_supply_w_id;
-        line.ol_quantity = items[i].ol_quantity;
+        ol_buffer_.attr_[3].value_ = i + 1;
+        ol_buffer_.attr_[4].value_ = std::to_string(items[i].i_id);
+        ol_buffer_.attr_[5].value_ = items[i].ol_supply_w_id;
+        ol_buffer_.attr_[6].value_ = items[i].ol_quantity;
+
+//        line.ol_number = i + 1;
+//        line.ol_i_id = items[i].i_id;
+//        line.ol_supply_w_id = items[i].ol_supply_w_id;
+//        line.ol_quantity = items[i].ol_quantity;
 
         // Vertical Partitioning HACK: We read s_dist_xx from our local replica, assuming that
         // these columns are replicated everywhere.
@@ -270,11 +286,12 @@ bool TPCCTables::newOrderHome(int32_t warehouse_id, int32_t district_id, int32_t
         // replicas. Try the "two round" version in the future.
         Stock *stock = findStock(items[i].ol_supply_w_id, items[i].i_id);
         assert(sizeof(line.ol_dist_info) == sizeof(stock->s_dist[district_id]));
-        memcpy(line.ol_dist_info, stock->s_dist[district_id], sizeof(line.ol_dist_info));
+        ol_buffer_.attr_[9].value_ = stock->s_dist[district_id];
+        // memcpy(line.ol_dist_info, stock->s_dist[district_id], sizeof(line.ol_dist_info));
         // Since we *need* to replicate s_dist_xx columns, might as well replicate s_data
         // Makes it 290 bytes per tuple, or ~28 MB per warehouse.
-        bool stock_is_original = (strstr(stock->s_data, "ORIGINAL") != NULL);
-        if (stock_is_original && strstr(item_tuples[i]->i_data, "ORIGINAL") != NULL) {
+        bool stock_is_original = (strstr(stock->s_data, "original") != NULL);
+        if (stock_is_original && strstr(item_tuples[i]->i_data, "original") != NULL) {
             output->items[i].brand_generic = NewOrderOutput::ItemInfo::BRAND;
         } else {
             output->items[i].brand_generic = NewOrderOutput::ItemInfo::GENERIC;
@@ -285,12 +302,14 @@ bool TPCCTables::newOrderHome(int32_t warehouse_id, int32_t district_id, int32_t
         output->items[i].i_price = item_tuples[i]->i_price;
         output->items[i].ol_amount =
                 static_cast<float>(items[i].ol_quantity) * item_tuples[i]->i_price;
-        line.ol_amount = output->items[i].ol_amount;
+        ol_buffer_.attr_[7].value_ = output->items[i].ol_amount;
+        // line.ol_amount = output->items[i].ol_amount;
         output->total += output->items[i].ol_amount;
-        OrderLine *ol = insertOrderLine(line);
         if (undo != NULL) {
+            OrderLine *ol = insertOrderLine(line);
             (*undo)->inserted(ol);
-        }
+        } else
+            insertOrderLineBlitz(ol_buffer_);
     }
 
     // Perform the "remote" part for this warehouse
@@ -565,14 +584,14 @@ void TPCCTables::delivery(int32_t warehouse_id, int32_t carrier_id, const char *
         float total = 0;
         // TODO: Select based on (w_id, d_id, o_id) rather than using ol_number?
         for (int32_t i = 1; i <= o->o_ol_cnt; ++i) {
-            OrderLine *line = findOrderLine(warehouse_id, d_id, o_id, i);
+            db_compress::AttrVector *line = findOrderLineBlitz(warehouse_id, d_id, o_id, i);
             if (undo != NULL) {
-                (*undo)->save(line);
+                OrderLine ol = attrVectorToOrderLine(*line);
+                (*undo)->save(&ol);
             }
-            assert(0 == strlen(line->ol_delivery_d));
-            strcpy(line->ol_delivery_d, now);
-            assert(strlen(line->ol_delivery_d) == DATETIME_SIZE);
-            total += line->ol_amount;
+            line->attr_[8].value_ = now;
+            assert(std::get<std::string>(line->attr_[8].value_).size() == DATETIME_SIZE);
+            total += std::get<double>(line->attr_[7].value_);
         }
 
         Customer *c = findCustomer(warehouse_id, d_id, o->o_c_id);
@@ -869,11 +888,12 @@ OrderLine *TPCCTables::insertOrderLine(const OrderLine &orderline) {
     return insert(&orderlines_, key, orderline);
 }
 
-uint32_t TPCCTables::insertOrderLineBlitz(const OrderLine &orderline) {
-    int32_t key = makeOrderLineKey(
-            orderline.ol_w_id, orderline.ol_d_id, orderline.ol_o_id, orderline.ol_number);
-    db_compress::AttrVector tuple = orderlineToAttrVector(orderline);
-    std::vector<uint8_t> compressed = orderline_compressor_->TransformTupleToBits(tuple);
+uint32_t TPCCTables::insertOrderLineBlitz(db_compress::AttrVector &orderline) {
+    int32_t key = makeOrderLineKey(std::get<int>(orderline.attr_[2].value_),
+                                   std::get<int>(orderline.attr_[1].value_),
+                                   std::get<int>(orderline.attr_[0].value_),
+                                   std::get<int>(orderline.attr_[3].value_));
+    std::vector<uint8_t> compressed = orderline_compressor_->TransformTupleToBits(orderline);
     insert(&orderlines_blitz_, key, compressed);
     return compressed.size();
 }
@@ -882,13 +902,12 @@ OrderLine *TPCCTables::findOrderLine(int32_t w_id, int32_t d_id, int32_t o_id, i
     return find(orderlines_, makeOrderLineKey(w_id, d_id, o_id, number));
 }
 
-OrderLine *
+db_compress::AttrVector *
 TPCCTables::findOrderLineBlitz(int32_t w_id, int32_t d_id, int32_t o_id, int32_t number) {
     std::vector<uint8_t> *compressed = find(orderlines_blitz_,
                                             makeOrderLineKey(w_id, d_id, o_id, number));
-    db_compress::AttrVector tuple(10);
-    orderline_decompressor_->TransformBytesToTuple(compressed, &tuple);
-    ol_buffer_ = attrVectorToOrderLine(tuple);
+    if (compressed == nullptr) return nullptr;
+    orderline_decompressor_->TransformBytesToTuple(compressed, &ol_buffer_);
     return &ol_buffer_;
 }
 
@@ -962,7 +981,7 @@ void TPCCTables::eraseHistory(const History *history) {
     delete history;
 }
 
-void TPCCTables::DBSize(int64_t num_warehouses) {
+void TPCCTables::DBSize(int64_t num_warehouses, uint32_t &total_size, uint32_t &ol_size) {
     // item
     uint32_t item_size = 0;
     for (Item &item: items_) item_size += item.Size();
@@ -1026,7 +1045,7 @@ void TPCCTables::DBSize(int64_t num_warehouses) {
     printf("order size: %u byte\n", order_size);
 
     // orderline
-    uint32_t ol_size = 0;
+    ol_size = 0;
     for (int32_t i = 1; i <= num_warehouses; ++i) {
         for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
             for (int32_t k = 1; k <= Order::INITIAL_ORDERS_PER_DISTRICT; ++k) {
@@ -1055,17 +1074,35 @@ void TPCCTables::DBSize(int64_t num_warehouses) {
     uint32_t history_size = 0;
     for (const History *h: history_) history_size += h->size();
     printf("History size: %u byte\n", history_size);
+
+    total_size =
+            item_size + w_size + district_size + stock_size + customer_size + order_size + ol_size +
+            no_size + history_size;
 }
 
 void TPCCTables::OrderLineBlitz(OrderLineTable &table, int64_t num_warehouses) {
+    std::ofstream ol_f("orderline.csv", std::ofstream::trunc);
     for (int32_t i = 1; i <= num_warehouses; ++i) {
         for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
             for (int32_t k = 1; k <= Order::INITIAL_ORDERS_PER_DISTRICT; ++k) {
                 for (int32_t l = 1; l <= Order::MAX_OL_CNT; ++l) {
                     OrderLine *ol = findOrderLine(i, j, k, l);
+                    if (ol == nullptr) continue;
                     table.pushTuple(ol);
+                    // write data to csv file
+                    ol_f << ol->ol_o_id << ","
+                         << ol->ol_d_id << ","
+                         << ol->ol_w_id << ","
+                         << ol->ol_number << ","
+                         << ol->ol_i_id << ","
+                         << ol->ol_supply_w_id << ","
+                         << ol->ol_quantity << ","
+                         << ol->ol_amount << ","
+                         << ol->ol_delivery_d << ","
+                         << ol->ol_dist_info << std::endl;
                 }
             }
         }
     }
+    ol_f.close();
 }

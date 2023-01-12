@@ -35,11 +35,11 @@ TEST_F(RandomGeneratorTest, NumberExcluding) {
 
 TEST_F(RandomGeneratorTest, astring) {
     char buffer[11];
-    generator_.astring(buffer, 5, 10);
+        generator_.astring(buffer, 5, 10, 26);
     EXPECT_EQ(0, strcmp("aaaaa", buffer));
 
     generator_.minimum_ = false;
-    generator_.astring(buffer, 5, 10);
+        generator_.astring(buffer, 5, 10, 26);
     EXPECT_EQ(0, strcmp("zzzzzzzzzz", buffer));
 }
 

@@ -72,7 +72,7 @@ public:
                 {kEnum,    15, 0},
                 {kString,  0,  0},
                 {kEnum,    5,  0},
-                {kEnum,    5,  0},
+                {kEnum,    10,  0},
                 {kDouble,  0,  0.0025},
                 {kString,  0,  0},
                 {kString,  0,  0}

@@ -39,7 +39,7 @@ public:
     // inclusive.
     int numberExcluding(int lower, int upper, int excluding);
 
-    void astring(char* s, int lower_length, int upper_length);
+    void astring(char *s, int lower_length, int upper_length, int cardinality);
     void nstring(char* s, int lower_length, int upper_length);
 
     // Fill name with a random last name, generated according to TPC-C rules. Limits the customer
