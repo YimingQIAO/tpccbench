@@ -66,16 +66,16 @@ class OrderLineTable : public BlitzTable {
 public:
     OrderLineTable() {
         config_ = {
-                {kInteger, 0,  0.5},
-                {kEnum,    10, 0},
-                {kEnum,    5,  0},
-                {kEnum,    15, 0},
-                {kString,  0,  0},
-                {kEnum,    5,  0},
-                {kEnum,    10,  0},
-                {kDouble,  0,  0.0025},
-                {kString,  0,  0},
-                {kString,  0,  0}
+                {kInteger, 0,    0.5},
+                {kEnum,    10,   0},
+                {kEnum,    5,    0},
+                {kEnum,    15,   0},
+                {kEnum,    1000, 0},
+                {kEnum,    5,    0},
+                {kEnum,    10,   0},
+                {kDouble,  0,    0.0025},
+                {kString,  0,    0},
+                {kString,  0,    0}
         };
 
         RegisterAttrInterpreter();

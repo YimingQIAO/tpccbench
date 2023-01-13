@@ -200,7 +200,7 @@ private:
         tuple.attr_[1].value_ = order_line.ol_d_id;
         tuple.attr_[2].value_ = order_line.ol_w_id;
         tuple.attr_[3].value_ = order_line.ol_number;
-        tuple.attr_[4].value_ = std::to_string(order_line.ol_i_id);
+        tuple.attr_[4].value_ = order_line.ol_i_id;
         tuple.attr_[5].value_ = order_line.ol_supply_w_id;
         tuple.attr_[6].value_ = order_line.ol_quantity;
         tuple.attr_[7].value_ = order_line.ol_amount;
@@ -216,7 +216,7 @@ private:
         order_line.ol_d_id = std::get<int>(attrVector.attr_[1].value_);
         order_line.ol_w_id = std::get<int>(attrVector.attr_[2].value_);
         order_line.ol_number = std::get<int>(attrVector.attr_[3].value_);
-        order_line.ol_i_id = std::stoi(std::get<std::string>(attrVector.attr_[4].value_));
+        order_line.ol_i_id = std::get<int>(attrVector.attr_[4].value_);
         order_line.ol_supply_w_id = std::get<int>(attrVector.attr_[5].value_);
         order_line.ol_quantity = std::get<int>(attrVector.attr_[6].value_);
         order_line.ol_amount = std::get<double>(attrVector.attr_[7].value_);

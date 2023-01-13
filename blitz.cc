@@ -26,7 +26,7 @@ bool OrderLineTable::pushTuple(OrderLine *order_line) {
     tuple.attr_[1].value_ = order_line->ol_d_id;
     tuple.attr_[2].value_ = order_line->ol_w_id;
     tuple.attr_[3].value_ = order_line->ol_number;
-    tuple.attr_[4].value_ = std::to_string(order_line->ol_i_id);
+    tuple.attr_[4].value_ = order_line->ol_i_id;
     tuple.attr_[5].value_ = order_line->ol_supply_w_id;
     tuple.attr_[6].value_ = order_line->ol_quantity;
     tuple.attr_[7].value_ = order_line->ol_amount;

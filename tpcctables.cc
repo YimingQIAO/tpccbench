@@ -98,7 +98,7 @@ int32_t TPCCTables::stockLevel(int32_t warehouse_id, int32_t district_id, int32_
             }
 
             // Check if s_quantity < threshold
-            int32_t ol_i_id = std::stoi(std::get<std::string>(line->attr_[4].value_));
+            int32_t ol_i_id = std::get<int>(line->attr_[4].value_);
             Stock *stock = findStock(warehouse_id, ol_i_id);
             if (stock->s_quantity < threshold) {
                 s_i_ids.push_back(ol_i_id);
@@ -152,8 +152,7 @@ void TPCCTables::internalOrderStatus(Customer *customer, OrderStatusOutput *outp
         db_compress::AttrVector *line = findOrderLineBlitz(customer->c_w_id, customer->c_d_id,
                                                            order->o_id,
                                                            line_number);
-        output->lines[line_number - 1].ol_i_id = std::stoi(
-                std::get<std::string>(line->attr_[4].value_));
+        output->lines[line_number - 1].ol_i_id = std::get<int>(line->attr_[4].value_);
         output->lines[line_number - 1].ol_supply_w_id = std::get<int>(line->attr_[5].value_);
         output->lines[line_number - 1].ol_quantity = std::get<int>(line->attr_[6].value_);
         output->lines[line_number - 1].ol_amount = std::get<double>(line->attr_[7].value_);
@@ -271,7 +270,7 @@ bool TPCCTables::newOrderHome(int32_t warehouse_id, int32_t district_id, int32_t
     output->total = 0;
     for (int i = 0; i < items.size(); ++i) {
         ol_buffer_.attr_[3].value_ = i + 1;
-        ol_buffer_.attr_[4].value_ = std::to_string(items[i].i_id);
+        ol_buffer_.attr_[4].value_ = items[i].i_id;
         ol_buffer_.attr_[5].value_ = items[i].ol_supply_w_id;
         ol_buffer_.attr_[6].value_ = items[i].ol_quantity;
 
@@ -290,8 +289,8 @@ bool TPCCTables::newOrderHome(int32_t warehouse_id, int32_t district_id, int32_t
         // memcpy(line.ol_dist_info, stock->s_dist[district_id], sizeof(line.ol_dist_info));
         // Since we *need* to replicate s_dist_xx columns, might as well replicate s_data
         // Makes it 290 bytes per tuple, or ~28 MB per warehouse.
-        bool stock_is_original = (strstr(stock->s_data, "original") != NULL);
-        if (stock_is_original && strstr(item_tuples[i]->i_data, "original") != NULL) {
+        bool stock_is_original = (strstr(stock->s_data, "ori") != NULL);
+        if (stock_is_original && strstr(item_tuples[i]->i_data, "ori") != NULL) {
             output->items[i].brand_generic = NewOrderOutput::ItemInfo::BRAND;
         } else {
             output->items[i].brand_generic = NewOrderOutput::ItemInfo::GENERIC;

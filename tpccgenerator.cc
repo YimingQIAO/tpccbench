@@ -35,7 +35,7 @@ TPCCGenerator::~TPCCGenerator() {
 static void setOriginal(tpcc::RandomGenerator *random, char *s) {
     int length = static_cast<int>(strlen(s));
     int position = random->number(0, length - 8);
-    memcpy(s + position, "original", 8);
+    memcpy(s + position, "ori", 8);
 }
 
 void TPCCGenerator::generateItem(int32_t id, bool original, Item *item) {
@@ -282,7 +282,8 @@ void TPCCGenerator::makeWarehouseWithoutStock(TPCCTables *tables, int32_t w_id) 
             bool new_order = scaling - new_orders_per_district_ < o_id;
             Order o;
             int32_t customer_id = permutation[o_id - 1];
-            if (customer_id > customers_per_district_) customer_id %= customers_per_district_;
+            if (customer_id > customers_per_district_)
+                customer_id = std::max(customer_id % (customers_per_district_ + 1), 1);
             generateOrder(o_id, customer_id, d_id, w_id, new_order, &o);
             tables->insertOrder(o);
 
