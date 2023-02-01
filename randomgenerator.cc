@@ -68,6 +68,10 @@ namespace tpcc {
         generateString(this, s, lower_length, upper_length, '0', 10);
     }
 
+    void RandomGenerator::distInfo(char *s, int d_id, int w_id, int i_id) {
+        snprintf(s, 24 + 1, "distInfoStr#%02d#%02d#%06d", d_id, w_id, i_id);
+    }
+
     void RandomGenerator::lastName(char *c_last, int max_cid) {
         makeLastName(NURand(255, 0, std::min(999, max_cid - 1)), c_last);
     }
@@ -120,7 +124,7 @@ namespace tpcc {
         return array;
     }
 
-// Defined by TPC-C 4.3.2.3.
+    // Defined by TPC-C 4.3.2.3.
     void makeLastName(int num, char *name) {
         static const char *const SYLLABLES[] = {
                 "BAR", "OUGHT", "ABLE", "PRI", "PRES", "ESE", "ANTI", "CALLY", "ATION", "EING",};

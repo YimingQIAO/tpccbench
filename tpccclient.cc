@@ -156,6 +156,7 @@ void TPCCClient::doOne() {
         doOrderStatus();
     } else if (x <= 12+43) { // 43%
         doPayment();
+        //doNewOrder();
     } else {  // 45%
         ASSERT(x > 100-45);
         doNewOrder();
