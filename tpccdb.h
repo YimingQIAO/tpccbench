@@ -1,7 +1,7 @@
 #ifndef TPCCDB_H__
 #define TPCCDB_H__
 
-#include <stdint.h>
+#include <cstdint>
 
 #include <cstring>
 #include <unordered_map>

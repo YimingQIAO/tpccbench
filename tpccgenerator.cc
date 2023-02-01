@@ -33,7 +33,7 @@ TPCCGenerator::~TPCCGenerator() { delete random_; }
 static void setOriginal(tpcc::RandomGenerator *random, char *s) {
   int length = static_cast<int>(strlen(s));
   int position = random->number(0, length - 8);
-  memcpy(s + position, "ori", 8);
+  memcpy(s + position, "original", 8);
 }
 
 void TPCCGenerator::generateItem(int32_t id, bool original, Item *item) {
