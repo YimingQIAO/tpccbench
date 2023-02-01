@@ -924,18 +924,18 @@ History *TPCCTables::insertHistory(const History &history) {
 
 void TPCCTables::eraseHistory(const History *history) {
     // Search backwards to find the history: it likely was inserted recently (or last)
-    bool found = false;
-    for (int i = static_cast<int>(history_.size()) - 1; i >= 0; --i) {
-        if (history == history_[i]) {
-            if (i != history_.size() - 1) {
-                // erase not at end: move the last element here
-                history_[i] = history_[history_.size() - 1];
-            }
-            found = true;
-            break;
-        }
-    }
-    assert(found);
+//    bool found = false;
+//    for (int i = static_cast<int>(history_.size()) - 1; i >= 0; --i) {
+//        if (history == history_[i]) {
+//            if (i != history_.size() - 1) {
+//                // erase not at end: move the last element here
+//                history_[i] = history_[history_.size() - 1];
+//            }
+//            found = true;
+//            break;
+//        }
+//    }
+//    assert(found);
     // Remove the last element
     history_.pop_back();
     delete history;

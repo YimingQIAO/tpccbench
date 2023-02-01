@@ -20,13 +20,13 @@ public:
             int num_warehouses, int districts_per_warehouse, int customers_per_district);
     ~TPCCClient();
 
-    void doStockLevel();
-    void doOrderStatus();
-    void doDelivery();
-    void doPayment();
-    bool doNewOrder();
+    uint64_t doStockLevel();
+    uint64_t doOrderStatus();
+    uint64_t doDelivery();
+    uint64_t doPayment();
+    uint64_t doNewOrder();
 
-    void doOne();
+    uint64_t doOne();
 
     static const int32_t MIN_STOCK_LEVEL_THRESHOLD = 10;
     static const int32_t MAX_STOCK_LEVEL_THRESHOLD = 20;

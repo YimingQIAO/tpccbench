@@ -14,7 +14,7 @@
 #include "tpccgenerator.h"
 #include "tpcctables.h"
 
-static const int NUM_TRANSACTIONS = 200000;
+static const int NUM_TRANSACTIONS = 1000000;
 
 int main(int argc, const char *argv[]) {
     if (argc != 2) {
@@ -70,14 +70,14 @@ int main(int argc, const char *argv[]) {
                       District::NUM_PER_WAREHOUSE, Customer::NUM_PER_DISTRICT);
     printf("Running... ");
     fflush(stdout);
-    begin = clock->getMicroseconds();
+    uint64_t nanoseconds = 0;
     for (int i = 0; i < NUM_TRANSACTIONS; ++i) {
-        client.doOne();
+        nanoseconds += client.doOne();
     }
-    end = clock->getMicroseconds();
-    int64_t microseconds = end - begin;
+    uint64_t microseconds = nanoseconds / 1000;
     printf("%d transactions in %" PRId64 " ms = %f txns/s\n", NUM_TRANSACTIONS,
-           (microseconds + 500) / 1000, NUM_TRANSACTIONS / (double) microseconds * 1000000.0);
+           (microseconds + 500) / 1000,
+           NUM_TRANSACTIONS / (double) microseconds * 1000000.0);
 
     return 0;
 }
