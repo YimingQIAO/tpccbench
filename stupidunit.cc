@@ -178,7 +178,9 @@ void Test::printErrors() const {
 }
 
 const string& Test::stupidunitError(size_t i) const {
-    ASSERT(0 <= i && i < errors_.size());
+    // ASSERT(0 <= i && i < errors_.size());
+    // error: comparison of unsigned expression in ‘>= 0’ is always true [-Werror=type-limits]
+    ASSERT(i < errors_.size());
     return errors_[i];
 }
 
