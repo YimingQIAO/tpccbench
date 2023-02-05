@@ -68,7 +68,7 @@ namespace db_compress {
               dynamic_list_(GetPredictorCap(predictor_list)),
               dynamic_list_index_(predictor_list.size()) {
         for (size_t i = 0; i < predictor_list_size_; ++i)
-            predictor_interpreter_[i] = GetAttrInterpreter(attr_type[predictor_list[i]]);
+            predictor_interpreter_[i] = GetAttrInterpreter(predictor_list[i]);
     }
 
     CategoricalSquID *TableCategorical::GetSquID(const AttrVector &tuple) {

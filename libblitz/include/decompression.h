@@ -88,7 +88,7 @@ class RelationDecompressor {
 
   void InitWithoutIndex();
 
-  void TransformBytesToTuple(std::vector<uint8_t> *bytes, AttrVector *tuple);
+  void TransformBytesToTuple(std::vector<uint8_t> *bytes, AttrVector *tuple, int stop_idx);
 
  private:
   Schema schema_;

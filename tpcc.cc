@@ -15,12 +15,18 @@
 #include "tpccgenerator.h"
 #include "tpcctables.h"
 
-static const int NUM_TRANSACTIONS = 1000000;
+static const int NUM_TRANSACTIONS = 500000;
 
 int main(int argc, const char *argv[]) {
-    if (argc != 2) {
-        fprintf(stderr, "tpcc [num warehouses]\n");
+    if (argc != 3) {
+        fprintf(stderr,
+                "tpcc [num warehouses] [mode]\n Option: mode = 0 (default) for running test, mode = 1 for generating data\n");
         exit(1);
+    }
+
+    bool download_mode = false;
+    if (atoi(argv[2]) == 1) {
+        download_mode = true;
     }
 
     long num_warehouses = strtol(argv[1], NULL, 10);
@@ -52,9 +58,9 @@ int main(int argc, const char *argv[]) {
     fflush(stdout);
     char now[Clock::DATETIME_SIZE + 1];
     clock->getDateTimestamp(now);
-    TPCCGenerator generator(
-            random, now, Item::NUM_ITEMS, District::NUM_PER_WAREHOUSE,
-            Customer::NUM_PER_DISTRICT, NewOrder::INITIAL_NUM_PER_DISTRICT);
+    TPCCGenerator generator(random, now, Item::NUM_ITEMS, District::NUM_PER_WAREHOUSE, Customer::NUM_PER_DISTRICT,
+                            NewOrder::INITIAL_NUM_PER_DISTRICT);
+
     int64_t begin = clock->getMicroseconds();
     generator.makeItemsTable(tables);
     for (int i = 0; i < num_warehouses; ++i) {
@@ -62,66 +68,87 @@ int main(int argc, const char *argv[]) {
     }
     int64_t end = clock->getMicroseconds();
     printf("%" PRId64 " ms\n", (end - begin + 500) / 1000);
+
     uint32_t initial_total_size, uncompressed_ol_size;
     std::cout << "----------------- Initial ----------------- \n";
     tables->DBSize(num_warehouses, initial_total_size, uncompressed_ol_size,
                    NUM_TRANSACTIONS, true);
+    if (download_mode) {
+        // download the date
+        tables->OrderlineToCSV(num_warehouses);
+        tables->StockToCSV(num_warehouses);
+    } else {
+        // Transform table into blitz format and train compression model
+        // order line
+        OrderLineBlitz order_line_blitz;
+        tables->OrderLineToBlitz(order_line_blitz, num_warehouses);
+        db_compress::RelationCompressor ol_compressor("ol_model.blitz", order_line_blitz.schema(),
+                                                      order_line_blitz.compressionConfig(), kBlockSize);
+        BlitzLearning(order_line_blitz, ol_compressor);
+        db_compress::RelationDecompressor ol_decompressor("ol_model.blitz", order_line_blitz.schema(), kBlockSize);
+        ol_decompressor.InitWithoutIndex();
+        tables->MountCompressor(ol_compressor, ol_decompressor, num_warehouses, "orderline");
+        db_compress::NextTableAttrInterpreter();
 
-    // Transform table into blitz format and train compression model
-    OrderLineTable order_line_blitz;
-    tables->OrderLineBlitz(order_line_blitz, num_warehouses);
-    db_compress::CompressionConfig config = order_line_blitz.compressionConfig();
-    db_compress::Schema schema = order_line_blitz.schema();
-    db_compress::RelationCompressor compressor("model.blitz", schema, config,
-                                               kBlockSize);
-    BlitzLearning(order_line_blitz, compressor);
-    db_compress::RelationDecompressor decompressor("model.blitz", schema,
-                                                   kBlockSize);
-    decompressor.InitWithoutIndex();
-    uint32_t initial_ol_cm_size =
-            tables->InitOrderlineCompressor(compressor, decompressor, num_warehouses);
+        // stock
+        StockBlitz stock_blitz;
+        tables->StockToBlitz(stock_blitz, num_warehouses);
+        db_compress::RelationCompressor stock_compressor("stock_model.blitz", stock_blitz.schema(),
+                                                         stock_blitz.compressionConfig(), kBlockSize);
+        BlitzLearning(stock_blitz, stock_compressor);
+        db_compress::RelationDecompressor stock_decompressor("stock_model.blitz", stock_blitz.schema(), kBlockSize);
+        stock_decompressor.InitWithoutIndex();
+        tables->MountCompressor(stock_compressor, stock_decompressor, num_warehouses, "stock");
+        db_compress::NextTableAttrInterpreter();
 
-    // Change the constants for run
-    random = new tpcc::RealRandomGenerator();
-    random->setC(tpcc::NURandC::makeRandomForRun(random, cLoad));
+        std::cout << "---------------- Compressed ---------------- \n";
+        uint32_t orderline_blitz_size = tables->BlitzSize(num_warehouses, "orderline", NUM_TRANSACTIONS);
+        uint32_t stock_blitz_size = tables->BlitzSize(num_warehouses, "stock", NUM_TRANSACTIONS);
+        printf("orderline blitz size: %u\nstock blitz size: %u\n", orderline_blitz_size, stock_blitz_size);
 
-    // Client owns all the parameters
-    TPCCClient client(clock, random, tables, Item::NUM_ITEMS,
-                      static_cast<int>(num_warehouses),
-                      District::NUM_PER_WAREHOUSE, Customer::NUM_PER_DISTRICT);
-    printf("Running... ");
-    fflush(stdout);
+        // Change the constants for run
+        random = new tpcc::RealRandomGenerator();
+        random->setC(tpcc::NURandC::makeRandomForRun(random, cLoad));
 
-    uint64_t nanoseconds = 0;
-    for (int i = 0; i < NUM_TRANSACTIONS; ++i) {
-        nanoseconds += client.doOne();
+        // Client owns all the parameters
+        TPCCClient client(clock, random, tables, Item::NUM_ITEMS, static_cast<int>(num_warehouses),
+                          District::NUM_PER_WAREHOUSE, Customer::NUM_PER_DISTRICT);
+        printf("Running... ");
+        fflush(stdout);
+
+        uint64_t nanoseconds = 0;
+        for (int i = 0; i < NUM_TRANSACTIONS; ++i) {
+            nanoseconds += client.doOne();
+        }
+        uint64_t microseconds = nanoseconds / 1000;
+        printf("%d transactions in %" PRId64 " ms = %f txns/s\n", NUM_TRANSACTIONS,
+               (microseconds + 500) / 1000, NUM_TRANSACTIONS / (double) microseconds * 1000000.0);
+        orderline_blitz_size = tables->BlitzSize(num_warehouses, "orderline", NUM_TRANSACTIONS);
+        stock_blitz_size = tables->BlitzSize(num_warehouses, "stock", NUM_TRANSACTIONS);
+        printf("orderline blitz size: %u\nstock blitz size: %u\n", orderline_blitz_size, stock_blitz_size);
+
+//        std::cout << "----------------- Result ----------------- \n";
+//        double ol_compression_ratio =
+//                (double) initial_ol_cm_size / uncompressed_ol_size;
+//
+//        uint32_t end_total_size;
+//        uint32_t initial_cm_total_size, end_cm_total_size;
+//        uint32_t end_ol_cm_size;
+//
+//        initial_cm_total_size =
+//                initial_total_size - uncompressed_ol_size + initial_ol_cm_size;
+//        printf("After load Size: %u -> %u (%.3f)\n", initial_total_size,
+//               initial_cm_total_size,
+//               (float) (initial_cm_total_size) / initial_total_size);
+//
+//        tables->DBSize(num_warehouses, end_total_size, uncompressed_ol_size,
+//                       NUM_TRANSACTIONS, false);
+//        end_ol_cm_size = tables->OrderlineBlitzSize(num_warehouses, NUM_TRANSACTIONS);
+//        end_cm_total_size = end_total_size - uncompressed_ol_size + end_ol_cm_size;
+//        end_total_size = end_total_size - uncompressed_ol_size +
+//                         (end_ol_cm_size / ol_compression_ratio);
+//        printf("After transaction Size: %u -> %u (%.3f)\n", end_total_size,
+//               end_cm_total_size, (float) (end_cm_total_size) / end_total_size);
     }
-    uint64_t microseconds = nanoseconds / 1000;
-    printf("%d transactions in %" PRId64 " ms = %f txns/s\n", NUM_TRANSACTIONS,
-           (microseconds + 500) / 1000,
-           NUM_TRANSACTIONS / (double) microseconds * 1000000.0);
-
-    std::cout << "----------------- Result ----------------- \n";
-    double ol_compression_ratio =
-            (double) initial_ol_cm_size / uncompressed_ol_size;
-
-    uint32_t end_total_size;
-    uint32_t initial_cm_total_size, end_cm_total_size;
-    uint32_t end_ol_cm_size;
-
-    initial_cm_total_size =
-            initial_total_size - uncompressed_ol_size + initial_ol_cm_size;
-    printf("After load Size: %u -> %u (%.3f)\n", initial_total_size,
-           initial_cm_total_size,
-           (float) (initial_cm_total_size) / initial_total_size);
-
-    tables->DBSize(num_warehouses, end_total_size, uncompressed_ol_size,
-                   NUM_TRANSACTIONS, false);
-    end_ol_cm_size = tables->OrderlineBlitzSize(num_warehouses, NUM_TRANSACTIONS);
-    end_cm_total_size = end_total_size - uncompressed_ol_size + end_ol_cm_size;
-    end_total_size = end_total_size - uncompressed_ol_size +
-                     (end_ol_cm_size / ol_compression_ratio);
-    printf("After transaction Size: %u -> %u (%.3f)\n", end_total_size,
-           end_cm_total_size, (float) (end_cm_total_size) / end_total_size);
     return 0;
 }

@@ -156,10 +156,11 @@ void RelationCompressor::EndOfLearningAndWriteModel() {
 
     for (size_t i = 0; i < schema_.attr_type_.size(); ++i)
       model_[i]->WriteModel(byte_writer_.get());
-    uint64_t num_bits = byte_writer_->GetNumBits();
     // stats
+#if kShowStat
+    uint64_t num_bits = byte_writer_->GetNumBits();
     std::cout << "Model Size: " << (num_bits / double(1 << 13)) << " KB. \n";
-
+#endif
     // End
     byte_writer_ = nullptr;
   }

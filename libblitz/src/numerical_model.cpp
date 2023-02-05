@@ -412,7 +412,7 @@ TableNumerical::TableNumerical(const std::vector<int> &attr_type,
       squid_(bin_size_, target_int_) {
   for (int i = 0; i < dynamic_list_.Size(); ++i) dynamic_list_[i].SetBinSize(bin_size_);
   for (size_t i = 0; i < predictor_list_size_; ++i)
-    predictor_interpreter_[i] = GetAttrInterpreter(attr_type[predictor_list_[i]]);
+    predictor_interpreter_[i] = GetAttrInterpreter(predictor_list_[i]);
 }
 
 NumericalSquID *TableNumerical::GetSquID(const AttrVector &tuple) {
@@ -488,8 +488,11 @@ void TableNumerical::WriteModel(SequenceByteWriter *byte_writer) {
   // Write Model Parameters
   size_t table_size = dynamic_list_.Size();
   for (size_t i = 0; i < table_size; ++i) {
-    const NumericalStats &stat = dynamic_list_[i];
-    stat.WriteStats(byte_writer);
+      NumericalStats &stat = dynamic_list_[i];
+      // suppose this stat does not have any data, we do not write it and use the first stat instead.
+      if (stat.v_count_ == 0) stat = dynamic_list_[0];
+      if (stat.v_count_ == 0) stat = dynamic_list_[table_size - 1];
+      stat.WriteStats(byte_writer);
   }
 }
 

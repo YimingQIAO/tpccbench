@@ -237,6 +237,12 @@ void RegisterAttrModel(int attr_type, ModelCreator *creator);
 ModelCreator *GetAttrModel(int attr_type);
 
 /**
+ * In TPC-C, I want to compress multiple tables at the same time. For each table, a map of attribute
+ * interpreter is needed. Therefore, a vector of map is used.
+ */
+void NextTableAttrInterpreter();
+
+/**
  * This function registers the AttrInterpreter, which can be used to interpret
  * attributes so that they can be used as predictors for other attributes.
  * In our implementation, each attribute type could have only one interpreter.

@@ -146,7 +146,7 @@ struct Stock {
     static const int DIST = 24;
     static const int MIN_DATA = 26;
     static const int MAX_DATA = 50;
-    static const int NUM_STOCK_PER_WAREHOUSE = Item::NUM_ITEMS;
+    static const int NUM_STOCK_PER_WAREHOUSE = 100000;
 
     int32_t s_i_id;
     int32_t s_w_id;
@@ -154,8 +154,8 @@ struct Stock {
     int32_t s_ytd;
     int32_t s_order_cnt;
     int32_t s_remote_cnt;
-    char s_dist[District::NUM_PER_WAREHOUSE][DIST + 1];
     char s_data[MAX_DATA + 1];
+    char s_dist[District::NUM_PER_WAREHOUSE][DIST + 1];
 
     uint32_t size() {
         uint32_t ret = 0;
@@ -284,23 +284,23 @@ struct Order {
 
 struct OrderLine {
     static const int MIN_I_ID = 1;
-    static const int MAX_I_ID = Item::NUM_ITEMS;  // Item::NUM_ITEMS
+    static const int MAX_I_ID = Item::NUM_ITEMS;
     static const int INITIAL_QUANTITY = 5;
     static constexpr float MIN_AMOUNT = 0.01f;
     static constexpr float MAX_AMOUNT = 9999.99f;
     // new order has 10/1000 probability of selecting a remote warehouse for ol_supply_w_id
     static const int REMOTE_PROBABILITY_MILLIS = 10;
 
+    int32_t ol_i_id;
+    float ol_amount;
+    int32_t ol_number;
+    int32_t ol_supply_w_id;
+    int32_t ol_quantity;
+    char ol_delivery_d[DATETIME_SIZE + 1];
+    char ol_dist_info[Stock::DIST + 1];
     int32_t ol_o_id;
     int32_t ol_d_id;
     int32_t ol_w_id;
-    int32_t ol_number;
-    int32_t ol_i_id;
-    int32_t ol_supply_w_id;
-    int32_t ol_quantity;
-    float ol_amount;
-    char ol_delivery_d[DATETIME_SIZE + 1];
-    char ol_dist_info[Stock::DIST + 1];
 
     uint32_t size() {
         uint32_t ret = 0;

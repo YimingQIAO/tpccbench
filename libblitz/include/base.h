@@ -20,7 +20,7 @@ namespace db_compress {
 
 // Blitzcrank
 #define DEBUG 0
-#define kSkipLearning 0
+#define kSkipLearning 1
 #define kDelimiter ','
 #define kNonFullPassStopPoint 20000
 #define kIntervalSize 10000
@@ -30,12 +30,13 @@ namespace db_compress {
 #define kBlockSize 1
 
 // String Model
-#define kLocalDictSize 0
+#define kLocalDictSize 1
 #define kMarkovModel 1
 
 // Numeric Model
 #define kNumBranch 512
 #define kNumEstSample 5000
+#define kShowStat false
 
 // ---------------------- Structural Model -------------------------------------
 /**

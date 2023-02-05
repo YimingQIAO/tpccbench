@@ -211,8 +211,10 @@ void GlobalDictionary::WriteDictionary(SequenceByteWriter *byte_writer, StringSq
     bit_string.Finish(byte_writer);
   }
 
+#if kShowStat
   std::cout << "Global Dict - Size: " << (bits >> 3) << " byte - #word: " << squid_.target_range_
             << "\n";
+#endif
 }
 
 void GlobalDictionary::LoadDictionary(ByteReader *byte_reader, StringSquID *string_squid) {
