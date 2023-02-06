@@ -152,8 +152,7 @@ void TPCCTables::orderStatus(int32_t warehouse_id, int32_t district_id,
     internalOrderStatus(customer, output);
 }
 
-void TPCCTables::internalOrderStatus(Customer *customer,
-                                     OrderStatusOutput *output) {
+void TPCCTables::internalOrderStatus(Customer *customer, OrderStatusOutput *output) {
     output->c_id = customer->c_id;
     // retrieve from customer: balance, first, middle, last
     output->c_balance = customer->c_balance;
@@ -170,8 +169,8 @@ void TPCCTables::internalOrderStatus(Customer *customer,
 
     output->lines.resize(order->o_ol_cnt);
     for (int32_t line_number = 1; line_number <= order->o_ol_cnt; ++line_number) {
-        db_compress::AttrVector *line = findOrderLineBlitz(
-                customer->c_w_id, customer->c_d_id, order->o_id, line_number, 6);
+        db_compress::AttrVector *line = findOrderLineBlitz(customer->c_w_id, customer->c_d_id, order->o_id, line_number,
+                                                           6);
         output->lines[line_number - 1].ol_i_id = line->attr_[0].Int();
         output->lines[line_number - 1].ol_supply_w_id = line->attr_[3].Int();
         output->lines[line_number - 1].ol_quantity = line->attr_[4].Int();
@@ -221,11 +220,8 @@ bool TPCCTables::newOrder(int32_t warehouse_id, int32_t district_id,
                           const char *now, NewOrderOutput *output,
                           TPCCUndo **undo) {
     // perform the home part
-    bool result = newOrderHome(warehouse_id, district_id, customer_id, items, now,
-                               output, undo);
-    if (!result) {
-        return false;
-    }
+    bool result = newOrderHome(warehouse_id, district_id, customer_id, items, now, output, undo);
+    if (!result) return false;
 
     // Process all remote warehouses
     WarehouseSet warehouses = newOrderRemoteWarehouses(warehouse_id, items);
@@ -253,12 +249,6 @@ bool TPCCTables::newOrderHome(int32_t warehouse_id, int32_t district_id,
     output->d_tax = d->d_tax;
     output->o_id = d->d_next_o_id;
     assert(findOrder(warehouse_id, district_id, output->o_id) == NULL);
-
-//    Customer *c = findCustomer(warehouse_id, district_id, customer_id);
-//    assert(sizeof(output->c_last) == sizeof(c->c_last));
-//    memcpy(output->c_last, c->c_last, sizeof(output->c_last));
-//    memcpy(output->c_credit, c->c_credit, sizeof(output->c_credit));
-//    output->c_discount = c->c_discount;
 
     db_compress::AttrVector *c = findCustomerBlitz(warehouse_id, district_id, customer_id, 11);
     assert(sizeof(output->c_last) >= c->attr_[10].String().size());
@@ -321,11 +311,6 @@ bool TPCCTables::newOrderHome(int32_t warehouse_id, int32_t district_id,
     ol_buffer_.attr_[5].value_ = "";
 
     OrderLine line;
-    //    line.ol_o_id = output->o_id;
-    //    line.ol_d_id = district_id;
-    //    line.ol_w_id = warehouse_id;
-    //    memset(line.ol_delivery_d, 0, DATETIME_SIZE + 1);
-
     output->items.resize(items.size());
     output->total = 0;
     for (int i = 0; i < items.size(); ++i) {
@@ -334,29 +319,14 @@ bool TPCCTables::newOrderHome(int32_t warehouse_id, int32_t district_id,
         ol_buffer_.attr_[3].value_ = items[i].ol_supply_w_id;
         ol_buffer_.attr_[4].value_ = items[i].ol_quantity;
 
-        //        line.ol_number = i + 1;
-        //        line.ol_i_id = items[i].i_id;
-        //        line.ol_supply_w_id = items[i].ol_supply_w_id;
-        //        line.ol_quantity = items[i].ol_quantity;
-
         // Vertical Partitioning HACK: We read s_dist_xx from our local replica,
         // assuming that these columns are replicated everywhere.
         // TODO: I think this is unrealistic, since it will occupy ~23 MB per
         // warehouse on all replicas. Try the "two round" version in the future.
         db_compress::AttrVector *stock_av = findStockBlitz(items[i].ol_supply_w_id, items[i].i_id, 7 + district_id);
-        // assert(sizeof(line.ol_dist_info) == stock_av->attr_[6 + district_id].String().size() + 1);
         ol_buffer_.attr_[6].value_ = stock_av->attr_[6 + district_id].value_;
-//        Stock *stock = findStock(items[i].ol_supply_w_id, items[i].i_id);
-//        assert(sizeof(line.ol_dist_info) == sizeof(stock->s_dist[district_id]));
-//        ol_buffer_.attr_[9].value_ = stock->s_dist[district_id];
-
-        // memcpy(line.ol_dist_info, stock->s_dist[district_id],
-        // sizeof(line.ol_dist_info)); Since we *need* to replicate s_dist_xx
-        // columns, might as well replicate s_data Makes it 290 bytes per tuple, or
-        // ~28 MB per warehouse.
         int32_t length = stock_av->attr_[6].String().size();
         bool stock_is_original = stock_av->attr_[6].String().substr(length - 8, 8) == "original";
-        // bool stock_is_original = (strstr(stock->s_data, "original") != NULL);
 
         if (stock_is_original && strstr(item_tuples[i]->i_data, "original") != NULL) {
             output->items[i].brand_generic = NewOrderOutput::ItemInfo::BRAND;
@@ -374,8 +344,9 @@ bool TPCCTables::newOrderHome(int32_t warehouse_id, int32_t district_id,
         if (undo != NULL) {
             OrderLine *ol = insertOrderLine(line);
             (*undo)->inserted(ol);
-        } else
+        } else {
             insertOrderLineBlitz(ol_buffer_);
+        }
     }
 
     // Perform the "remote" part for this warehouse
@@ -414,8 +385,7 @@ bool TPCCTables::newOrderRemote(int32_t home_warehouse,
         }
 
         // update stock
-        db_compress::AttrVector *stock_av = findStockBlitz(items[i].ol_supply_w_id, items[i].i_id,
-                                                           StockBlitz::kNumAttrs);
+        db_compress::AttrVector *stock_av = findStockBlitz(items[i].ol_supply_w_id, items[i].i_id, 6);
         if (stock_av->attr_[2].Int() >= items[i].ol_quantity + 10) {
             stock_av->attr_[2].value_ = stock_av->attr_[2].Int() - items[i].ol_quantity;
         } else {
@@ -429,7 +399,7 @@ bool TPCCTables::newOrderRemote(int32_t home_warehouse,
             // remote order
             stock_av->attr_[5].value_ = stock_av->attr_[5].Int() + 1;
         }
-        insertStockBlitz(*stock_av);
+        // insertStockBlitz(*stock_av);
 
 //        Stock *stock = findStock(items[i].ol_supply_w_id, items[i].i_id);
 //        if (undo != NULL) {
@@ -525,7 +495,7 @@ void TPCCTables::paymentRemote(int32_t warehouse_id, int32_t district_id,
 //                          undo);
 //    zeroWarehouseDistrict(output);
 
-    db_compress::AttrVector *customer_av = findCustomerBlitz(c_warehouse_id, c_district_id, c_id, 22);
+    db_compress::AttrVector *customer_av = findCustomerBlitz(c_warehouse_id, c_district_id, c_id, 21);
     internalPaymentRemoteBlitz(warehouse_id, district_id, customer_av, h_amount, output, undo);
     zeroWarehouseDistrict(output);
 }
@@ -660,7 +630,7 @@ void TPCCTables::internalPaymentRemoteBlitz(int32_t warehouse_id, int32_t distri
         assert(current_keep + characters <= Customer::MAX_DATA);
         c->attr_[20].value_ = c->attr_[20].String() + history;
     }
-    insertCustomerBlitz(*c);
+    // insertCustomerBlitz(*c);
 
     output->c_credit_lim = c->attr_[3].Double();
     output->c_discount = c->attr_[4].Double();
@@ -733,7 +703,7 @@ void TPCCTables::delivery(int32_t warehouse_id, int32_t carrier_id,
             line->attr_[5].value_ = now;
             assert(line->attr_[5].String().size() == DATETIME_SIZE);
             total += line->attr_[1].Double();
-            insertOrderLineBlitz(*line);
+            // insertOrderLineBlitz(*line);
         }
 
 //        Customer *c = findCustomer(warehouse_id, d_id, o->o_c_id);
@@ -743,10 +713,10 @@ void TPCCTables::delivery(int32_t warehouse_id, int32_t carrier_id,
 //        c->c_balance += total;
 //        c->c_delivery_cnt += 1;
 
-        db_compress::AttrVector *c = findCustomerBlitz(warehouse_id, d_id, o->o_c_id, CustomerBlitz::kNumAttrs);
+        db_compress::AttrVector *c = findCustomerBlitz(warehouse_id, d_id, o->o_c_id, 7);
         c->attr_[6].value_ = c->attr_[6].Double() + total;
         c->attr_[5].value_ = c->attr_[5].Int() + 1;
-        insertCustomerBlitz(*c);
+        // insertCustomerBlitz(*c);
     }
 }
 
@@ -868,7 +838,7 @@ void TPCCTables::insertStock(const Stock &stock) {
     insert(&stock_, makeStockKey(stock.s_w_id, stock.s_i_id), stock);
 }
 
-uint32_t TPCCTables::insertStockBlitz(db_compress::AttrVector &stock) {
+void TPCCTables::insertStockBlitz(db_compress::AttrVector &stock) {
     int32_t key = makeStockKey(stock.attr_[1].Int(), stock.attr_[0].Int());
     std::vector<uint8_t> compressed = stock_compressor_->TransformTupleToBits(stock);
     std::vector<uint8_t> *old = find(stock_blitz_, key);
@@ -876,7 +846,6 @@ uint32_t TPCCTables::insertStockBlitz(db_compress::AttrVector &stock) {
         *old = compressed;
     else
         insert(&stock_blitz_, key, compressed);
-    return compressed.size();
 }
 
 Stock *TPCCTables::findStock(int32_t w_id, int32_t s_id) {
@@ -1083,7 +1052,7 @@ OrderLine *TPCCTables::insertOrderLine(const OrderLine &orderline) {
     return insert(&orderlines_, key, orderline);
 }
 
-uint32_t TPCCTables::insertOrderLineBlitz(db_compress::AttrVector &orderline) {
+void TPCCTables::insertOrderLineBlitz(db_compress::AttrVector &orderline) {
     int32_t key = makeOrderLineKey(orderline.attr_[9].Int(), orderline.attr_[8].Int(),
                                    orderline.attr_[7].Int(), orderline.attr_[2].Int());
     std::vector<uint8_t> compressed = orderline_compressor_->TransformTupleToBits(orderline);
@@ -1092,7 +1061,6 @@ uint32_t TPCCTables::insertOrderLineBlitz(db_compress::AttrVector &orderline) {
         *old = compressed;
     else
         insert(&orderlines_blitz_, key, compressed);
-    return compressed.size();
 }
 
 OrderLine *TPCCTables::findOrderLine(int32_t w_id, int32_t d_id, int32_t o_id,

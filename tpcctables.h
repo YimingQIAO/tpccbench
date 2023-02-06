@@ -99,7 +99,7 @@ public:
 
     void insertStock(const Stock &stock);
 
-    uint32_t insertStockBlitz(db_compress::AttrVector &stock);
+    void insertStockBlitz(db_compress::AttrVector &stock);
 
     Stock *findStock(int32_t w_id, int32_t s_id);
 
@@ -132,7 +132,7 @@ public:
     // tuple.
     OrderLine *insertOrderLine(const OrderLine &orderline);
 
-    uint32_t insertOrderLineBlitz(db_compress::AttrVector &orderline);
+    void insertOrderLineBlitz(db_compress::AttrVector &orderline);
 
     OrderLine *findOrderLine(int32_t w_id, int32_t d_id, int32_t o_id,
                              int32_t number);

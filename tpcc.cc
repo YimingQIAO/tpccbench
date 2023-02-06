@@ -139,7 +139,9 @@ int main(int argc, const char *argv[]) {
                (microseconds + 500) / 1000, NUM_TRANSACTIONS / (double) microseconds * 1000000.0);
         orderline_blitz_size = tables->BlitzSize(num_warehouses, NUM_TRANSACTIONS, "orderline");
         stock_blitz_size = tables->BlitzSize(num_warehouses, NUM_TRANSACTIONS, "stock");
-        printf("orderline blitz size: %u\nstock blitz size: %u\n", orderline_blitz_size, stock_blitz_size);
+        customer_blitz_size = tables->BlitzSize(num_warehouses, NUM_TRANSACTIONS, "customer");
+        printf("orderline blitz size: %u\nstock blitz size: %u\ncustomer blitz size: %u\n", orderline_blitz_size,
+               stock_blitz_size, customer_blitz_size);
 
 //        std::cout << "----------------- Result ----------------- \n";
 //        double ol_compression_ratio =

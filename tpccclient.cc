@@ -143,7 +143,8 @@ uint64_t TPCCClient::doNewOrder() {
     int ol_cnt = generator_->number(Order::MIN_OL_CNT, Order::MAX_OL_CNT);
 
     // 1% of transactions roll back
-    bool rollback = generator_->number(1, 100) == 1;
+    // bool rollback = generator_->number(1, 100) == 1;
+    bool rollback = false;
 
     vector<NewOrderItem> items(ol_cnt);
     for (int i = 0; i < ol_cnt; ++i) {
@@ -168,9 +169,6 @@ uint64_t TPCCClient::doNewOrder() {
     clock_->getDateTimestamp(now);
     NewOrderOutput output;
 
-    //    bool result = db_->newOrder(
-    //            w_id, generateDistrict(), generateCID(), items, now, &output, NULL);
-    //    assert(result == !rollback);
     auto beg = std::chrono::high_resolution_clock::now();
     db_->newOrder(w_id, generateDistrict(), generateCID(), items, now, &output, nullptr);
     auto end = std::chrono::high_resolution_clock::now();
