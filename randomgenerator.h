@@ -38,6 +38,7 @@ namespace tpcc {
     public:
         RandomGenerator() : c_values_(NURandC()) {
             loadCorpus();
+            loadDataDist();
         }
 
         virtual ~RandomGenerator() {}
@@ -160,6 +161,16 @@ namespace tpcc {
             s[word.size()] = '\0';
         }
 
+        uint32_t stockNumDist(const std::string &name) {
+            if (name == "ytd") return stock_ytd_dist_[number(0, stock_ytd_dist_.size() - 1)];
+            else if (name == "order_cnt") return stock_order_cnt_dist_[number(0, stock_order_cnt_dist_.size() - 1)];
+            else if (name == "remote_cnt") return stock_remote_cnt_dist_[number(0, stock_remote_cnt_dist_.size() - 1)];
+            else {
+                printf("Stock num dist name %s is not supported\n", name.c_str());
+            }
+            return 0;
+        }
+
     private:
         NURandC c_values_;
         std::vector<std::string> stock_data_corpus_;
@@ -184,6 +195,10 @@ namespace tpcc {
                 "206", "425", // Seattle, WA
                 "703", "571", // Washington, DC
         };
+
+        std::vector<uint32_t> stock_ytd_dist_;
+        std::vector<uint32_t> stock_order_cnt_dist_;
+        std::vector<uint32_t> stock_remote_cnt_dist_;
 
         void loadCorpus() {
             if (!loadStockDataCorpus()) {
@@ -263,6 +278,46 @@ namespace tpcc {
             while (std::getline(in, line)) {
                 if (line.back() == '\r') line.pop_back();
                 street_.push_back(line);
+            }
+            in.close();
+            return true;
+        }
+
+        bool loadDataDist() {
+            std::ifstream in("data_dist/stock_ytd_1m.txt");
+            if (in.fail()) {
+                printf("Failed to open stock_ytd_1m.txt\n");
+                return false;
+            }
+
+            std::string line;
+            while (std::getline(in, line)) {
+                if (line.back() == '\r') line.pop_back();
+                stock_ytd_dist_.push_back(std::stoi(line));
+            }
+            in.close();
+
+            in.open("data_dist/stock_order_cnt_1m.txt");
+            if (in.fail()) {
+                printf("Failed to open stock_order_cnt_1m.txt\n");
+                return false;
+            }
+
+            while (std::getline(in, line)) {
+                if (line.back() == '\r') line.pop_back();
+                stock_order_cnt_dist_.push_back(std::stoi(line));
+            }
+            in.close();
+
+            in.open("data_dist/stock_remote_cnt_1m.txt");
+            if (in.fail()) {
+                printf("Failed to open stock_remote_cnt_1m.txt\n");
+                return false;
+            }
+
+            while (std::getline(in, line)) {
+                if (line.back() == '\r') line.pop_back();
+                stock_remote_cnt_dist_.push_back(std::stoi(line));
             }
             in.close();
             return true;

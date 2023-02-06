@@ -365,17 +365,6 @@ bool TPCCTables::newOrderRemote(int32_t home_warehouse,
                                 const vector<NewOrderItem> &items,
                                 std::vector<int32_t> *out_quantities,
                                 TPCCUndo **undo) {
-    // Validate all the items: needed so that we don't need to undo in order to
-    // execute this
-    // TODO: item_tuples is unused. Remove?
-    vector<Item *> item_tuples;
-    if (!findAndValidateItems(items, &item_tuples)) {
-        return false;
-    }
-
-    // We will not abort: allocate an undo buffer
-    allocateUndo(undo);
-
     out_quantities->resize(items.size());
     for (int i = 0; i < items.size(); ++i) {
         // Skip items that don't belong to remote warehouse
@@ -1451,13 +1440,14 @@ void TPCCTables::CustomerToCSV(int64_t num_warehouses) {
                       << c->c_w_id << ","
                       << c->c_credit_lim << ","
                       << c->c_discount << ","
+                      << c->c_delivery_cnt << ","
                       << c->c_balance << ","
                       << c->c_ytd_payment << ","
                       << c->c_payment_cnt << ","
-                      << c->c_delivery_cnt << ","
+                      << c->c_credit << ","
+                      << c->c_last << ","
                       << c->c_first << ","
                       << c->c_middle << ","
-                      << c->c_last << ","
                       << c->c_street_1 << ","
                       << c->c_street_2 << ","
                       << c->c_city << ","
@@ -1465,7 +1455,6 @@ void TPCCTables::CustomerToCSV(int64_t num_warehouses) {
                       << c->c_zip << ","
                       << c->c_phone << ","
                       << c->c_since << ","
-                      << c->c_credit << ","
                       << c->c_data << "\n";
             }
         }

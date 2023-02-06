@@ -110,23 +110,19 @@ void TPCCGenerator::generateWarehouse(int32_t id, Warehouse *warehouse) {
     makeZip(random_, warehouse->w_zip);
 }
 
-void TPCCGenerator::generateStock(int32_t id, int32_t w_id, bool original,
-                                  Stock *stock) {
+void TPCCGenerator::generateStock(int32_t id, int32_t w_id, bool original, Stock *stock) {
     // assert(1 <= id && id <= num_items_);
     assert(1 <= id && id <= Stock::NUM_STOCK_PER_WAREHOUSE);
     stock->s_i_id = id;
     stock->s_w_id = w_id;
     stock->s_quantity = random_->number(Stock::MIN_QUANTITY, Stock::MAX_QUANTITY);
-    stock->s_ytd = 0;
-    stock->s_order_cnt = 0;
-    stock->s_remote_cnt = 0;
+    stock->s_ytd = random_->stockNumDist("ytd");
+    stock->s_order_cnt = random_->stockNumDist("order_cnt");
+    stock->s_remote_cnt = random_->stockNumDist("remote_cnt");
     for (int i = 0; i < District::NUM_PER_WAREHOUSE; ++i) {
-//        random_->astring(stock->s_dist[i], sizeof(stock->s_dist[i]) - 1,
-//                         sizeof(stock->s_dist[i]) - 1, 26);
         assert(sizeof(stock->s_dist[i]) - 1 == 24);
         random_->distInfo(stock->s_dist[i], i, w_id, id);
     }
-    // random_->astring(stock->s_data, Stock::MIN_DATA, Stock::MAX_DATA, 26);
     random_->stockData(stock->s_data, Stock::MAX_DATA - 8);
 
     if (original) {

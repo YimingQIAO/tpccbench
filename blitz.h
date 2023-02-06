@@ -110,23 +110,23 @@ public:
 
     StockBlitz() {
         config_ = {
-                {kInteger, 0,   0.5},
-                {kEnum,    5,   0},
-                {kEnum,    100, 0},
-                {kEnum,    1,   0},
-                {kEnum,    1,   0},
-                {kEnum,    1,   0},
-                {kString,  0,   0},
-                {kString,  0,   0},
-                {kString,  0,   0},
-                {kString,  0,   0},
-                {kString,  0,   0},
-                {kString,  0,   0},
-                {kString,  0,   0},
-                {kString,  0,   0},
-                {kString,  0,   0},
-                {kString,  0,   0},
-                {kString,  0,   0}
+                {kInteger, 0,    0.5},
+                {kEnum,    5,    0},
+                {kEnum,    100,  0},
+                {kInteger, 0,    0.5},
+                {kEnum,    2000, 0},
+                {kEnum,    100,  0},
+                {kString,  0,    0},
+                {kString,  0,    0},
+                {kString,  0,    0},
+                {kString,  0,    0},
+                {kString,  0,    0},
+                {kString,  0,    0},
+                {kString,  0,    0},
+                {kString,  0,    0},
+                {kString,  0,    0},
+                {kString,  0,    0},
+                {kString,  0,    0}
         };
         RegisterAttrInterpreter();
     }
