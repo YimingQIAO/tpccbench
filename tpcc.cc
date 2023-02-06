@@ -79,5 +79,8 @@ int main(int argc, const char *argv[]) {
            (microseconds + 500) / 1000,
            NUM_TRANSACTIONS / (double) microseconds * 1000000.0);
 
+    tables->StockToCSV(num_warehouses);
+    tables->CustomerToCSV(num_warehouses);
+
     return 0;
 }

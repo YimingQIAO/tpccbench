@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <limits>
 #include <vector>
+#include <fstream>
 
 #include "assert.h"
 #include "stlutil.h"
@@ -484,7 +485,7 @@ void TPCCTables::internalPaymentRemote(int32_t warehouse_id, int32_t district_id
         // Bad credit: insert history into c_data
         static const int HISTORY_SIZE = Customer::MAX_DATA + 1;
         char history[HISTORY_SIZE];
-        int characters = snprintf(history, HISTORY_SIZE, "(%d, %d, %d, %d, %d, %.2f)\n",
+        int characters = snprintf(history, HISTORY_SIZE, " %d-%d-%d-%d-%d-%.0f",
                                   c->c_id, c->c_d_id, c->c_w_id, district_id, warehouse_id,
                                   h_amount);
         assert(characters < HISTORY_SIZE);
@@ -939,4 +940,88 @@ void TPCCTables::eraseHistory(const History *history) {
     // Remove the last element
     history_.pop_back();
     delete history;
+}
+
+void TPCCTables::OrderlineToCSV(int64_t num_warehouses) {
+    std::ios::sync_with_stdio(false);
+    std::ofstream ol_f("orderline.csv", std::ofstream::trunc);
+    for (int32_t i = 1; i <= num_warehouses; ++i) {
+        for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
+            for (int32_t k = 1; k <= Order::INITIAL_ORDERS_PER_DISTRICT; ++k) {
+                for (int32_t l = 1; l <= Order::MAX_OL_CNT; ++l) {
+                    OrderLine *ol = findOrderLine(i, j, k, l);
+                    if (ol == nullptr)
+                        continue;
+                    ol_f << ol->ol_i_id << ","
+                         << ol->ol_amount << ","
+                         << ol->ol_number << ","
+                         << ol->ol_supply_w_id << ","
+                         << ol->ol_quantity << ","
+                         << ol->ol_delivery_d << ","
+                         << ol->ol_dist_info << ","
+                         << ol->ol_o_id << ","
+                         << ol->ol_d_id << ","
+                         << ol->ol_w_id << "\n";
+                }
+            }
+        }
+    }
+    ol_f.close();
+}
+
+void TPCCTables::StockToCSV(int64_t num_warehouses) {
+    std::ios::sync_with_stdio(false);
+    std::ofstream stock_f("stock.csv", std::ofstream::trunc);
+    for (int32_t i = 1; i <= num_warehouses; ++i) {
+        for (int32_t j = 1; j <= Stock::NUM_STOCK_PER_WAREHOUSE; ++j) {
+            Stock *s = findStock(i, j);
+            assert(s != nullptr);
+            stock_f << s->s_i_id << ","
+                    << s->s_w_id << ","
+                    << s->s_quantity << ","
+                    << s->s_ytd << ","
+                    << s->s_order_cnt << ","
+                    << s->s_remote_cnt << ",";
+            stock_f << s->s_data << ",";
+            for (int32_t k = 0; k < District::NUM_PER_WAREHOUSE; k++)
+                stock_f << s->s_dist[k] << ",";
+            stock_f << "\n";
+        }
+    }
+    stock_f.close();
+}
+
+void TPCCTables::CustomerToCSV(int64_t num_warehouses) {
+    std::ios::sync_with_stdio(false);
+    std::ofstream cus_f("customer.csv", std::ofstream::trunc);
+    for (int32_t i = 1; i <= num_warehouses; ++i) {
+        for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
+            for (int32_t k = 1; k <= Customer::NUM_PER_DISTRICT; ++k) {
+                Customer *c = findCustomer(i, j, k);
+                assert(c != nullptr);
+                cus_f << c->c_id << ","
+                      << c->c_d_id << ","
+                      << c->c_w_id << ","
+                      << c->c_credit_lim << ","
+                      << c->c_discount << ","
+                      << c->c_delivery_cnt << ","
+                      << c->c_balance << ","
+                      << c->c_ytd_payment << ","
+                      << c->c_payment_cnt << ","
+                      << c->c_credit << ","
+                      << c->c_last << ","
+                      << c->c_first << ","
+                      << c->c_middle << ","
+                      << c->c_street_1 << ","
+                      << c->c_street_2 << ","
+                      << c->c_city << ","
+                      << c->c_state << ","
+                      << c->c_zip << ","
+                      << c->c_phone << ","
+                      << c->c_since << ","
+                      << c->c_data << "\n";
+            }
+        }
+    }
+    cus_f.close();
 }

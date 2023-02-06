@@ -217,6 +217,12 @@ public:
         printf("History size: %u byte\n", history_size);
     }
 
+    void OrderlineToCSV(int64_t num_warehouses);
+
+    void StockToCSV(int64_t num_warehouses);
+
+    void CustomerToCSV(int64_t num_warehouses);
+
     static const int KEYS_PER_INTERNAL = 8;
     static const int KEYS_PER_LEAF = 8;
 
