@@ -6,6 +6,7 @@
 #include <vector>
 #include <fstream>
 #include <cstring>
+#include <sstream>
 
 #ifdef __linux__
 #define HAVE_RANDOM_R
@@ -36,7 +37,7 @@ namespace tpcc {
     class RandomGenerator {
     public:
         RandomGenerator() : c_values_(NURandC()) {
-            loadStockDataCorpus();
+            loadCorpus();
         }
 
         virtual ~RandomGenerator() {}
@@ -91,9 +92,113 @@ namespace tpcc {
             *s = '\0';
         }
 
+        void customerData(char *s, int upper_length) {
+            int32_t word_num = 10;
+            std::vector<int> word_idx(word_num);
+            int total_length = upper_length + 1;
+            while (total_length > upper_length) {
+                total_length = word_num - 1;
+                for (int i = 0; i < word_num; i++) {
+                    word_idx[i] = number(0, stock_data_corpus_.size() - 1);
+                    total_length += stock_data_corpus_[word_idx[i]].size();
+                }
+            }
+            for (int i = 0; i < word_num; i++) {
+                std::string &word = stock_data_corpus_[word_idx[i]];
+                strncpy(s, word.c_str(), word.size());
+
+                s += word.size();
+                if (i != word_num - 1) {
+                    *s = ' ';
+                    s++;
+                }
+            }
+            *s = '\0';
+        }
+
+        void phoneData(char *s, int length) {
+            if (length == 16) {
+                memcpy(s, "+01-", 4);
+                std::string &word = phone_district_code[number(0, phone_district_code.size() - 1)];
+                memcpy(s + 4, word.c_str(), 3);
+                s[7] = '-';
+                nstring(s + 8, 3, 3);
+                s[11] = '-';
+                nstring(s + 12, 4, 4);
+            }
+        }
+
+        void departmentData(char *s, int upper_length) {
+            if (upper_length > 13) {
+                memcpy(s, "Department#", 11);
+                nstring(s + 11, 1, 2);
+            }
+        }
+
+        void corpusData(char *s, int upper_length, const std::string &corpus_name) {
+            std::vector<std::string> *corpus;
+            if (corpus_name == "first_name") {
+                corpus = &first_names_;
+            } else if (corpus_name == "street") {
+                corpus = &street_;
+            } else if (corpus_name == "city") {
+                corpus = &city_;
+            } else if (corpus_name == "state") {
+                corpus = &state_;
+            } else if (corpus_name == "zip") {
+                corpus = &zip_;
+            } else if (corpus_name == "stock_data") {
+                corpus = &stock_data_corpus_;
+            } else {
+                printf("Corpus name %s is not supported\n", corpus_name.c_str());
+                return;
+            }
+
+            std::string &word = (*corpus)[number(0, corpus->size() - 1)];
+            while (word.length() > upper_length) word = (*corpus)[number(0, corpus->size() - 1)];
+            strncpy(s, word.c_str(), word.size());
+            s[word.size()] = '\0';
+        }
+
     private:
         NURandC c_values_;
         std::vector<std::string> stock_data_corpus_;
+        std::vector<std::string> first_names_;
+        std::vector<std::string> zip_;
+        std::vector<std::string> city_;
+        std::vector<std::string> state_;
+        std::vector<std::string> street_;
+        std::vector<std::string> phone_district_code = {
+                "617", "508", // Boston, MA
+                "773", "312", "872", // Chicago, IL
+                "214", "469", "972", // Dallas, TX
+                "303", "720", // Denver, CO
+                "305", "786", // Miami, FL
+                "212", "646", // New York, NY
+                "267", "215", // Philadelphia, PA
+                "602", "480", // Phoenix, AZ
+                "503", "971", // Portland, OR
+                "901", "615", "423", // Memphis, TN
+                "210", "512", // San Antonio, TX
+                "415", "650", "408", // San Francisco, CA
+                "206", "425", // Seattle, WA
+                "703", "571", // Washington, DC
+        };
+
+        void loadCorpus() {
+            if (!loadStockDataCorpus()) {
+                printf("Loaded stock_data_corpus.txt failed\n");
+            }
+            if (!loadFirstNames()) {
+                printf("Loaded first_names.txt failed\n");
+            }
+            if (!loadZip()) {
+                printf("Loaded zip.txt failed\n");
+            }
+            if (!loadStreet()) {
+                printf("Loaded street.txt failed\n");
+            }
+        }
 
         bool loadStockDataCorpus() {
             std::ifstream in("corpus/stock_data_corpus.txt");
@@ -104,11 +209,62 @@ namespace tpcc {
 
             std::string line;
             while (std::getline(in, line)) {
-                line.pop_back();
+                if (line.back() == '\r') line.pop_back();
                 stock_data_corpus_.push_back(line);
             }
             in.close();
-            // printf("Loaded %zu lines from stock_data_corpus.txt\n", stock_data_corpus_.size());
+            return true;
+        }
+
+        bool loadFirstNames() {
+            std::ifstream in("corpus/first_names.txt");
+            if (in.fail()) {
+                printf("Failed to open first_names.txt\n");
+                return false;
+            }
+
+            std::string line;
+            while (std::getline(in, line)) {
+                if (line.back() == '\r') line.pop_back();
+                first_names_.push_back(line);
+            }
+            in.close();
+            return true;
+        }
+
+        bool loadZip() {
+            std::ifstream in("corpus/zip_corpus.txt");
+            if (in.fail()) {
+                printf("Failed to open zip.txt\n");
+                return false;
+            }
+
+            std::string line;
+            while (std::getline(in, line)) {
+                if (line.back() == '\r') line.pop_back();
+                const int32_t zip_length = 5;
+                const int32_t state_length = 2;
+                zip_.push_back(line.substr(0, zip_length));
+                state_.push_back(line.substr(line.size() - state_length, state_length));
+                city_.push_back(line.substr(zip_length + 1, line.size() - zip_length - state_length - 2));
+            }
+            in.close();
+            return true;
+        }
+
+        bool loadStreet() {
+            std::ifstream in("corpus/streets.txt");
+            if (in.fail()) {
+                printf("Failed to open street.txt\n");
+                return false;
+            }
+
+            std::string line;
+            while (std::getline(in, line)) {
+                if (line.back() == '\r') line.pop_back();
+                street_.push_back(line);
+            }
+            in.close();
             return true;
         }
     };

@@ -30,7 +30,7 @@ namespace db_compress {
 #define kBlockSize 1
 
 // String Model
-#define kLocalDictSize 1
+#define kLocalDictSize 0
 #define kMarkovModel 1
 
 // Numeric Model

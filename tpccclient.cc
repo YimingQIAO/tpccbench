@@ -89,7 +89,7 @@ uint64_t TPCCClient::doDelivery() {
 uint64_t TPCCClient::doPayment() {
     PaymentOutput output;
     int x = generator_->number(1, 100);
-    int y = generator_->number(1, 100);
+    // int y = generator_->number(1, 100);
 
     int32_t w_id = generateWarehouse();
     int32_t d_id = generateDistrict();
@@ -112,23 +112,30 @@ uint64_t TPCCClient::doPayment() {
     char now[Clock::DATETIME_SIZE + 1];
     clock_->getDateTimestamp(now);
 
-    if (y <= 60) {
-        // 60%: payment by last name
-        char c_last[Customer::MAX_LAST + 1];
-        generator_->lastName(c_last, customers_per_district_);
+//    if (y <= 40) {
+//        // 40%: payment by last name
+//        char c_last[Customer::MAX_LAST + 1];
+//        generator_->lastName(c_last, customers_per_district_);
+//
+//        auto beg = std::chrono::high_resolution_clock::now();
+//        db_->payment(w_id, d_id, c_w_id, c_d_id, c_last, h_amount, now, &output, NULL);
+//        auto end = std::chrono::high_resolution_clock::now();
+//        return std::chrono::duration_cast<std::chrono::nanoseconds>(end - beg).count();
+//    } else {
+//        // 60%: payment by id
+//        ASSERT(y > 60);
+//        int32_t c_id = generateCID();
+//        auto beg = std::chrono::high_resolution_clock::now();
+//        db_->payment(w_id, d_id, c_w_id, c_d_id, c_id, h_amount, now, &output, NULL);
+//        auto end = std::chrono::high_resolution_clock::now();
+//        return std::chrono::duration_cast<std::chrono::nanoseconds>(end - beg).count();
+//    }
 
-        auto beg = std::chrono::high_resolution_clock::now();
-        db_->payment(w_id, d_id, c_w_id, c_d_id, c_last, h_amount, now, &output, NULL);
-        auto end = std::chrono::high_resolution_clock::now();
-        return std::chrono::duration_cast<std::chrono::nanoseconds>(end - beg).count();
-    } else {
-        // 40%: payment by id
-        ASSERT(y > 60);
-        auto beg = std::chrono::high_resolution_clock::now();
-        db_->payment(w_id, d_id, c_w_id, c_d_id, generateCID(), h_amount, now, &output, NULL);
-        auto end = std::chrono::high_resolution_clock::now();
-        return std::chrono::duration_cast<std::chrono::nanoseconds>(end - beg).count();
-    }
+    int32_t c_id = generateCID();
+    auto beg = std::chrono::high_resolution_clock::now();
+    db_->payment(w_id, d_id, c_w_id, c_d_id, c_id, h_amount, now, &output, NULL);
+    auto end = std::chrono::high_resolution_clock::now();
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(end - beg).count();
 }
 
 uint64_t TPCCClient::doNewOrder() {

@@ -162,14 +162,13 @@ void TPCCGenerator::generateCustomer(int32_t id, int32_t d_id, int32_t w_id,
     customer->c_d_id = d_id;
     customer->c_w_id = w_id;
     customer->c_credit_lim = Customer::INITIAL_CREDIT_LIM;
-    customer->c_discount =
-            random_->fixedPoint(4, Customer::MIN_DISCOUNT, Customer::MAX_DISCOUNT);
+    customer->c_discount = random_->fixedPoint(4, Customer::MIN_DISCOUNT, Customer::MAX_DISCOUNT);
     customer->c_balance = Customer::INITIAL_BALANCE;
     customer->c_ytd_payment = Customer::INITIAL_YTD_PAYMENT;
     customer->c_payment_cnt = Customer::INITIAL_PAYMENT_CNT;
     customer->c_delivery_cnt = Customer::INITIAL_DELIVERY_CNT;
-    random_->astring(customer->c_first, Customer::MIN_FIRST, Customer::MAX_FIRST,
-                     26);
+    // random_->astring(customer->c_first, Customer::MIN_FIRST, Customer::MAX_FIRST, 26);
+    random_->corpusData(customer->c_first, Customer::MAX_FIRST, "first_name");
     strcpy(customer->c_middle, "OE");
 
     if (id <= 1000) {
@@ -178,14 +177,19 @@ void TPCCGenerator::generateCustomer(int32_t id, int32_t d_id, int32_t w_id,
         random_->lastName(customer->c_last, customers_per_district_);
     }
 
-    random_->astring(customer->c_street_1, Address::MIN_STREET,
-                     Address::MAX_STREET, 26);
-    random_->astring(customer->c_street_2, Address::MIN_STREET,
-                     Address::MAX_STREET, 26);
-    random_->astring(customer->c_city, Address::MIN_CITY, Address::MAX_CITY, 26);
-    random_->astring(customer->c_state, Address::STATE, Address::STATE, 26);
-    makeZip(random_, customer->c_zip);
-    random_->nstring(customer->c_phone, Customer::PHONE, Customer::PHONE);
+    random_->corpusData(customer->c_street_1, Address::MAX_STREET, "street");
+    random_->departmentData(customer->c_street_2, Address::MAX_STREET);
+    random_->corpusData(customer->c_city, Address::MAX_CITY, "city");
+    random_->corpusData(customer->c_state, Address::STATE, "state");
+    random_->corpusData(customer->c_zip, Address::ZIP, "zip");
+    random_->phoneData(customer->c_phone, Customer::PHONE);
+
+//    random_->astring(customer->c_street_1, Address::MIN_STREET, Address::MAX_STREET, 26);
+//    random_->astring(customer->c_street_2, Address::MIN_STREET, Address::MAX_STREET, 26);
+//    random_->astring(customer->c_city, Address::MIN_CITY, Address::MAX_CITY, 26);
+//    random_->astring(customer->c_state, Address::STATE, Address::STATE, 26);
+//    makeZip(random_, customer->c_zip);
+//    random_->nstring(customer->c_phone, Customer::PHONE, Customer::PHONE);
     strcpy(customer->c_since, now_);
     assert(strlen(customer->c_since) == DATETIME_SIZE);
     if (bad_credit) {
@@ -193,8 +197,9 @@ void TPCCGenerator::generateCustomer(int32_t id, int32_t d_id, int32_t w_id,
     } else {
         strcpy(customer->c_credit, Customer::GOOD_CREDIT);
     }
-    random_->astring(customer->c_data, Customer::MIN_DATA, Customer::MAX_DATA,
-                     26);
+    random_->customerData(customer->c_data, Customer::MAX_DATA);
+//    random_->astring(customer->c_data, Customer::MIN_DATA, Customer::MAX_DATA,
+//                     26);
 }
 
 void TPCCGenerator::generateOrder(int32_t id, int32_t c_id, int32_t d_id,

@@ -6,6 +6,7 @@
 #define TPCC_BLITZ_H
 
 #include <random>
+#include <sstream>
 
 #include "base.h"
 #include "model.h"
@@ -41,6 +42,8 @@ struct AttrConfig {
     int capacity;
     double tolerance;
 };
+
+// -------------------------- Blitz Table ------------------------------------
 
 class BlitzTable {
 public:
@@ -80,6 +83,8 @@ protected:
 
 class OrderLineBlitz : public BlitzTable {
 public:
+    static const int kNumAttrs = 10;
+
     OrderLineBlitz() {
         config_ = {
                 {kEnum,    Item::NUM_ITEMS, 0},
@@ -101,6 +106,8 @@ public:
 
 class StockBlitz : public BlitzTable {
 public:
+    static const int kNumAttrs = 17;
+
     StockBlitz() {
         config_ = {
                 {kInteger, 0,   0.5},
@@ -134,6 +141,47 @@ public:
     bool pushTuple(Stock *stock);
 };
 
+class CustomerBlitz : public BlitzTable {
+public:
+    static const int kNumAttrs = 21;
+
+    CustomerBlitz() {
+        config_ = {
+                {kEnum,   Customer::NUM_PER_DISTRICT,  0},
+                {kEnum,   District::NUM_PER_WAREHOUSE, 0},
+                {kEnum,   5,                           0},
+                {kDouble, 0,                           0.0025},
+                {kDouble, 0,                           0.000025},
+                {kEnum,   1,                           0},
+                {kDouble, 0,                           0.0025},
+                {kDouble, 0,                           0.0025},
+                {kEnum,   1,                           0},
+                {kEnum,   2,                           0},
+                {kString, 0,                           0},
+                {kString, 0,                           0},
+                {kEnum,   1,                           0},
+                {kString, 0,                           0},
+                {kString, 0,                           0},
+                {kString, 0,                           0},
+                {kEnum,   50,                          0},
+                {kString, 0,                           0},
+                {kString, 0,                           0},
+                {kString, 0,                           0},
+                {kString, 0,                           0}
+        };
+        RegisterAttrInterpreter();
+    }
+
+    db_compress::CompressionConfig compressionConfig() override {
+        db_compress::CompressionConfig config;
+        for (AttrConfig &ac: config_) config.allowed_err_.push_back(ac.tolerance);
+        config.skip_model_learning_ = true;
+        return config;
+    }
+
+    bool pushTuple(Customer *customer);
+};
+
 void BlitzLearning(BlitzTable &table, db_compress::RelationCompressor &compressor);
 
 void orderlineToAttrVector(const OrderLine &order_line, db_compress::AttrVector &tuple);
@@ -143,5 +191,14 @@ OrderLine attrVectorToOrderLine(db_compress::AttrVector &attrVector);
 void stockToAttrVector(const Stock &stock, db_compress::AttrVector &tuple);
 
 Stock attrVectorToStock(db_compress::AttrVector &attrVector);
+
+void customerToAttrVector(const Customer &customer, db_compress::AttrVector &tuple);
+
+Customer attrVectorToCustomer(db_compress::AttrVector &attrVector);
+
+// --------------------------- Enum Handle ----------------------------------
+int EnumStrToId(const std::string &str, int32_t attr, const std::string &table_name);
+
+std::string &EnumIdToStr(int32_t id, int32_t attr, const std::string &table_name);
 
 #endif //TPCC_BLITZ_H

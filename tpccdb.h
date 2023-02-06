@@ -187,12 +187,12 @@ struct Customer {
     static const int MIN_FIRST = 6;
     static const int MAX_FIRST = 10;
     static const int MIDDLE = 2;
-    static const int MAX_LAST = 16;
+    static const int MAX_LAST = 17;
     static const int PHONE = 16;
     static const int CREDIT = 2;
     static const int MIN_DATA = 300;
     static const int MAX_DATA = 500;
-    static const int NUM_PER_DISTRICT = 300;
+    static const int NUM_PER_DISTRICT = 3000;
     static const char GOOD_CREDIT[];
     static const char BAD_CREDIT[];
 
@@ -201,13 +201,14 @@ struct Customer {
     int32_t c_w_id;
     float c_credit_lim;
     float c_discount;
+    int32_t c_delivery_cnt;
     float c_balance;
     float c_ytd_payment;
     int32_t c_payment_cnt;
-    int32_t c_delivery_cnt;
+    char c_credit[CREDIT + 1];
+    char c_last[MAX_LAST + 1];
     char c_first[MAX_FIRST + 1];
     char c_middle[MIDDLE + 1];
-    char c_last[MAX_LAST + 1];
     char c_street_1[Address::MAX_STREET + 1];
     char c_street_2[Address::MAX_STREET + 1];
     char c_city[Address::MAX_CITY + 1];
@@ -215,8 +216,29 @@ struct Customer {
     char c_zip[Address::ZIP + 1];
     char c_phone[PHONE + 1];
     char c_since[DATETIME_SIZE + 1];
-    char c_credit[CREDIT + 1];
     char c_data[MAX_DATA + 1];
+
+//    int32_t c_id;
+//    int32_t c_d_id;
+//    int32_t c_w_id;
+//    float c_credit_lim;
+//    float c_discount;
+//    float c_balance;
+//    float c_ytd_payment;
+//    int32_t c_payment_cnt;
+//    int32_t c_delivery_cnt;
+//    char c_first[MAX_FIRST + 1];
+//    char c_middle[MIDDLE + 1];
+//    char c_last[MAX_LAST + 1];
+//    char c_street_1[Address::MAX_STREET + 1];
+//    char c_street_2[Address::MAX_STREET + 1];
+//    char c_city[Address::MAX_CITY + 1];
+//    char c_state[Address::STATE + 1];
+//    char c_zip[Address::ZIP + 1];
+//    char c_phone[PHONE + 1];
+//    char c_since[DATETIME_SIZE + 1];
+//    char c_credit[CREDIT + 1];
+//    char c_data[MAX_DATA + 1];
 
     uint32_t size() {
         uint32_t ret = 0;

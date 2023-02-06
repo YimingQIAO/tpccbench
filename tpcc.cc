@@ -15,7 +15,7 @@
 #include "tpccgenerator.h"
 #include "tpcctables.h"
 
-static const int NUM_TRANSACTIONS = 500000;
+static const int NUM_TRANSACTIONS = 200000;
 
 int main(int argc, const char *argv[]) {
     if (argc != 3) {
@@ -77,6 +77,7 @@ int main(int argc, const char *argv[]) {
         // download the date
         tables->OrderlineToCSV(num_warehouses);
         tables->StockToCSV(num_warehouses);
+        tables->CustomerToCSV(num_warehouses);
     } else {
         // Transform table into blitz format and train compression model
         // order line
@@ -101,10 +102,23 @@ int main(int argc, const char *argv[]) {
         tables->MountCompressor(stock_compressor, stock_decompressor, num_warehouses, "stock");
         db_compress::NextTableAttrInterpreter();
 
+        // customer
+        CustomerBlitz cust_blitz;
+        tables->CustomerToBlitz(cust_blitz, num_warehouses);
+        db_compress::RelationCompressor cust_compressor("cust_model.blitz", cust_blitz.schema(),
+                                                        cust_blitz.compressionConfig(), kBlockSize);
+        BlitzLearning(cust_blitz, cust_compressor);
+        db_compress::RelationDecompressor cust_decompressor("cust_model.blitz", cust_blitz.schema(), kBlockSize);
+        cust_decompressor.InitWithoutIndex();
+        tables->MountCompressor(cust_compressor, cust_decompressor, num_warehouses, "customer");
+        db_compress::NextTableAttrInterpreter();
+
         std::cout << "---------------- Compressed ---------------- \n";
-        uint32_t orderline_blitz_size = tables->BlitzSize(num_warehouses, "orderline", NUM_TRANSACTIONS);
-        uint32_t stock_blitz_size = tables->BlitzSize(num_warehouses, "stock", NUM_TRANSACTIONS);
-        printf("orderline blitz size: %u\nstock blitz size: %u\n", orderline_blitz_size, stock_blitz_size);
+        uint32_t orderline_blitz_size = tables->BlitzSize(num_warehouses, NUM_TRANSACTIONS, "orderline");
+        uint32_t stock_blitz_size = tables->BlitzSize(num_warehouses, NUM_TRANSACTIONS, "stock");
+        uint32_t customer_blitz_size = tables->BlitzSize(num_warehouses, NUM_TRANSACTIONS, "customer");
+        printf("orderline blitz size: %u\nstock blitz size: %u\ncustomer blitz size: %u\n", orderline_blitz_size,
+               stock_blitz_size, customer_blitz_size);
 
         // Change the constants for run
         random = new tpcc::RealRandomGenerator();
@@ -123,8 +137,8 @@ int main(int argc, const char *argv[]) {
         uint64_t microseconds = nanoseconds / 1000;
         printf("%d transactions in %" PRId64 " ms = %f txns/s\n", NUM_TRANSACTIONS,
                (microseconds + 500) / 1000, NUM_TRANSACTIONS / (double) microseconds * 1000000.0);
-        orderline_blitz_size = tables->BlitzSize(num_warehouses, "orderline", NUM_TRANSACTIONS);
-        stock_blitz_size = tables->BlitzSize(num_warehouses, "stock", NUM_TRANSACTIONS);
+        orderline_blitz_size = tables->BlitzSize(num_warehouses, NUM_TRANSACTIONS, "orderline");
+        stock_blitz_size = tables->BlitzSize(num_warehouses, NUM_TRANSACTIONS, "stock");
         printf("orderline blitz size: %u\nstock blitz size: %u\n", orderline_blitz_size, stock_blitz_size);
 
 //        std::cout << "----------------- Result ----------------- \n";

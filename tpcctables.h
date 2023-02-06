@@ -17,7 +17,7 @@ public:
 // Stores all the tables in TPC-C
 class TPCCTables : public TPCCDB {
 public:
-    TPCCTables() : ol_buffer_(10), stock_buffer_(District::NUM_PER_WAREHOUSE + 7) {}
+    TPCCTables() : ol_buffer_(10), stock_buffer_(District::NUM_PER_WAREHOUSE + 7), customer_buffer_(21) {}
 
     virtual ~TPCCTables();
 
@@ -111,7 +111,11 @@ public:
 
     void insertCustomer(const Customer &customer);
 
+    void insertCustomerBlitz(db_compress::AttrVector &customer);
+
     Customer *findCustomer(int32_t w_id, int32_t d_id, int32_t c_id);
+
+    db_compress::AttrVector *findCustomerBlitz(int32_t w_id, int32_t d_id, int32_t c_id, int32_t stop_idx);
 
     // Finds all customers that match (w_id, d_id, *, c_last), taking the n/2th
     // one (rounded up).
@@ -154,59 +158,18 @@ public:
 
     void StockToBlitz(StockBlitz &table, int64_t num_warehouses);
 
+    void CustomerToBlitz(CustomerBlitz &table, int64_t num_warehouses);
+
     void MountCompressor(db_compress::RelationCompressor &compressor, db_compress::RelationDecompressor &decompressor,
                          int64_t num_warehouses, const std::string &table_name);
 
-    uint32_t BlitzSize(int64_t num_warehouses, const std::string &table_name, int64_t num_transactions);
+    uint32_t BlitzSize(int64_t num_warehouses, int64_t num_transactions, const std::string &table_name);
 
-    void OrderlineToCSV(int64_t num_warehouses) {
-        std::ios::sync_with_stdio(false);
-        std::ofstream ol_f("orderline.csv", std::ofstream::trunc);
-        for (int32_t i = 1; i <= num_warehouses; ++i) {
-            for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
-                for (int32_t k = 1; k <= Order::INITIAL_ORDERS_PER_DISTRICT; ++k) {
-                    for (int32_t l = 1; l <= Order::MAX_OL_CNT; ++l) {
-                        OrderLine *ol = findOrderLine(i, j, k, l);
-                        if (ol == nullptr)
-                            continue;
-                        ol_f << ol->ol_i_id << ","
-                             << ol->ol_amount << ","
-                             << ol->ol_number << ","
-                             << ol->ol_supply_w_id << ","
-                             << ol->ol_quantity << ","
-                             << ol->ol_delivery_d << ","
-                             << ol->ol_dist_info << ","
-                             << ol->ol_o_id << ","
-                             << ol->ol_d_id << ","
-                             << ol->ol_w_id << "\n";
-                    }
-                }
-            }
-        }
-        ol_f.close();
-    }
+    void OrderlineToCSV(int64_t num_warehouses);
 
-    void StockToCSV(int64_t num_warehouses) {
-        std::ios::sync_with_stdio(false);
-        std::ofstream stock_f("stock.csv", std::ofstream::trunc);
-        for (int32_t i = 1; i <= num_warehouses; ++i) {
-            for (int32_t j = 1; j <= Stock::NUM_STOCK_PER_WAREHOUSE; ++j) {
-                Stock *s = findStock(i, j);
-                assert(s != nullptr);
-                stock_f << s->s_i_id << ","
-                        << s->s_w_id << ","
-                        << s->s_quantity << ","
-                        << s->s_ytd << ","
-                        << s->s_order_cnt << ","
-                        << s->s_remote_cnt << ",";
-                stock_f << s->s_data << ",";
-                for (int32_t k = 0; k < District::NUM_PER_WAREHOUSE; k++)
-                    stock_f << s->s_dist[k] << ",";
-                stock_f << "\n";
-            }
-        }
-        stock_f.close();
-    }
+    void StockToCSV(int64_t num_warehouses);
+
+    void CustomerToCSV(int64_t num_warehouses);
 
     static const int KEYS_PER_INTERNAL = 8;
     static const int KEYS_PER_LEAF = 8;
@@ -222,10 +185,16 @@ private:
     // located.
     void internalOrderStatus(Customer *customer, OrderStatusOutput *output);
 
+    void internalOrderStatusBlitz(db_compress::AttrVector *customer, OrderStatusOutput *output);
+
     // Implements payment transaction after the customer tuple has been located.
     void internalPaymentRemote(int32_t warehouse_id, int32_t district_id,
                                Customer *c, float h_amount, PaymentOutput *output,
                                TPCCUndo **undo);
+
+    void internalPaymentRemoteBlitz(int32_t warehouse_id, int32_t district_id,
+                                    db_compress::AttrVector *c, float h_amount, PaymentOutput *output,
+                                    TPCCUndo **undo);
 
     // Erases order from the database. NOTE: This is only for undoing
     // transactions.
@@ -261,14 +230,14 @@ private:
     BPlusTree<int32_t, std::vector<uint8_t> *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> stock_blitz_;
     BPlusTree<int32_t, District *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> districts_;
     BPlusTree<int32_t, Customer *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> customers_;
+    BPlusTree<int32_t, std::vector<uint8_t> *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> customers_blitz_;
     typedef std::set<Customer *, CustomerByNameOrdering> CustomerByNameSet;
     CustomerByNameSet customers_by_name_;
     BPlusTree<int32_t, Order *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> orders_;
     // TODO: Tune the size of this tree for the bigger keys?
     BPlusTree<int64_t, Order *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> orders_by_customer_;
     BPlusTree<int32_t, OrderLine *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> orderlines_;
-    BPlusTree<int32_t, std::vector<uint8_t> *, KEYS_PER_INTERNAL, KEYS_PER_LEAF>
-            orderlines_blitz_;
+    BPlusTree<int32_t, std::vector<uint8_t> *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> orderlines_blitz_;
     // TODO: Implement btree lower_bound?
     typedef std::map<int64_t, NewOrder *> NewOrderMap;
     NewOrderMap neworders_;
@@ -280,6 +249,9 @@ private:
     db_compress::RelationCompressor *stock_compressor_;
     db_compress::RelationDecompressor *stock_decompressor_;
     db_compress::AttrVector stock_buffer_;
+    db_compress::RelationCompressor *customer_compressor_;
+    db_compress::RelationDecompressor *customer_decompressor_;
+    db_compress::AttrVector customer_buffer_;
 };
 
 #endif
