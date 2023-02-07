@@ -252,6 +252,12 @@ private:
     // Erases history from the database. NOTE: This is only for undoing transactions.
     void eraseHistory(const History *history);
 
+    // Erases history from the database. NOTE: This is only for undoing transactions.
+    void eraseStock(const Stock *stock);
+
+    // Erases history from the database. NOTE: This is only for undoing transactions.
+    void eraseCustomer(Customer *customer);
+
     // Allocates an undo buffer if needed, storing the pointer in *undo.
     void allocateUndo(TPCCUndo **undo) {
         if (undo != NULL && *undo == NULL) {

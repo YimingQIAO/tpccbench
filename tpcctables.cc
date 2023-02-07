@@ -343,6 +343,10 @@ bool TPCCTables::newOrderRemote(int32_t home_warehouse, int32_t remote_warehouse
             // remote order
             stock->s_remote_cnt += 1;
         }
+        // update stock
+        const Stock updated = *stock;
+        eraseStock(stock);
+        insertStock(updated);
     }
 
     return true;
@@ -515,6 +519,11 @@ void TPCCTables::internalPaymentRemote(int32_t warehouse_id, int32_t district_id
     COPY_STRING(output, c, c_credit);
     COPY_STRING(output, c, c_data);
 #undef COPY_STRING
+
+    // update customer
+    const Customer updated = *c;
+    eraseCustomer(c);
+    insertCustomer(updated);
 }
 
 #undef ZERO_ADDRESS
@@ -574,6 +583,11 @@ void TPCCTables::delivery(int32_t warehouse_id, int32_t carrier_id, const char *
             strcpy(line->ol_delivery_d, now);
             assert(strlen(line->ol_delivery_d) == DATETIME_SIZE);
             total += line->ol_amount;
+
+            // update orderline
+            const OrderLine updated = *line;
+            eraseOrderLine(line);
+            insertOrderLine(updated);
         }
 
         Customer *c = findCustomer(warehouse_id, d_id, o->o_c_id);
@@ -582,6 +596,11 @@ void TPCCTables::delivery(int32_t warehouse_id, int32_t carrier_id, const char *
         }
         c->c_balance += total;
         c->c_delivery_cnt += 1;
+
+        // update customer
+        const Customer updated = *c;
+        eraseCustomer(c);
+        insertCustomer(updated);
     }
 }
 
@@ -704,6 +723,12 @@ Stock *TPCCTables::findStock(int32_t w_id, int32_t s_id) {
     return find(stock_, makeStockKey(w_id, s_id));
 }
 
+void TPCCTables::eraseStock(const Stock *stock) {
+    int32_t key = makeStockKey(stock->s_w_id, stock->s_i_id);
+    erase(&stock_, key, stock);
+    delete stock;
+}
+
 static int32_t makeDistrictKey(int32_t w_id, int32_t d_id) {
     assert(1 <= w_id && w_id <= Warehouse::MAX_WAREHOUSE_ID);
     assert(1 <= d_id && d_id <= District::NUM_PER_WAREHOUSE);
@@ -786,6 +811,13 @@ Customer *TPCCTables::findCustomerByName(int32_t w_id, int32_t d_id, const char 
     assert(customer->c_w_id == w_id && customer->c_d_id == d_id &&
            strcmp(customer->c_last, c_last) == 0);
     return customer;
+}
+
+void TPCCTables::eraseCustomer(Customer *customer) {
+    int32_t key = makeCustomerKey(customer->c_w_id, customer->c_d_id, customer->c_id);
+    erase(&customers_, key, customer);
+    customers_by_name_.erase(customer);
+    delete customer;
 }
 
 static int32_t makeOrderKey(int32_t w_id, int32_t d_id, int32_t o_id) {
