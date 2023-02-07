@@ -607,7 +607,7 @@ void TPCCTables::internalPaymentRemoteBlitz(int32_t warehouse_id, int32_t distri
         static const int HISTORY_SIZE = Customer::MAX_DATA + 1;
         char history[HISTORY_SIZE];
         int characters =
-                snprintf(history, HISTORY_SIZE, "(%d, %d, %d, %d, %d, %.2f)\n", c->attr_[0].Int(),
+                snprintf(history, HISTORY_SIZE, " %d-%d-%d-%d-%d-%.0f)", c->attr_[0].Int(),
                          c->attr_[1].Int(), c->attr_[2].Int(), district_id, warehouse_id, h_amount);
         assert(characters < HISTORY_SIZE);
 

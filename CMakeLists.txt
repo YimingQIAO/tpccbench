@@ -15,7 +15,6 @@ SET(CMAKE_CXX_FLAGS "-MD ${CMAKE_CXX_FLAGS} ${WARNINGS}")
 SET(CMAKE_CXX_FLAGS_DEBUG "-g ${CMAKE_CXX_FLAGS}")
 SET(CMAKE_CXX_FLAGS_RELEASE "-g -O3 -DNDEBUG ${CMAKE_CXX_FLAGS}")
 
-add_executable(btree_test btree_test.cc stupidunit.cc)
 add_executable(tpcc tpcc.cc tpccclient.cc tpccgenerator.cc tpcctables.cc tpccdb.cc clock.cc randomgenerator.cc stupidunit.cc blitz.cc blitz.h)
 
 add_subdirectory(libblitz)
