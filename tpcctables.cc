@@ -38,7 +38,7 @@ bool CustomerByNameOrdering::operator()(const Customer *a,
 template<typename KeyType, typename ValueType>
 static void
 deleteBTreeValues(BPlusTree<KeyType, ValueType *, TPCCTables::KEYS_PER_INTERNAL,
-        TPCCTables::KEYS_PER_LEAF> *btree) {
+                            TPCCTables::KEYS_PER_LEAF> *btree) {
     KeyType key = std::numeric_limits<KeyType>::max();
     ValueType *value = NULL;
     while (btree->findLastLessThan(key, &value, &key)) {
@@ -63,15 +63,15 @@ TPCCTables::~TPCCTables() {
 int32_t TPCCTables::stockLevel(int32_t warehouse_id, int32_t district_id,
                                int32_t threshold) {
     /* EXEC SQL SELECT d_next_o_id INTO :o_id FROM district
-        WHERE d_w_id=:w_id AND d_id=:d_id; */
+      WHERE d_w_id=:w_id AND d_id=:d_id; */
     //~ printf("stock level %d %d %d\n", warehouse_id, district_id, threshold);
     District *d = findDistrict(warehouse_id, district_id);
     int32_t o_id = d->d_next_o_id;
 
     /* EXEC SQL SELECT COUNT(DISTINCT (s_i_id)) INTO :stock_count FROM order_line,
-       stock WHERE ol_w_id=:w_id AND ol_d_id=:d_id AND ol_o_id<:o_id AND
-       ol_o_id>=:o_id-20 AND s_w_id=:w_id AND s_i_id=ol_i_id AND s_quantity <
-       :threshold;*/
+     stock WHERE ol_w_id=:w_id AND ol_d_id=:d_id AND ol_o_id<:o_id AND
+     ol_o_id>=:o_id-20 AND s_w_id=:w_id AND s_i_id=ol_i_id AND s_quantity <
+     :threshold;*/
 
     // retrieve up to 300 tuples from order line, using ( [o_id-20, o_id), d_id,
     // w_id, [1, 15])
@@ -94,7 +94,8 @@ int32_t TPCCTables::stockLevel(int32_t warehouse_id, int32_t district_id,
     for (int order_id = o_id - STOCK_LEVEL_ORDERS; order_id < o_id; ++order_id) {
         // HACK: We shouldn't rely on MAX_OL_CNT. See comment above.
         for (int line_number = 1; line_number <= Order::MAX_OL_CNT; ++line_number) {
-            db_compress::AttrVector *line = findOrderLineBlitz(warehouse_id, district_id, order_id, line_number, 1);
+            db_compress::AttrVector *line = findOrderLineBlitz(
+                    warehouse_id, district_id, order_id, line_number, 1);
             if (line == NULL) {
                 // We can break since we have reached the end of the lines for this
                 // order.
@@ -112,20 +113,22 @@ int32_t TPCCTables::stockLevel(int32_t warehouse_id, int32_t district_id,
 
             // Check if s_quantity < threshold
             int32_t ol_i_id = line->attr_[0].Int();
-            db_compress::AttrVector *stock_av = findStockBlitz(warehouse_id, ol_i_id, 1);
-            if (stock_av->attr_[0].Int() < threshold) s_i_ids.push_back(ol_i_id);
+            db_compress::AttrVector *stock_av =
+                    findStockBlitz(warehouse_id, ol_i_id, 1);
+            if (stock_av->attr_[0].Int() < threshold)
+                s_i_ids.push_back(ol_i_id);
 
-//            Stock *stock = findStock(warehouse_id, ol_i_id);
-//            if (stock->s_quantity < threshold) {
-//                s_i_ids.push_back(ol_i_id);
-//            }
+            //            Stock *stock = findStock(warehouse_id, ol_i_id);
+            //            if (stock->s_quantity < threshold) {
+            //                s_i_ids.push_back(ol_i_id);
+            //            }
         }
     }
 
     // Filter out duplicate s_i_id: multiple order lines can have the same item
     std::sort(s_i_ids.begin(), s_i_ids.end());
     int num_distinct = 0;
-    int32_t last = -1; // NOTE: This relies on -1 being an invalid s_i_id
+    int32_t last = -1;// NOTE: This relies on -1 being an invalid s_i_id
     for (size_t i = 0; i < s_i_ids.size(); ++i) {
         if (s_i_ids[i] != last) {
             last = s_i_ids[i];
@@ -139,9 +142,11 @@ int32_t TPCCTables::stockLevel(int32_t warehouse_id, int32_t district_id,
 void TPCCTables::orderStatus(int32_t warehouse_id, int32_t district_id,
                              int32_t customer_id, OrderStatusOutput *output) {
     //~ printf("order status %d %d %d\n", warehouse_id, district_id, customer_id);
-    //    internalOrderStatus(findCustomer(warehouse_id, district_id, customer_id),
+    //    internalOrderStatus(findCustomer(warehouse_id, district_id,
+    //    customer_id),
     //                        output);
-    db_compress::AttrVector *av = findCustomerBlitz(warehouse_id, district_id, customer_id, 13);
+    db_compress::AttrVector *av =
+            findCustomerBlitz(warehouse_id, district_id, customer_id, 13);
     internalOrderStatusBlitz(av, output);
 }
 
@@ -152,7 +157,8 @@ void TPCCTables::orderStatus(int32_t warehouse_id, int32_t district_id,
     internalOrderStatus(customer, output);
 }
 
-void TPCCTables::internalOrderStatus(Customer *customer, OrderStatusOutput *output) {
+void TPCCTables::internalOrderStatus(Customer *customer,
+                                     OrderStatusOutput *output) {
     output->c_id = customer->c_id;
     // retrieve from customer: balance, first, middle, last
     output->c_balance = customer->c_balance;
@@ -169,13 +175,14 @@ void TPCCTables::internalOrderStatus(Customer *customer, OrderStatusOutput *outp
 
     output->lines.resize(order->o_ol_cnt);
     for (int32_t line_number = 1; line_number <= order->o_ol_cnt; ++line_number) {
-        db_compress::AttrVector *line = findOrderLineBlitz(customer->c_w_id, customer->c_d_id, order->o_id, line_number,
-                                                           6);
+        db_compress::AttrVector *line = findOrderLineBlitz(
+                customer->c_w_id, customer->c_d_id, order->o_id, line_number, 6);
         output->lines[line_number - 1].ol_i_id = line->attr_[0].Int();
         output->lines[line_number - 1].ol_supply_w_id = line->attr_[3].Int();
         output->lines[line_number - 1].ol_quantity = line->attr_[4].Int();
         output->lines[line_number - 1].ol_amount = line->attr_[1].Double();
-        strcpy(output->lines[line_number - 1].ol_delivery_d, line->attr_[5].String().c_str());
+        strcpy(output->lines[line_number - 1].ol_delivery_d,
+               line->attr_[5].String().c_str());
     }
 #ifndef NDEBUG
     // Verify that none of the other OrderLines exist.
@@ -187,16 +194,19 @@ void TPCCTables::internalOrderStatus(Customer *customer, OrderStatusOutput *outp
 #endif
 }
 
-void TPCCTables::internalOrderStatusBlitz(db_compress::AttrVector *customer, OrderStatusOutput *output) {
+void TPCCTables::internalOrderStatusBlitz(db_compress::AttrVector *customer,
+                                          OrderStatusOutput *output) {
     output->c_id = customer->attr_[0].Int();
     // retrieve from customer: balance, first, middle, last
     output->c_balance = customer->attr_[6].Double();
     strcpy(output->c_first, customer->attr_[11].String().c_str());
-    strcpy(output->c_middle, EnumIdToStr(customer->attr_[12].Int(), 12, "customer").c_str());
+    strcpy(output->c_middle,
+           EnumIdToStr(customer->attr_[12].Int(), 12, "customer").c_str());
     strcpy(output->c_last, customer->attr_[10].String().c_str());
 
     // Find the row in the order table with largest o_id
-    Order *order = findLastOrderByCustomer(customer->attr_[2].Int(), customer->attr_[1].Int(),
+    Order *order = findLastOrderByCustomer(customer->attr_[2].Int(),
+                                           customer->attr_[1].Int(),
                                            customer->attr_[0].Int());
     output->o_id = order->o_id;
     output->o_carrier_id = order->o_carrier_id;
@@ -204,13 +214,15 @@ void TPCCTables::internalOrderStatusBlitz(db_compress::AttrVector *customer, Ord
 
     output->lines.resize(order->o_ol_cnt);
     for (int32_t line_number = 1; line_number <= order->o_ol_cnt; ++line_number) {
-        db_compress::AttrVector *line = findOrderLineBlitz(
-                customer->attr_[2].Int(), customer->attr_[1].Int(), order->o_id, line_number, 6);
+        db_compress::AttrVector *line =
+                findOrderLineBlitz(customer->attr_[2].Int(), customer->attr_[1].Int(),
+                                   order->o_id, line_number, 6);
         output->lines[line_number - 1].ol_i_id = line->attr_[0].Int();
         output->lines[line_number - 1].ol_supply_w_id = line->attr_[3].Int();
         output->lines[line_number - 1].ol_quantity = line->attr_[4].Int();
         output->lines[line_number - 1].ol_amount = line->attr_[1].Double();
-        strcpy(output->lines[line_number - 1].ol_delivery_d, line->attr_[5].String().c_str());
+        strcpy(output->lines[line_number - 1].ol_delivery_d,
+               line->attr_[5].String().c_str());
     }
 }
 
@@ -220,8 +232,10 @@ bool TPCCTables::newOrder(int32_t warehouse_id, int32_t district_id,
                           const char *now, NewOrderOutput *output,
                           TPCCUndo **undo) {
     // perform the home part
-    bool result = newOrderHome(warehouse_id, district_id, customer_id, items, now, output, undo);
-    if (!result) return false;
+    bool result = newOrderHome(warehouse_id, district_id, customer_id, items, now,
+                               output, undo);
+    if (!result)
+        return false;
 
     // Process all remote warehouses
     WarehouseSet warehouses = newOrderRemoteWarehouses(warehouse_id, items);
@@ -250,10 +264,14 @@ bool TPCCTables::newOrderHome(int32_t warehouse_id, int32_t district_id,
     output->o_id = d->d_next_o_id;
     assert(findOrder(warehouse_id, district_id, output->o_id) == NULL);
 
-    db_compress::AttrVector *c = findCustomerBlitz(warehouse_id, district_id, customer_id, 11);
+    db_compress::AttrVector *c =
+            findCustomerBlitz(warehouse_id, district_id, customer_id, 11);
     assert(sizeof(output->c_last) >= c->attr_[10].String().size());
-    memcpy(output->c_last, c->attr_[10].String().c_str(), c->attr_[10].String().size());
-    memcpy(output->c_credit, EnumIdToStr(c->attr_[9].Int(), 9, "customer").c_str(), Customer::CREDIT);
+    memcpy(output->c_last, c->attr_[10].String().c_str(),
+           c->attr_[10].String().size());
+    memcpy(output->c_credit,
+           EnumIdToStr(c->attr_[9].Int(), 9, "customer").c_str(),
+           Customer::CREDIT);
     output->c_discount = c->attr_[4].Double();
 
     // CHEAT: Validate all items to see if we will need to abort
@@ -313,31 +331,34 @@ bool TPCCTables::newOrderHome(int32_t warehouse_id, int32_t district_id,
     OrderLine line;
     output->items.resize(items.size());
     output->total = 0;
+    char dist_info[Stock::DIST];
     for (int i = 0; i < items.size(); ++i) {
         ol_buffer_.attr_[2].value_ = i + 1;
         ol_buffer_.attr_[0].value_ = items[i].i_id;
         ol_buffer_.attr_[3].value_ = items[i].ol_supply_w_id;
         ol_buffer_.attr_[4].value_ = items[i].ol_quantity;
 
-        // Vertical Partitioning HACK: We read s_dist_xx from our local replica,
-        // assuming that these columns are replicated everywhere.
-        // TODO: I think this is unrealistic, since it will occupy ~23 MB per
-        // warehouse on all replicas. Try the "two round" version in the future.
-        db_compress::AttrVector *stock_av = findStockBlitz(items[i].ol_supply_w_id, items[i].i_id, 5 + district_id);
-        ol_buffer_.attr_[6].value_ = stock_av->attr_[4 + district_id].value_;
+        db_compress::AttrVector *stock_av = findStockBlitz(items[i].ol_supply_w_id, items[i].i_id, 5);
+        // This is a hack to get the stock data into the orderline
+        snprintf(dist_info, Stock::DIST,
+                 "distInfoStr#%02d#%03d#%05d", 4 + district_id, items[i].ol_supply_w_id, items[i].i_id);
+        ol_buffer_.attr_[6].value_ = dist_info;
         int32_t length = stock_av->attr_[4].String().size();
         bool stock_is_original = stock_av->attr_[4].String().substr(length - 8, 8) == "original";
 
-        if (stock_is_original && strstr(item_tuples[i]->i_data, "original") != NULL) {
+        if (stock_is_original &&
+            strstr(item_tuples[i]->i_data, "original") != NULL) {
             output->items[i].brand_generic = NewOrderOutput::ItemInfo::BRAND;
         } else {
             output->items[i].brand_generic = NewOrderOutput::ItemInfo::GENERIC;
         }
 
         assert(sizeof(output->items[i].i_name) == sizeof(item_tuples[i]->i_name));
-        memcpy(output->items[i].i_name, item_tuples[i]->i_name, sizeof(output->items[i].i_name));
+        memcpy(output->items[i].i_name, item_tuples[i]->i_name,
+               sizeof(output->items[i].i_name));
         output->items[i].i_price = item_tuples[i]->i_price;
-        output->items[i].ol_amount = static_cast<float>(items[i].ol_quantity) * item_tuples[i]->i_price;
+        output->items[i].ol_amount =
+                static_cast<float>(items[i].ol_quantity) * item_tuples[i]->i_price;
         ol_buffer_.attr_[1].value_ = output->items[i].ol_amount;
         // line.ol_amount = output->items[i].ol_amount;
         output->total += output->items[i].ol_amount;
@@ -345,7 +366,7 @@ bool TPCCTables::newOrderHome(int32_t warehouse_id, int32_t district_id,
             OrderLine *ol = insertOrderLine(line);
             (*undo)->inserted(ol);
         } else {
-            insertOrderLineBlitz(ol_buffer_);
+            insertOrderLineBlitz(ol_buffer_, OrderLineBlitz::kNumAttrs);
         }
     }
 
@@ -353,7 +374,8 @@ bool TPCCTables::newOrderHome(int32_t warehouse_id, int32_t district_id,
     // TODO: It might be more efficient to merge this into the loop above, but
     // this is simpler.
     vector<int32_t> quantities;
-    bool result = newOrderRemote(warehouse_id, warehouse_id, items, &quantities, undo);
+    bool result =
+            newOrderRemote(warehouse_id, warehouse_id, items, &quantities, undo);
     ASSERT(result);
     newOrderCombine(quantities, output);
 
@@ -383,32 +405,15 @@ bool TPCCTables::newOrderRemote(int32_t home_warehouse,
         (*out_quantities)[i] = stock_av->attr_[0].Int();
         stock_av->attr_[1].value_ = stock_av->attr_[1].Int() + items[i].ol_quantity;
         stock_av->attr_[2].value_ = stock_av->attr_[2].Int() + 1;
+        if (stock_av->attr_[2].Int() > 100) stock_av->attr_[2].value_ = 1;
         // newOrderHome calls newOrderRemote, so this is needed
         if (items[i].ol_supply_w_id != home_warehouse) {
             // remote order
             stock_av->attr_[3].value_ = stock_av->attr_[3].Int() + 1;
+            if (stock_av->attr_[3].Int() > 100) stock_av->attr_[3].value_ = 1;
         }
-        // insertStockBlitz(*stock_av);
-
-//        Stock *stock = findStock(items[i].ol_supply_w_id, items[i].i_id);
-//        if (undo != NULL) {
-//            (*undo)->save(stock);
-//        }
-//        if (stock->s_quantity >= items[i].ol_quantity + 10) {
-//            stock->s_quantity -= items[i].ol_quantity;
-//        } else {
-//            stock->s_quantity = stock->s_quantity - items[i].ol_quantity + 91;
-//        }
-//        (*out_quantities)[i] = stock->s_quantity;
-//        stock->s_ytd += items[i].ol_quantity;
-//        stock->s_order_cnt += 1;
-//        // newOrderHome calls newOrderRemote, so this is needed
-//        if (items[i].ol_supply_w_id != home_warehouse) {
-//            // remote order
-//            stock->s_remote_cnt += 1;
-//        }
+        insertOrderLineBlitz(ol_buffer_, 4);
     }
-
     return true;
 }
 
@@ -425,18 +430,9 @@ bool TPCCTables::findAndValidateItems(const vector<NewOrderItem> &items,
     return true;
 }
 
-void TPCCTables::payment(int32_t warehouse_id, int32_t district_id,
-                         int32_t c_warehouse_id, int32_t c_district_id,
-                         int32_t customer_id, float h_amount, const char *now,
+void TPCCTables::payment(int32_t warehouse_id, int32_t district_id, int32_t c_warehouse_id,
+                         int32_t c_district_id, int32_t customer_id, float h_amount, const char *now,
                          PaymentOutput *output, TPCCUndo **undo) {
-    //~ printf("payment %d %d %d %d %d %f %s\n", warehouse_id, district_id,
-    // c_warehouse_id, c_district_id, customer_id, h_amount, now);
-//    Customer *customer = findCustomer(c_warehouse_id, c_district_id, customer_id);
-//    paymentHome(warehouse_id, district_id, c_warehouse_id, c_district_id,
-//                customer_id, h_amount, now, output, undo);
-//    internalPaymentRemote(warehouse_id, district_id, customer, h_amount, output,
-//                          undo);
-
     db_compress::AttrVector *customer_av = findCustomerBlitz(c_warehouse_id, c_district_id, customer_id, 21);
     paymentHome(warehouse_id, district_id, c_warehouse_id, c_district_id, customer_id, h_amount, now, output, undo);
     internalPaymentRemoteBlitz(warehouse_id, district_id, customer_av, h_amount, output, undo);
@@ -448,25 +444,26 @@ void TPCCTables::payment(int32_t warehouse_id, int32_t district_id,
                          PaymentOutput *output, TPCCUndo **undo) {
     //~ printf("payment %d %d %d %d %s %f %s\n", warehouse_id, district_id,
     // c_warehouse_id, c_district_id, c_last, h_amount, now);
-    Customer *customer = findCustomerByName(c_warehouse_id, c_district_id, c_last);
+    Customer *customer =
+            findCustomerByName(c_warehouse_id, c_district_id, c_last);
     paymentHome(warehouse_id, district_id, c_warehouse_id, c_district_id,
                 customer->c_id, h_amount, now, output, undo);
     internalPaymentRemote(warehouse_id, district_id, customer, h_amount, output,
                           undo);
 }
 
-#define COPY_ADDRESS(src, dest, prefix)                                        \
-  Address::copy(dest->prefix##street_1, dest->prefix##street_2,                \
-                dest->prefix##city, dest->prefix##state, dest->prefix##zip,    \
-                src->prefix##street_1, src->prefix##street_2,                  \
-                src->prefix##city, src->prefix##state, src->prefix##zip)
+#define COPY_ADDRESS(src, dest, prefix)                                       \
+    Address::copy(dest->prefix##street_1, dest->prefix##street_2,             \
+                  dest->prefix##city, dest->prefix##state, dest->prefix##zip, \
+                  src->prefix##street_1, src->prefix##street_2,               \
+                  src->prefix##city, src->prefix##state, src->prefix##zip)
 
-#define ZERO_ADDRESS(output, prefix)                                           \
-  output->prefix##street_1[0] = '\0';                                          \
-  output->prefix##street_2[0] = '\0';                                          \
-  output->prefix##city[0] = '\0';                                              \
-  output->prefix##state[0] = '\0';                                             \
-  output->prefix##zip[0] = '\0'
+#define ZERO_ADDRESS(output, prefix)    \
+    output->prefix##street_1[0] = '\0'; \
+    output->prefix##street_2[0] = '\0'; \
+    output->prefix##city[0] = '\0';     \
+    output->prefix##state[0] = '\0';    \
+    output->prefix##zip[0] = '\0'
 
 static void zeroWarehouseDistrict(PaymentOutput *output) {
     // Zero the warehouse and district data
@@ -479,13 +476,16 @@ void TPCCTables::paymentRemote(int32_t warehouse_id, int32_t district_id,
                                int32_t c_warehouse_id, int32_t c_district_id,
                                int32_t c_id, float h_amount,
                                PaymentOutput *output, TPCCUndo **undo) {
-//    Customer *customer = findCustomer(c_warehouse_id, c_district_id, c_id);
-//    internalPaymentRemote(warehouse_id, district_id, customer, h_amount, output,
-//                          undo);
-//    zeroWarehouseDistrict(output);
+    //    Customer *customer = findCustomer(c_warehouse_id, c_district_id, c_id);
+    //    internalPaymentRemote(warehouse_id, district_id, customer, h_amount,
+    //    output,
+    //                          undo);
+    //    zeroWarehouseDistrict(output);
 
-    db_compress::AttrVector *customer_av = findCustomerBlitz(c_warehouse_id, c_district_id, c_id, 21);
-    internalPaymentRemoteBlitz(warehouse_id, district_id, customer_av, h_amount, output, undo);
+    db_compress::AttrVector *customer_av =
+            findCustomerBlitz(c_warehouse_id, c_district_id, c_id, 21);
+    internalPaymentRemoteBlitz(warehouse_id, district_id, customer_av, h_amount,
+                               output, undo);
     zeroWarehouseDistrict(output);
 }
 
@@ -493,8 +493,10 @@ void TPCCTables::paymentRemote(int32_t warehouse_id, int32_t district_id,
                                int32_t c_warehouse_id, int32_t c_district_id,
                                const char *c_last, float h_amount,
                                PaymentOutput *output, TPCCUndo **undo) {
-    Customer *customer = findCustomerByName(c_warehouse_id, c_district_id, c_last);
-    internalPaymentRemote(warehouse_id, district_id, customer, h_amount, output, undo);
+    Customer *customer =
+            findCustomerByName(c_warehouse_id, c_district_id, c_last);
+    internalPaymentRemote(warehouse_id, district_id, customer, h_amount, output,
+                          undo);
     zeroWarehouseDistrict(output);
 }
 
@@ -584,8 +586,8 @@ void TPCCTables::internalPaymentRemote(int32_t warehouse_id,
     output->c_credit_lim = c->c_credit_lim;
     output->c_discount = c->c_discount;
     output->c_balance = c->c_balance;
-#define COPY_STRING(dest, src, field)                                          \
-  memcpy(dest->field, src->field, sizeof(src->field))
+#define COPY_STRING(dest, src, field) \
+    memcpy(dest->field, src->field, sizeof(src->field))
     COPY_STRING(output, c, c_first);
     COPY_STRING(output, c, c_middle);
     COPY_STRING(output, c, c_last);
@@ -597,8 +599,9 @@ void TPCCTables::internalPaymentRemote(int32_t warehouse_id,
 #undef COPY_STRING
 }
 
-void TPCCTables::internalPaymentRemoteBlitz(int32_t warehouse_id, int32_t district_id, db_compress::AttrVector *c,
-                                            float h_amount, PaymentOutput *output, TPCCUndo **undo) {
+void TPCCTables::internalPaymentRemoteBlitz(
+        int32_t warehouse_id, int32_t district_id, db_compress::AttrVector *c,
+        float h_amount, PaymentOutput *output, TPCCUndo **undo) {
     c->attr_[6].value_ = c->attr_[6].Double() - h_amount;
     c->attr_[7].value_ = c->attr_[7].Double() + h_amount;
     c->attr_[8].value_ = c->attr_[8].Int() + 1;
@@ -607,8 +610,9 @@ void TPCCTables::internalPaymentRemoteBlitz(int32_t warehouse_id, int32_t distri
         static const int HISTORY_SIZE = Customer::MAX_DATA + 1;
         char history[HISTORY_SIZE];
         int characters =
-                snprintf(history, HISTORY_SIZE, " %d-%d-%d-%d-%d-%.0f)", c->attr_[0].Int(),
-                         c->attr_[1].Int(), c->attr_[2].Int(), district_id, warehouse_id, h_amount);
+                snprintf(history, HISTORY_SIZE, " %d-%d-%d-%d-%d-%.0f)",
+                         c->attr_[0].Int(), c->attr_[1].Int(), c->attr_[2].Int(),
+                         district_id, warehouse_id, h_amount);
         assert(characters < HISTORY_SIZE);
 
         // Perform the insert with a move and copy
@@ -619,22 +623,31 @@ void TPCCTables::internalPaymentRemoteBlitz(int32_t warehouse_id, int32_t distri
         assert(current_keep + characters <= Customer::MAX_DATA);
         c->attr_[20].value_ = c->attr_[20].String() + history;
     }
-    // insertCustomerBlitz(*c);
+    insertCustomerBlitz(*c, 9);
 
-    output->c_credit_lim = std::stof(EnumIdToStr(c->attr_[3].Int(), 3, "customer"));
+    output->c_credit_lim =
+            std::stof(EnumIdToStr(c->attr_[3].Int(), 3, "customer"));
     output->c_discount = c->attr_[4].Double();
     output->c_balance = c->attr_[6].Double();
     strncpy(output->c_first, c->attr_[11].String().c_str(), Customer::MAX_FIRST);
-    strncpy(output->c_middle, EnumIdToStr(c->attr_[12].Int(), 12, "customer").c_str(), Customer::MIDDLE);
+    strncpy(output->c_middle,
+            EnumIdToStr(c->attr_[12].Int(), 12, "customer").c_str(),
+            Customer::MIDDLE);
     strncpy(output->c_last, c->attr_[10].String().c_str(), Customer::MAX_LAST);
-    strncpy(output->c_street_1, c->attr_[13].String().c_str(), Address::MAX_STREET);
-    strncpy(output->c_street_2, c->attr_[14].String().c_str(), Address::MAX_STREET);
+    strncpy(output->c_street_1, c->attr_[13].String().c_str(),
+            Address::MAX_STREET);
+    strncpy(output->c_street_2, c->attr_[14].String().c_str(),
+            Address::MAX_STREET);
     strncpy(output->c_city, c->attr_[15].String().c_str(), Address::MAX_CITY);
-    strncpy(output->c_state, EnumIdToStr(c->attr_[16].Int(), 16, "customer").c_str(), Address::STATE);
+    strncpy(output->c_state,
+            EnumIdToStr(c->attr_[16].Int(), 16, "customer").c_str(),
+            Address::STATE);
     strncpy(output->c_zip, c->attr_[17].String().c_str(), Address::ZIP);
     strncpy(output->c_phone, c->attr_[18].String().c_str(), Customer::PHONE);
     strncpy(output->c_since, c->attr_[19].String().c_str(), DATETIME_SIZE);
-    strncpy(output->c_credit, EnumIdToStr(c->attr_[9].Int(), 9, "customer").c_str(), Customer::CREDIT);
+    strncpy(output->c_credit,
+            EnumIdToStr(c->attr_[9].Int(), 9, "customer").c_str(),
+            Customer::CREDIT);
     strncpy(output->c_data, c->attr_[20].String().c_str(), Customer::MAX_DATA);
 }
 
@@ -692,20 +705,13 @@ void TPCCTables::delivery(int32_t warehouse_id, int32_t carrier_id,
             line->attr_[5].value_ = now;
             assert(line->attr_[5].String().size() == DATETIME_SIZE);
             total += line->attr_[1].Double();
-            // insertOrderLineBlitz(*line);
+            insertOrderLineBlitz(*line, 2);
         }
-
-//        Customer *c = findCustomer(warehouse_id, d_id, o->o_c_id);
-//        if (undo != NULL) {
-//            (*undo)->save(c);
-//        }
-//        c->c_balance += total;
-//        c->c_delivery_cnt += 1;
 
         db_compress::AttrVector *c = findCustomerBlitz(warehouse_id, d_id, o->o_c_id, 7);
         c->attr_[6].value_ = c->attr_[6].Double() + total;
         c->attr_[5].value_ = c->attr_[5].Int() + 1;
-        // insertCustomerBlitz(*c);
+        insertCustomerBlitz(*c, 7);
     }
 }
 
@@ -752,7 +758,7 @@ void TPCCTables::applyUndo(TPCCUndo *undo) {
 
     // Transfer deleted new orders back to the database
     for (TPCCUndo::NewOrderDeletedSet::const_iterator i =
-            undo->deleted_new_orders().begin();
+                 undo->deleted_new_orders().begin();
          i != undo->deleted_new_orders().end(); ++i) {
         NewOrder *neworder = *i;
         insertNewOrderObject(&neworders_, neworder);
@@ -763,8 +769,9 @@ void TPCCTables::applyUndo(TPCCUndo *undo) {
 }
 
 template<typename T>
-static T *insert(BPlusTree<int32_t, T *, TPCCTables::KEYS_PER_INTERNAL, TPCCTables::KEYS_PER_LEAF> *tree, int32_t key,
-                 const T &item) {
+static T *insert(BPlusTree<int32_t, T *, TPCCTables::KEYS_PER_INTERNAL,
+                           TPCCTables::KEYS_PER_LEAF> *tree,
+                 int32_t key, const T &item) {
     assert(!tree->find(key));
     T *copy = new T(item);
     tree->insert(key, copy);
@@ -773,7 +780,7 @@ static T *insert(BPlusTree<int32_t, T *, TPCCTables::KEYS_PER_INTERNAL, TPCCTabl
 
 template<typename T>
 static T *find(const BPlusTree<int32_t, T *, TPCCTables::KEYS_PER_INTERNAL,
-        TPCCTables::KEYS_PER_LEAF> &tree,
+                               TPCCTables::KEYS_PER_LEAF> &tree,
                int32_t key) {
     T *output = NULL;
     if (tree.find(key, &output)) {
@@ -784,7 +791,7 @@ static T *find(const BPlusTree<int32_t, T *, TPCCTables::KEYS_PER_INTERNAL,
 
 template<typename T, typename KeyType>
 static void erase(BPlusTree<KeyType, T *, TPCCTables::KEYS_PER_INTERNAL,
-        TPCCTables::KEYS_PER_LEAF> *tree,
+                            TPCCTables::KEYS_PER_LEAF> *tree,
                   KeyType key, const T *value) {
     T *out = NULL;
     ASSERT(tree->find(key, &out));
@@ -827,24 +834,31 @@ void TPCCTables::insertStock(const Stock &stock) {
     insert(&stock_, makeStockKey(stock.s_w_id, stock.s_i_id), stock);
 }
 
-void TPCCTables::insertStockBlitz(db_compress::AttrVector &stock) {
+void TPCCTables::insertStockBlitz(db_compress::AttrVector &stock, int32_t stop_idx) {
     int32_t key = makeStockKey(stock.attr_[16].Int(), stock.attr_[15].Int());
-    std::vector<uint8_t> compressed = stock_compressor_->TransformTupleToBits(stock);
-    std::vector<uint8_t> *old = find(stock_blitz_, key);
-    if (old != nullptr)
-        *old = compressed;
-    else
-        insert(&stock_blitz_, key, compressed);
+    std::vector<uint8_t> compressed = stock_compressor_->TransformTupleToBits(stock, stop_idx);
+    // sub-tuple should not be written to B+-tree
+    if (stop_idx == StockBlitz::kNumAttrs) {
+        std::vector<uint8_t> *old = find(stock_blitz_, key);
+        if (old != nullptr)
+            *old = compressed;
+        else
+            insert(&stock_blitz_, key, compressed);
+    }
 }
 
 Stock *TPCCTables::findStock(int32_t w_id, int32_t s_id) {
     return find(stock_, makeStockKey(w_id, s_id));
 }
 
-db_compress::AttrVector *TPCCTables::findStockBlitz(int32_t w_id, int32_t s_id, int32_t stop_idx) {
-    std::vector<uint8_t> *compressed = find(stock_blitz_, makeStockKey(w_id, s_id));
-    if (compressed == nullptr) return nullptr;
-    stock_decompressor_->TransformBytesToTuple(compressed, &stock_buffer_, stop_idx);
+db_compress::AttrVector *TPCCTables::findStockBlitz(int32_t w_id, int32_t s_id,
+                                                    int32_t stop_idx) {
+    std::vector<uint8_t> *compressed =
+            find(stock_blitz_, makeStockKey(w_id, s_id));
+    if (compressed == nullptr)
+        return nullptr;
+    stock_decompressor_->TransformBytesToTuple(compressed, &stock_buffer_,
+                                               stop_idx);
     return &stock_buffer_;
 }
 
@@ -869,7 +883,9 @@ static int32_t makeCustomerKey(int32_t w_id, int32_t d_id, int32_t c_id) {
     assert(1 <= w_id && w_id <= Warehouse::MAX_WAREHOUSE_ID);
     assert(1 <= d_id && d_id <= District::NUM_PER_WAREHOUSE);
     assert(1 <= c_id && c_id <= Customer::NUM_PER_DISTRICT);
-    int32_t id = (w_id * District::NUM_PER_WAREHOUSE + d_id) * Customer::NUM_PER_DISTRICT + c_id;
+    int32_t id =
+            (w_id * District::NUM_PER_WAREHOUSE + d_id) * Customer::NUM_PER_DISTRICT +
+            c_id;
     assert(id >= 0);
     return id;
 }
@@ -881,28 +897,38 @@ void TPCCTables::insertCustomer(const Customer &customer) {
     customers_by_name_.insert(c);
 }
 
-void TPCCTables::insertCustomerBlitz(db_compress::AttrVector &customer) {
-    int32_t key = makeCustomerKey(customer.attr_[2].Int(), customer.attr_[1].Int(), customer.attr_[0].Int());
-    std::vector<uint8_t> compressed = customer_compressor_->TransformTupleToBits(customer);
-    std::vector<uint8_t> *old = find(customers_blitz_, key);
-    if (old != nullptr)
-        *old = compressed;
-    else
-        insert(&customers_blitz_, key, compressed);
+void TPCCTables::insertCustomerBlitz(db_compress::AttrVector &customer, int32_t stop_idx) {
+    int32_t key = makeCustomerKey(customer.attr_[2].Int(), customer.attr_[1].Int(),
+                                  customer.attr_[0].Int());
+    std::vector<uint8_t> compressed = customer_compressor_->TransformTupleToBits(customer, stop_idx);
+    // sub-tuple should not be written to B+-tree
+    if (stop_idx == CustomerBlitz::kNumAttrs) {
+        std::vector<uint8_t> *old = find(customers_blitz_, key);
+        if (old != nullptr)
+            *old = compressed;
+        else
+            insert(&customers_blitz_, key, compressed);
+    }
 }
 
 Customer *TPCCTables::findCustomer(int32_t w_id, int32_t d_id, int32_t c_id) {
     return find(customers_, makeCustomerKey(w_id, d_id, c_id));
 }
 
-db_compress::AttrVector *TPCCTables::findCustomerBlitz(int32_t w_id, int32_t d_id, int32_t c_id, int32_t stop_idx) {
+db_compress::AttrVector *TPCCTables::findCustomerBlitz(int32_t w_id,
+                                                       int32_t d_id,
+                                                       int32_t c_id,
+                                                       int32_t stop_idx) {
     std::vector<uint8_t> *compressed = find(customers_blitz_, makeCustomerKey(w_id, d_id, c_id));
-    if (compressed == nullptr) return nullptr;
-    customer_decompressor_->TransformBytesToTuple(compressed, &customer_buffer_, stop_idx);
+    if (compressed == nullptr)
+        return nullptr;
+    customer_decompressor_->TransformBytesToTuple(compressed, &customer_buffer_,
+                                                  stop_idx);
     return &customer_buffer_;
 }
 
-Customer *TPCCTables::findCustomerByName(int32_t w_id, int32_t d_id, const char *c_last) {
+Customer *TPCCTables::findCustomerByName(int32_t w_id, int32_t d_id,
+                                         const char *c_last) {
     // select (w_id, d_id, *, c_last) order by c_first
     Customer c;
     c.c_w_id = w_id;
@@ -911,7 +937,8 @@ Customer *TPCCTables::findCustomerByName(int32_t w_id, int32_t d_id, const char 
     c.c_first[0] = '\0';
     CustomerByNameSet::const_iterator it = customers_by_name_.lower_bound(&c);
     assert(it != customers_by_name_.end());
-    assert((*it)->c_w_id == w_id && (*it)->c_d_id == d_id && strcmp((*it)->c_last, c_last) == 0);
+    assert((*it)->c_w_id == w_id && (*it)->c_d_id == d_id &&
+           strcmp((*it)->c_last, c_last) == 0);
 
     // go to the "next" c_last
     // TODO: This is a GROSS hack. Can we do better?
@@ -955,7 +982,7 @@ static int32_t makeOrderKey(int32_t w_id, int32_t d_id, int32_t o_id) {
     // TODO: This is bad for locality since o_id is in the most significant
     // position. Larger keys?
     int32_t id = (o_id * District::NUM_PER_WAREHOUSE + d_id) *
-                 Warehouse::MAX_WAREHOUSE_ID +
+                         Warehouse::MAX_WAREHOUSE_ID +
                  w_id;
     assert(id >= 0);
     return id;
@@ -1028,9 +1055,11 @@ static int32_t makeOrderLineKey(int32_t w_id, int32_t d_id, int32_t o_id,
     // position. However, Order status fetches all rows for one (w_id, d_id, o_id)
     // tuple, so it may be fine, but stock level fetches order lines for a range
     // of (w_id, d_id, o_id) values
-    int64_t id =
-            ((o_id * District::NUM_PER_WAREHOUSE + d_id) * Warehouse::MAX_WAREHOUSE_ID + w_id) * Order::MAX_OL_CNT +
-            number;
+    int64_t id = ((o_id * District::NUM_PER_WAREHOUSE + d_id) *
+                          Warehouse::MAX_WAREHOUSE_ID +
+                  w_id) *
+                         Order::MAX_OL_CNT +
+                 number;
     assert(id >= 0);
     return id;
 }
@@ -1041,15 +1070,18 @@ OrderLine *TPCCTables::insertOrderLine(const OrderLine &orderline) {
     return insert(&orderlines_, key, orderline);
 }
 
-void TPCCTables::insertOrderLineBlitz(db_compress::AttrVector &orderline) {
+void TPCCTables::insertOrderLineBlitz(db_compress::AttrVector &orderline, int32_t stop_idx) {
     int32_t key = makeOrderLineKey(orderline.attr_[9].Int(), orderline.attr_[8].Int(),
                                    orderline.attr_[7].Int(), orderline.attr_[2].Int());
-    std::vector<uint8_t> compressed = orderline_compressor_->TransformTupleToBits(orderline);
-    std::vector<uint8_t> *old = find(orderlines_blitz_, key);
-    if (old != nullptr)
-        *old = compressed;
-    else
-        insert(&orderlines_blitz_, key, compressed);
+    std::vector<uint8_t> compressed = orderline_compressor_->TransformTupleToBits(orderline, stop_idx);
+    // sub-tuple should not be written to B+-tree
+    if (stop_idx == OrderLineBlitz::kNumAttrs) {
+        std::vector<uint8_t> *old = find(orderlines_blitz_, key);
+        if (old != nullptr)
+            *old = compressed;
+        else
+            insert(&orderlines_blitz_, key, compressed);
+    }
 }
 
 OrderLine *TPCCTables::findOrderLine(int32_t w_id, int32_t d_id, int32_t o_id,
@@ -1057,12 +1089,15 @@ OrderLine *TPCCTables::findOrderLine(int32_t w_id, int32_t d_id, int32_t o_id,
     return find(orderlines_, makeOrderLineKey(w_id, d_id, o_id, number));
 }
 
-db_compress::AttrVector *TPCCTables::findOrderLineBlitz(int32_t w_id, int32_t d_id, int32_t o_id, int32_t number,
-                                                        int32_t stop_idx) {
+db_compress::AttrVector *
+TPCCTables::findOrderLineBlitz(int32_t w_id, int32_t d_id, int32_t o_id,
+                               int32_t number, int32_t stop_idx) {
     int32_t key = makeOrderLineKey(w_id, d_id, o_id, number);
     std::vector<uint8_t> *compressed = find(orderlines_blitz_, key);
-    if (compressed == nullptr) return nullptr;
-    orderline_decompressor_->TransformBytesToTuple(compressed, &ol_buffer_, stop_idx);
+    if (compressed == nullptr)
+        return nullptr;
+    orderline_decompressor_->TransformBytesToTuple(compressed, &ol_buffer_,
+                                                   stop_idx);
     return &ol_buffer_;
 }
 
@@ -1205,8 +1240,8 @@ void TPCCTables::DBSize(int64_t num_warehouses, uint32_t &total_size,
     ol_size = 0;
     for (int32_t i = 1; i <= num_warehouses; ++i) {
         for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
-            for (int32_t k = 1; k <= Order::INITIAL_ORDERS_PER_DISTRICT + num_trans / 2;
-                 ++k) {
+            for (int32_t k = 1;
+                 k <= Order::INITIAL_ORDERS_PER_DISTRICT + num_trans / 2; ++k) {
                 for (int32_t l = 1; l <= Order::MAX_OL_CNT; ++l) {
                     OrderLine *ol = findOrderLine(i, j, k, l);
                     if (ol == nullptr)
@@ -1251,7 +1286,8 @@ void TPCCTables::DBSize(int64_t num_warehouses, uint32_t &total_size,
     }
 }
 
-void TPCCTables::OrderLineToBlitz(OrderLineBlitz &table, int64_t num_warehouses) {
+void TPCCTables::OrderLineToBlitz(OrderLineBlitz &table,
+                                  int64_t num_warehouses) {
     for (int32_t i = 1; i <= num_warehouses; ++i) {
         for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
             for (int32_t k = 1; k <= Order::INITIAL_ORDERS_PER_DISTRICT; ++k) {
@@ -1288,9 +1324,10 @@ void TPCCTables::CustomerToBlitz(CustomerBlitz &table, int64_t num_warehouses) {
     }
 }
 
-void TPCCTables::MountCompressor(db_compress::RelationCompressor &compressor,
-                                 db_compress::RelationDecompressor &decompressor, int64_t num_warehouses,
-                                 const std::string &table_name) {
+void TPCCTables::MountCompressor(
+        db_compress::RelationCompressor &compressor,
+        db_compress::RelationDecompressor &decompressor, int64_t num_warehouses,
+        const std::string &table_name) {
     if (table_name == "orderline") {
         orderline_compressor_ = &compressor;
         orderline_decompressor_ = &decompressor;
@@ -1303,7 +1340,7 @@ void TPCCTables::MountCompressor(db_compress::RelationCompressor &compressor,
                         OrderLine *ol = findOrderLine(i, j, k, l);
                         if (ol != nullptr) {
                             orderlineToAttrVector(*ol, orderline);
-                            insertOrderLineBlitz(orderline);
+                            insertOrderLineBlitz(orderline, OrderLineBlitz::kNumAttrs);
                         }
                     }
                 }
@@ -1319,7 +1356,7 @@ void TPCCTables::MountCompressor(db_compress::RelationCompressor &compressor,
                 Stock *s = findStock(i, j);
                 if (s != nullptr) {
                     stockToAttrVector(*s, stock);
-                    insertStockBlitz(stock);
+                    insertStockBlitz(stock, StockBlitz::kNumAttrs);
                 }
             }
         }
@@ -1334,7 +1371,7 @@ void TPCCTables::MountCompressor(db_compress::RelationCompressor &compressor,
                     Customer *c = findCustomer(i, j, k);
                     if (c != nullptr) {
                         customerToAttrVector(*c, customer);
-                        insertCustomerBlitz(customer);
+                        insertCustomerBlitz(customer, CustomerBlitz::kNumAttrs);
                     }
                 }
             }
@@ -1342,16 +1379,20 @@ void TPCCTables::MountCompressor(db_compress::RelationCompressor &compressor,
     }
 }
 
-uint32_t TPCCTables::BlitzSize(int64_t num_warehouses, int64_t num_transactions, const std::string &table_name) {
+uint32_t TPCCTables::BlitzSize(int64_t num_warehouses, int64_t num_transactions,
+                               const std::string &table_name) {
     uint32_t table_size = 0;
     if (table_name == "orderline") {
         for (int32_t i = 1; i <= num_warehouses; ++i) {
             for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
-                for (int32_t k = 1; k <= Order::INITIAL_ORDERS_PER_DISTRICT + num_transactions / 2; ++k) {
+                for (int32_t k = 1;
+                     k <= Order::INITIAL_ORDERS_PER_DISTRICT + num_transactions / 2;
+                     ++k) {
                     for (int32_t l = 1; l <= Order::MAX_OL_CNT; ++l) {
                         int64_t key = makeOrderLineKey(i, j, k, l);
                         std::vector<uint8_t> *compressed = find(orderlines_blitz_, key);
-                        if (compressed != nullptr) table_size += compressed->size();
+                        if (compressed != nullptr)
+                            table_size += compressed->size();
                     }
                 }
             }
@@ -1361,7 +1402,8 @@ uint32_t TPCCTables::BlitzSize(int64_t num_warehouses, int64_t num_transactions,
             for (int32_t j = 1; j <= Stock::NUM_STOCK_PER_WAREHOUSE; ++j) {
                 int32_t key = makeStockKey(i, j);
                 std::vector<uint8_t> *compressed = find(stock_blitz_, key);
-                if (compressed != nullptr) table_size += compressed->size();
+                if (compressed != nullptr)
+                    table_size += compressed->size();
             }
         }
     } else if (table_name == "customer") {
@@ -1370,7 +1412,8 @@ uint32_t TPCCTables::BlitzSize(int64_t num_warehouses, int64_t num_transactions,
                 for (int32_t k = 1; k <= Customer::NUM_PER_DISTRICT; ++k) {
                     int64_t key = makeCustomerKey(i, j, k);
                     std::vector<uint8_t> *compressed = find(customers_blitz_, key);
-                    if (compressed != nullptr) table_size += compressed->size();
+                    if (compressed != nullptr)
+                        table_size += compressed->size();
                 }
             }
         }
@@ -1388,16 +1431,11 @@ void TPCCTables::OrderlineToCSV(int64_t num_warehouses) {
                     OrderLine *ol = findOrderLine(i, j, k, l);
                     if (ol == nullptr)
                         continue;
-                    ol_f << ol->ol_i_id << ","
-                         << ol->ol_amount << ","
-                         << ol->ol_number << ","
-                         << ol->ol_supply_w_id << ","
-                         << ol->ol_quantity << ","
-                         << ol->ol_delivery_d << ","
-                         << ol->ol_dist_info << ","
-                         << ol->ol_o_id << ","
-                         << ol->ol_d_id << ","
-                         << ol->ol_w_id << "\n";
+                    ol_f << ol->ol_i_id << "," << ol->ol_amount << "," << ol->ol_number
+                         << "," << ol->ol_supply_w_id << "," << ol->ol_quantity << ","
+                         << ol->ol_delivery_d << "," << ol->ol_dist_info << ","
+                         << ol->ol_o_id << "," << ol->ol_d_id << "," << ol->ol_w_id
+                         << "\n";
                 }
             }
         }
@@ -1412,12 +1450,9 @@ void TPCCTables::StockToCSV(int64_t num_warehouses) {
         for (int32_t j = 1; j <= Stock::NUM_STOCK_PER_WAREHOUSE; ++j) {
             Stock *s = findStock(i, j);
             assert(s != nullptr);
-            stock_f << s->s_i_id << ","
-                    << s->s_w_id << ","
-                    << s->s_quantity << ","
-                    << s->s_ytd << ","
-                    << s->s_order_cnt << ","
-                    << s->s_remote_cnt << ",";
+            stock_f << s->s_i_id << "," << s->s_w_id << "," << s->s_quantity << ","
+                    << s->s_ytd << "," << s->s_order_cnt << "," << s->s_remote_cnt
+                    << ",";
             stock_f << s->s_data << ",";
             for (int32_t k = 0; k < District::NUM_PER_WAREHOUSE; k++)
                 stock_f << s->s_dist[k] << ",";
@@ -1435,27 +1470,14 @@ void TPCCTables::CustomerToCSV(int64_t num_warehouses) {
             for (int32_t k = 1; k <= Customer::NUM_PER_DISTRICT; ++k) {
                 Customer *c = findCustomer(i, j, k);
                 assert(c != nullptr);
-                cus_f << c->c_id << ","
-                      << c->c_d_id << ","
-                      << c->c_w_id << ","
-                      << c->c_credit_lim << ","
-                      << c->c_discount << ","
-                      << c->c_delivery_cnt << ","
-                      << c->c_balance << ","
-                      << c->c_ytd_payment << ","
-                      << c->c_payment_cnt << ","
-                      << c->c_credit << ","
-                      << c->c_last << ","
-                      << c->c_first << ","
-                      << c->c_middle << ","
-                      << c->c_street_1 << ","
-                      << c->c_street_2 << ","
-                      << c->c_city << ","
-                      << c->c_state << ","
-                      << c->c_zip << ","
-                      << c->c_phone << ","
-                      << c->c_since << ","
-                      << c->c_data << "\n";
+                cus_f << c->c_id << "," << c->c_d_id << "," << c->c_w_id << ","
+                      << c->c_credit_lim << "," << c->c_discount << ","
+                      << c->c_delivery_cnt << "," << c->c_balance << ","
+                      << c->c_ytd_payment << "," << c->c_payment_cnt << ","
+                      << c->c_credit << "," << c->c_last << "," << c->c_first << ","
+                      << c->c_middle << "," << c->c_street_1 << "," << c->c_street_2
+                      << "," << c->c_city << "," << c->c_state << "," << c->c_zip << ","
+                      << c->c_phone << "," << c->c_since << "," << c->c_data << "\n";
             }
         }
     }

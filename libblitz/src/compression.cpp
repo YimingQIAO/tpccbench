@@ -169,8 +169,11 @@ void RelationCompressor::EndOfLearningAndWriteModel() {
   num_tuples_ = 0;
 }
 
-std::vector<uint8_t> RelationCompressor::TransformTupleToBits(AttrVector &tuple) {
-  for (size_t attr_index : attr_order_) {
+std::vector<uint8_t> RelationCompressor::TransformTupleToBits(AttrVector &tuple, int32_t stop_idx) {
+  stop_idx = std::min(stop_idx, (int) attr_order_.size());
+  size_t attr_index;
+  for (int i = 0; i < stop_idx; ++i) {
+    attr_index = attr_order_[i];
     switch (schema_.attr_type_[attr_index]) {
       case 0: {
         // attribute types are recorded in schema, thus dynamic_cast is not

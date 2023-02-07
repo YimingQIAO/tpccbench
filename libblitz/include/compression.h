@@ -87,7 +87,7 @@ class RelationCompressor {
   /**
    * Transform a tuple into bits.
    */
-  std::vector<uint8_t> TransformTupleToBits(AttrVector &tuple);
+  std::vector<uint8_t> TransformTupleToBits(AttrVector &tuple, int32_t stop_idx);
 
  private:
   Schema schema_;

@@ -121,7 +121,7 @@ void TPCCGenerator::generateStock(int32_t id, int32_t w_id, bool original, Stock
     stock->s_remote_cnt = random_->stockIntDist("remote_cnt");
     for (int i = 0; i < District::NUM_PER_WAREHOUSE; ++i) {
         assert(sizeof(stock->s_dist[i]) - 1 == 24);
-        random_->distInfo(stock->s_dist[i], i, w_id, id);
+        random_->distInfo(stock->s_dist[i], i + 1, w_id, id);
     }
     random_->stockData(stock->s_data, Stock::MAX_DATA - 8);
 

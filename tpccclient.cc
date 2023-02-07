@@ -1,8 +1,8 @@
 #include "tpccclient.h"
 
+#include <chrono>
 #include <cstdio>
 #include <vector>
-#include <chrono>
 
 #include "assert.h"
 #include "clock.h"
@@ -12,17 +12,16 @@
 using std::vector;
 
 TPCCClient::TPCCClient(Clock *clock, tpcc::RandomGenerator *generator, TPCCDB *db, int num_items,
-                       int num_warehouses, int districts_per_warehouse, int customers_per_district) :
-        clock_(clock),
-        generator_(generator),
-        db_(db),
-        num_items_(num_items),
-        num_warehouses_(num_warehouses),
-        districts_per_warehouse_(districts_per_warehouse),
-        customers_per_district_(customers_per_district),
-        remote_item_milli_p_(OrderLine::REMOTE_PROBABILITY_MILLIS),
-        bound_warehouse_(0),
-        bound_district_(0) {
+                       int num_warehouses, int districts_per_warehouse, int customers_per_district) : clock_(clock),
+                                                                                                      generator_(generator),
+                                                                                                      db_(db),
+                                                                                                      num_items_(num_items),
+                                                                                                      num_warehouses_(num_warehouses),
+                                                                                                      districts_per_warehouse_(districts_per_warehouse),
+                                                                                                      customers_per_district_(customers_per_district),
+                                                                                                      remote_item_milli_p_(OrderLine::REMOTE_PROBABILITY_MILLIS),
+                                                                                                      bound_warehouse_(0),
+                                                                                                      bound_district_(0) {
     ASSERT(clock_ != NULL);
     ASSERT(generator_ != NULL);
     ASSERT(db_ != NULL);
@@ -89,7 +88,7 @@ uint64_t TPCCClient::doDelivery() {
 uint64_t TPCCClient::doPayment() {
     PaymentOutput output;
     int x = generator_->number(1, 100);
-    // int y = generator_->number(1, 100);
+    int y = generator_->number(1, 100);
 
     int32_t w_id = generateWarehouse();
     int32_t d_id = generateDistrict();
@@ -112,30 +111,24 @@ uint64_t TPCCClient::doPayment() {
     char now[Clock::DATETIME_SIZE + 1];
     clock_->getDateTimestamp(now);
 
-//    if (y <= 40) {
-//        // 40%: payment by last name
-//        char c_last[Customer::MAX_LAST + 1];
-//        generator_->lastName(c_last, customers_per_district_);
-//
-//        auto beg = std::chrono::high_resolution_clock::now();
-//        db_->payment(w_id, d_id, c_w_id, c_d_id, c_last, h_amount, now, &output, NULL);
-//        auto end = std::chrono::high_resolution_clock::now();
-//        return std::chrono::duration_cast<std::chrono::nanoseconds>(end - beg).count();
-//    } else {
-//        // 60%: payment by id
-//        ASSERT(y > 60);
-//        int32_t c_id = generateCID();
-//        auto beg = std::chrono::high_resolution_clock::now();
-//        db_->payment(w_id, d_id, c_w_id, c_d_id, c_id, h_amount, now, &output, NULL);
-//        auto end = std::chrono::high_resolution_clock::now();
-//        return std::chrono::duration_cast<std::chrono::nanoseconds>(end - beg).count();
-//    }
+    if (y <= 40) {
+        // 40%: payment by last name
+        char c_last[Customer::MAX_LAST + 1];
+        generator_->lastName(c_last, customers_per_district_);
 
-    int32_t c_id = generateCID();
-    auto beg = std::chrono::high_resolution_clock::now();
-    db_->payment(w_id, d_id, c_w_id, c_d_id, c_id, h_amount, now, &output, NULL);
-    auto end = std::chrono::high_resolution_clock::now();
-    return std::chrono::duration_cast<std::chrono::nanoseconds>(end - beg).count();
+        auto beg = std::chrono::high_resolution_clock::now();
+        db_->payment(w_id, d_id, c_w_id, c_d_id, c_last, h_amount, now, &output, NULL);
+        auto end = std::chrono::high_resolution_clock::now();
+        return std::chrono::duration_cast<std::chrono::nanoseconds>(end - beg).count();
+    } else {
+        // 60%: payment by id
+        ASSERT(y > 40);
+        int32_t c_id = generateCID();
+        auto beg = std::chrono::high_resolution_clock::now();
+        db_->payment(w_id, d_id, c_w_id, c_d_id, c_id, h_amount, now, &output, NULL);
+        auto end = std::chrono::high_resolution_clock::now();
+        return std::chrono::duration_cast<std::chrono::nanoseconds>(end - beg).count();
+    }
 }
 
 uint64_t TPCCClient::doNewOrder() {
@@ -181,15 +174,15 @@ uint64_t TPCCClient::doOne() {
     // See TPC-C 5.2.4 (page 68).
     uint64_t nanos;
     int x = generator_->number(1, 100);
-    if (x <= 4) { // 4%
+    if (x <= 4) {// 4%
         nanos = doStockLevel();
-    } else if (x <= 8) {  // 4%
+    } else if (x <= 8) {// 4%
         nanos = doDelivery();
-    } else if (x <= 12) {  // 4%
+    } else if (x <= 12) {// 4%
         nanos = doOrderStatus();
-    } else if (x <= 12 + 43) { // 43%
+    } else if (x <= 12 + 43) {// 43%
         nanos = doPayment();
-    } else {  // 45%
+    } else {// 45%
         ASSERT(x > 100 - 45);
         nanos = doNewOrder();
     }
