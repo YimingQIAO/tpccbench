@@ -186,7 +186,7 @@ struct Customer {
     static const int MIN_FIRST = 6;
     static const int MAX_FIRST = 10;
     static const int MIDDLE = 2;
-    static const int MAX_LAST = 16;
+    static const int MAX_LAST = 17;
     static const int PHONE = 16;
     static const int CREDIT = 2;
     static const int MIN_DATA = 300;

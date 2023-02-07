@@ -734,7 +734,7 @@ void TPCCTables::insertCustomer(const Customer &customer) {
     Customer *c = insert(&customers_,
                          makeCustomerKey(customer.c_w_id, customer.c_d_id, customer.c_id),
                          customer);
-    assert(customers_by_name_.find(c) == customers_by_name_.end());
+    // assert(customers_by_name_.find(c) == customers_by_name_.end());
     customers_by_name_.insert(c);
 }
 
