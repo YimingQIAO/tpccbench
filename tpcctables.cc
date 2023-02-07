@@ -343,10 +343,6 @@ bool TPCCTables::newOrderRemote(int32_t home_warehouse, int32_t remote_warehouse
             // remote order
             stock->s_remote_cnt += 1;
         }
-        // update stock
-        const Stock updated = *stock;
-        eraseStock(stock);
-        insertStock(updated);
     }
 
     return true;
@@ -519,11 +515,6 @@ void TPCCTables::internalPaymentRemote(int32_t warehouse_id, int32_t district_id
     COPY_STRING(output, c, c_credit);
     COPY_STRING(output, c, c_data);
 #undef COPY_STRING
-
-    // update customer
-    const Customer updated = *c;
-    eraseCustomer(c);
-    insertCustomer(updated);
 }
 
 #undef ZERO_ADDRESS
@@ -583,11 +574,6 @@ void TPCCTables::delivery(int32_t warehouse_id, int32_t carrier_id, const char *
             strcpy(line->ol_delivery_d, now);
             assert(strlen(line->ol_delivery_d) == DATETIME_SIZE);
             total += line->ol_amount;
-
-            // update orderline
-            const OrderLine updated = *line;
-            eraseOrderLine(line);
-            insertOrderLine(updated);
         }
 
         Customer *c = findCustomer(warehouse_id, d_id, o->o_c_id);
@@ -596,11 +582,6 @@ void TPCCTables::delivery(int32_t warehouse_id, int32_t carrier_id, const char *
         }
         c->c_balance += total;
         c->c_delivery_cnt += 1;
-
-        // update customer
-        const Customer updated = *c;
-        eraseCustomer(c);
-        insertCustomer(updated);
     }
 }
 
