@@ -116,9 +116,9 @@ void TPCCGenerator::generateStock(int32_t id, int32_t w_id, bool original, Stock
     stock->s_i_id = id;
     stock->s_w_id = w_id;
     stock->s_quantity = random_->number(Stock::MIN_QUANTITY, Stock::MAX_QUANTITY);
-    stock->s_ytd = random_->stockNumDist("ytd");
-    stock->s_order_cnt = random_->stockNumDist("order_cnt");
-    stock->s_remote_cnt = random_->stockNumDist("remote_cnt");
+    stock->s_ytd = random_->stockIntDist("ytd");
+    stock->s_order_cnt = random_->stockIntDist("order_cnt");
+    stock->s_remote_cnt = random_->stockIntDist("remote_cnt");
     for (int i = 0; i < District::NUM_PER_WAREHOUSE; ++i) {
         assert(sizeof(stock->s_dist[i]) - 1 == 24);
         random_->distInfo(stock->s_dist[i], i, w_id, id);
@@ -159,12 +159,11 @@ void TPCCGenerator::generateCustomer(int32_t id, int32_t d_id, int32_t w_id,
     customer->c_w_id = w_id;
     customer->c_credit_lim = Customer::INITIAL_CREDIT_LIM;
     customer->c_discount = random_->fixedPoint(4, Customer::MIN_DISCOUNT, Customer::MAX_DISCOUNT);
-    customer->c_balance = Customer::INITIAL_BALANCE;
-    customer->c_ytd_payment = Customer::INITIAL_YTD_PAYMENT;
-    customer->c_payment_cnt = Customer::INITIAL_PAYMENT_CNT;
-    customer->c_delivery_cnt = Customer::INITIAL_DELIVERY_CNT;
-    // random_->astring(customer->c_first, Customer::MIN_FIRST, Customer::MAX_FIRST, 26);
-    random_->corpusData(customer->c_first, Customer::MAX_FIRST, "first_name");
+    customer->c_balance = random_->customerFloatDist("balance");
+    customer->c_ytd_payment = random_->customerFloatDist("ytd_payment");
+    customer->c_payment_cnt = random_->customerIntDist("payment_cnt");
+    customer->c_delivery_cnt = random_->customerIntDist("delivery_cnt");
+    random_->customerString(customer->c_first, Customer::MAX_FIRST, "first_name");
     strcpy(customer->c_middle, "OE");
 
     if (id <= 1000) {
@@ -173,11 +172,11 @@ void TPCCGenerator::generateCustomer(int32_t id, int32_t d_id, int32_t w_id,
         random_->lastName(customer->c_last, customers_per_district_);
     }
 
-    random_->corpusData(customer->c_street_1, Address::MAX_STREET, "street");
+    random_->customerString(customer->c_street_1, Address::MAX_STREET, "street");
     random_->departmentData(customer->c_street_2, Address::MAX_STREET);
-    random_->corpusData(customer->c_city, Address::MAX_CITY, "city");
-    random_->corpusData(customer->c_state, Address::STATE, "state");
-    random_->corpusData(customer->c_zip, Address::ZIP, "zip");
+    random_->customerString(customer->c_city, Address::MAX_CITY, "city");
+    random_->customerString(customer->c_state, Address::STATE, "state");
+    random_->customerString(customer->c_zip, Address::ZIP, "zip");
     random_->phoneData(customer->c_phone, Customer::PHONE);
 
 //    random_->astring(customer->c_street_1, Address::MIN_STREET, Address::MAX_STREET, 26);

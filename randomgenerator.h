@@ -136,7 +136,7 @@ namespace tpcc {
             }
         }
 
-        void corpusData(char *s, int upper_length, const std::string &corpus_name) {
+        void customerString(char *s, int upper_length, const std::string &corpus_name) {
             std::vector<std::string> *corpus;
             if (corpus_name == "first_name") {
                 corpus = &first_names_;
@@ -161,12 +161,31 @@ namespace tpcc {
             s[word.size()] = '\0';
         }
 
-        uint32_t stockNumDist(const std::string &name) {
+        uint32_t stockIntDist(const std::string &name) {
             if (name == "ytd") return stock_ytd_dist_[number(0, stock_ytd_dist_.size() - 1)];
             else if (name == "order_cnt") return stock_order_cnt_dist_[number(0, stock_order_cnt_dist_.size() - 1)];
             else if (name == "remote_cnt") return stock_remote_cnt_dist_[number(0, stock_remote_cnt_dist_.size() - 1)];
             else {
                 printf("Stock num dist name %s is not supported\n", name.c_str());
+            }
+            return 0;
+        }
+
+        uint32_t customerIntDist(const std::string &name) {
+            if (name == "payment_cnt") return cus_payment_cnt_dist_[number(0, cus_payment_cnt_dist_.size() - 1)];
+            else if (name == "delivery_cnt")
+                return cus_delivery_cnt_dist_[number(0, cus_delivery_cnt_dist_.size() - 1)];
+            else {
+                printf("Customer num dist name %s is not supported\n", name.c_str());
+            }
+            return 0;
+        }
+
+        float customerFloatDist(const std::string &name) {
+            if (name == "balance") return cus_balance_dist_[number(0, cus_balance_dist_.size() - 1)];
+            else if (name == "ytd_payment") return cus_ytd_payment_dist_[number(0, cus_ytd_payment_dist_.size() - 1)];
+            else {
+                printf("Customer float dist name %s is not supported\n", name.c_str());
             }
             return 0;
         }
@@ -199,6 +218,11 @@ namespace tpcc {
         std::vector<uint32_t> stock_ytd_dist_;
         std::vector<uint32_t> stock_order_cnt_dist_;
         std::vector<uint32_t> stock_remote_cnt_dist_;
+
+        std::vector<uint32_t> cus_delivery_cnt_dist_;
+        std::vector<float> cus_balance_dist_;
+        std::vector<float> cus_ytd_payment_dist_;
+        std::vector<uint32_t> cus_payment_cnt_dist_;
 
         void loadCorpus() {
             if (!loadStockDataCorpus()) {
@@ -283,45 +307,7 @@ namespace tpcc {
             return true;
         }
 
-        bool loadDataDist() {
-            std::ifstream in("data_dist/stock_ytd_1m.txt");
-            if (in.fail()) {
-                printf("Failed to open stock_ytd_1m.txt\n");
-                return false;
-            }
-
-            std::string line;
-            while (std::getline(in, line)) {
-                if (line.back() == '\r') line.pop_back();
-                stock_ytd_dist_.push_back(std::stoi(line));
-            }
-            in.close();
-
-            in.open("data_dist/stock_order_cnt_1m.txt");
-            if (in.fail()) {
-                printf("Failed to open stock_order_cnt_1m.txt\n");
-                return false;
-            }
-
-            while (std::getline(in, line)) {
-                if (line.back() == '\r') line.pop_back();
-                stock_order_cnt_dist_.push_back(std::stoi(line));
-            }
-            in.close();
-
-            in.open("data_dist/stock_remote_cnt_1m.txt");
-            if (in.fail()) {
-                printf("Failed to open stock_remote_cnt_1m.txt\n");
-                return false;
-            }
-
-            while (std::getline(in, line)) {
-                if (line.back() == '\r') line.pop_back();
-                stock_remote_cnt_dist_.push_back(std::stoi(line));
-            }
-            in.close();
-            return true;
-        }
+        bool loadDataDist();
     };
 
 // A mock RandomGenerator for unit testing.

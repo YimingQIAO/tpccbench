@@ -110,8 +110,6 @@ public:
 
     StockBlitz() {
         config_ = {
-                {kInteger, 0,    0.5},
-                {kEnum,    5,    0},
                 {kEnum,    100,  0},
                 {kInteger, 0,    0.5},
                 {kEnum,    2000, 0},
@@ -126,7 +124,9 @@ public:
                 {kString,  0,    0},
                 {kString,  0,    0},
                 {kString,  0,    0},
-                {kString,  0,    0}
+                {kString,  0,    0},
+                {kInteger, 0,    0.5},
+                {kEnum,    5,    0},
         };
         RegisterAttrInterpreter();
     }
@@ -150,12 +150,12 @@ public:
                 {kEnum,   Customer::NUM_PER_DISTRICT,  0},
                 {kEnum,   District::NUM_PER_WAREHOUSE, 0},
                 {kEnum,   5,                           0},
-                {kDouble, 0,                           0.0025},
+                {kEnum,   1,                           0},
                 {kDouble, 0,                           0.000025},
-                {kEnum,   1,                           0},
+                {kEnum,   200,                         0},
                 {kDouble, 0,                           0.0025},
                 {kDouble, 0,                           0.0025},
-                {kEnum,   1,                           0},
+                {kEnum,   200,                         0},
                 {kEnum,   2,                           0},
                 {kString, 0,                           0},
                 {kString, 0,                           0},

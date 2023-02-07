@@ -147,15 +147,15 @@ struct Stock {
     static const int MIN_DATA = 26;
     static const int MAX_DATA = 50;
     static const int NUM_STOCK_PER_WAREHOUSE = 100000;
-
-    int32_t s_i_id;
-    int32_t s_w_id;
+    
     int32_t s_quantity;
     int32_t s_ytd;
     int32_t s_order_cnt;
     int32_t s_remote_cnt;
     char s_data[MAX_DATA + 1];
     char s_dist[District::NUM_PER_WAREHOUSE][DIST + 1];
+    int32_t s_i_id;
+    int32_t s_w_id;
 
     uint32_t size() {
         uint32_t ret = 0;

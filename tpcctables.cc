@@ -112,8 +112,8 @@ int32_t TPCCTables::stockLevel(int32_t warehouse_id, int32_t district_id,
 
             // Check if s_quantity < threshold
             int32_t ol_i_id = line->attr_[0].Int();
-            db_compress::AttrVector *stock_av = findStockBlitz(warehouse_id, ol_i_id, 3);
-            if (stock_av->attr_[2].Int() < threshold) s_i_ids.push_back(ol_i_id);
+            db_compress::AttrVector *stock_av = findStockBlitz(warehouse_id, ol_i_id, 1);
+            if (stock_av->attr_[0].Int() < threshold) s_i_ids.push_back(ol_i_id);
 
 //            Stock *stock = findStock(warehouse_id, ol_i_id);
 //            if (stock->s_quantity < threshold) {
@@ -323,10 +323,10 @@ bool TPCCTables::newOrderHome(int32_t warehouse_id, int32_t district_id,
         // assuming that these columns are replicated everywhere.
         // TODO: I think this is unrealistic, since it will occupy ~23 MB per
         // warehouse on all replicas. Try the "two round" version in the future.
-        db_compress::AttrVector *stock_av = findStockBlitz(items[i].ol_supply_w_id, items[i].i_id, 7 + district_id);
-        ol_buffer_.attr_[6].value_ = stock_av->attr_[6 + district_id].value_;
-        int32_t length = stock_av->attr_[6].String().size();
-        bool stock_is_original = stock_av->attr_[6].String().substr(length - 8, 8) == "original";
+        db_compress::AttrVector *stock_av = findStockBlitz(items[i].ol_supply_w_id, items[i].i_id, 5 + district_id);
+        ol_buffer_.attr_[6].value_ = stock_av->attr_[4 + district_id].value_;
+        int32_t length = stock_av->attr_[4].String().size();
+        bool stock_is_original = stock_av->attr_[4].String().substr(length - 8, 8) == "original";
 
         if (stock_is_original && strstr(item_tuples[i]->i_data, "original") != NULL) {
             output->items[i].brand_generic = NewOrderOutput::ItemInfo::BRAND;
@@ -374,19 +374,19 @@ bool TPCCTables::newOrderRemote(int32_t home_warehouse,
         }
 
         // update stock
-        db_compress::AttrVector *stock_av = findStockBlitz(items[i].ol_supply_w_id, items[i].i_id, 6);
-        if (stock_av->attr_[2].Int() >= items[i].ol_quantity + 10) {
-            stock_av->attr_[2].value_ = stock_av->attr_[2].Int() - items[i].ol_quantity;
+        db_compress::AttrVector *stock_av = findStockBlitz(items[i].ol_supply_w_id, items[i].i_id, 4);
+        if (stock_av->attr_[0].Int() >= items[i].ol_quantity + 10) {
+            stock_av->attr_[0].value_ = stock_av->attr_[0].Int() - items[i].ol_quantity;
         } else {
-            stock_av->attr_[2].value_ = stock_av->attr_[2].Int() - items[i].ol_quantity + 91;
+            stock_av->attr_[0].value_ = stock_av->attr_[0].Int() - items[i].ol_quantity + 91;
         }
-        (*out_quantities)[i] = stock_av->attr_[2].Int();
-        stock_av->attr_[3].value_ = stock_av->attr_[3].Int() + items[i].ol_quantity;
-        stock_av->attr_[4].value_ = stock_av->attr_[4].Int() + 1;
+        (*out_quantities)[i] = stock_av->attr_[0].Int();
+        stock_av->attr_[1].value_ = stock_av->attr_[1].Int() + items[i].ol_quantity;
+        stock_av->attr_[2].value_ = stock_av->attr_[2].Int() + 1;
         // newOrderHome calls newOrderRemote, so this is needed
         if (items[i].ol_supply_w_id != home_warehouse) {
             // remote order
-            stock_av->attr_[5].value_ = stock_av->attr_[5].Int() + 1;
+            stock_av->attr_[3].value_ = stock_av->attr_[3].Int() + 1;
         }
         // insertStockBlitz(*stock_av);
 
@@ -621,7 +621,7 @@ void TPCCTables::internalPaymentRemoteBlitz(int32_t warehouse_id, int32_t distri
     }
     // insertCustomerBlitz(*c);
 
-    output->c_credit_lim = c->attr_[3].Double();
+    output->c_credit_lim = std::stof(EnumIdToStr(c->attr_[3].Int(), 3, "customer"));
     output->c_discount = c->attr_[4].Double();
     output->c_balance = c->attr_[6].Double();
     strncpy(output->c_first, c->attr_[11].String().c_str(), Customer::MAX_FIRST);
@@ -828,7 +828,7 @@ void TPCCTables::insertStock(const Stock &stock) {
 }
 
 void TPCCTables::insertStockBlitz(db_compress::AttrVector &stock) {
-    int32_t key = makeStockKey(stock.attr_[1].Int(), stock.attr_[0].Int());
+    int32_t key = makeStockKey(stock.attr_[16].Int(), stock.attr_[15].Int());
     std::vector<uint8_t> compressed = stock_compressor_->TransformTupleToBits(stock);
     std::vector<uint8_t> *old = find(stock_blitz_, key);
     if (old != nullptr)

@@ -113,28 +113,28 @@ OrderLine attrVectorToOrderLine(db_compress::AttrVector &attrVector) {
 }
 
 void stockToAttrVector(const Stock &stock, db_compress::AttrVector &tuple) {
-    tuple.attr_[0].value_ = stock.s_i_id;
-    tuple.attr_[1].value_ = stock.s_w_id;
-    tuple.attr_[2].value_ = stock.s_quantity;
-    tuple.attr_[3].value_ = stock.s_ytd;
-    tuple.attr_[4].value_ = stock.s_order_cnt;
-    tuple.attr_[5].value_ = stock.s_remote_cnt;
-    tuple.attr_[6].value_ = stock.s_data;
+    tuple.attr_[0].value_ = stock.s_quantity;
+    tuple.attr_[1].value_ = stock.s_ytd;
+    tuple.attr_[2].value_ = stock.s_order_cnt;
+    tuple.attr_[3].value_ = stock.s_remote_cnt;
+    tuple.attr_[4].value_ = stock.s_data;
     for (int32_t k = 0; k < District::NUM_PER_WAREHOUSE; k++)
-        tuple.attr_[7 + k].value_ = stock.s_dist[k];
+        tuple.attr_[5 + k].value_ = stock.s_dist[k];
+    tuple.attr_[15].value_ = stock.s_i_id;
+    tuple.attr_[16].value_ = stock.s_w_id;
 }
 
 Stock attrVectorToStock(db_compress::AttrVector &attrVector) {
     Stock stock;
-    stock.s_i_id = attrVector.attr_[0].Int();
-    stock.s_w_id = attrVector.attr_[1].Int();
-    stock.s_quantity = attrVector.attr_[2].Int();
-    stock.s_ytd = attrVector.attr_[3].Int();
-    stock.s_order_cnt = attrVector.attr_[4].Int();
-    stock.s_remote_cnt = attrVector.attr_[5].Int();
-    strcpy(stock.s_data, attrVector.attr_[6].String().c_str());
+    stock.s_i_id = attrVector.attr_[15].Int();
+    stock.s_w_id = attrVector.attr_[16].Int();
+    stock.s_quantity = attrVector.attr_[0].Int();
+    stock.s_ytd = attrVector.attr_[1].Int();
+    stock.s_order_cnt = attrVector.attr_[2].Int();
+    stock.s_remote_cnt = attrVector.attr_[3].Int();
+    strcpy(stock.s_data, attrVector.attr_[4].String().c_str());
     for (int32_t k = 0; k < District::NUM_PER_WAREHOUSE; k++) {
-        std::string &s = attrVector.attr_[7 + k].String();
+        std::string &s = attrVector.attr_[5 + k].String();
         strcpy(stock.s_dist[k], s.c_str());
     }
     return stock;
@@ -144,7 +144,8 @@ void customerToAttrVector(const Customer &customer, db_compress::AttrVector &tup
     tuple.attr_[0].value_ = customer.c_id;
     tuple.attr_[1].value_ = customer.c_d_id;
     tuple.attr_[2].value_ = customer.c_w_id;
-    tuple.attr_[3].value_ = customer.c_credit_lim;
+    // tuple.attr_[3].value_ = customer.c_credit_lim;
+    tuple.attr_[3].value_ = EnumStrToId(std::to_string(customer.c_credit_lim), 3, "customer");
     tuple.attr_[4].value_ = customer.c_discount;
     tuple.attr_[5].value_ = customer.c_delivery_cnt;
     tuple.attr_[6].value_ = customer.c_balance;
@@ -169,7 +170,7 @@ Customer attrVectorToCustomer(db_compress::AttrVector &attrVector) {
     customer.c_id = attrVector.attr_[0].Int();
     customer.c_d_id = attrVector.attr_[1].Int();
     customer.c_w_id = attrVector.attr_[2].Int();
-    customer.c_credit_lim = attrVector.attr_[3].Double();
+    customer.c_credit_lim = std::stof(EnumIdToStr(attrVector.attr_[3].Int(), 3, "customer"));
     customer.c_discount = attrVector.attr_[4].Double();
     customer.c_balance = attrVector.attr_[6].Double();
     customer.c_ytd_payment = attrVector.attr_[7].Double();

@@ -124,6 +124,94 @@ namespace tpcc {
         return array;
     }
 
+    bool RandomGenerator::loadDataDist() {
+        std::ifstream in("data_dist/stock_ytd_1m.txt");
+        if (in.fail()) {
+            printf("Failed to open stock_ytd_1m.txt\n");
+            return false;
+        }
+
+        std::string line;
+        while (std::getline(in, line)) {
+            if (line.back() == '\r') line.pop_back();
+            stock_ytd_dist_.push_back(std::stoi(line));
+        }
+        in.close();
+
+        in.open("data_dist/stock_order_cnt_1m.txt");
+        if (in.fail()) {
+            printf("Failed to open stock_order_cnt_1m.txt\n");
+            return false;
+        }
+
+        while (std::getline(in, line)) {
+            if (line.back() == '\r') line.pop_back();
+            stock_order_cnt_dist_.push_back(std::stoi(line));
+        }
+        in.close();
+
+        in.open("data_dist/stock_remote_cnt_1m.txt");
+        if (in.fail()) {
+            printf("Failed to open stock_remote_cnt_1m.txt\n");
+            return false;
+        }
+
+        while (std::getline(in, line)) {
+            if (line.back() == '\r') line.pop_back();
+            stock_remote_cnt_dist_.push_back(std::stoi(line));
+        }
+        in.close();
+
+        in.open("data_dist/customer_delivery_cnt_1m.txt");
+        if (in.fail()) {
+            printf("Failed to open customer_delivery_cnt_1m.txt\n");
+            return false;
+        }
+
+        while (std::getline(in, line)) {
+            if (line.back() == '\r') line.pop_back();
+            cus_delivery_cnt_dist_.push_back(std::stoi(line));
+        }
+        in.close();
+
+        in.open("data_dist/customer_balance_1m.txt");
+        if (in.fail()) {
+            printf("Failed to open customer_balance_1m.txt\n");
+            return false;
+        }
+
+        while (std::getline(in, line)) {
+            if (line.back() == '\r') line.pop_back();
+            cus_balance_dist_.push_back(std::stof(line));
+        }
+        in.close();
+
+        in.open("data_dist/customer_ytd_payment_1m.txt");
+        if (in.fail()) {
+            printf("Failed to open customer_ytd_payment_1m.txt\n");
+            return false;
+        }
+
+        while (std::getline(in, line)) {
+            if (line.back() == '\r') line.pop_back();
+            cus_ytd_payment_dist_.push_back(std::stof(line));
+        }
+        in.close();
+
+        in.open("data_dist/customer_payment_cnt_1m.txt");
+        if (in.fail()) {
+            printf("Failed to open customer_payment_cnt_1m.txt\n");
+            return false;
+        }
+
+        while (std::getline(in, line)) {
+            if (line.back() == '\r') line.pop_back();
+            cus_payment_cnt_dist_.push_back(std::stoi(line));
+        }
+        in.close();
+        return true;
+    }
+
     // Defined by TPC-C 4.3.2.3.
     void makeLastName(int num, char *name) {
         static const char *const SYLLABLES[] = {
