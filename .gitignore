@@ -1,5 +1,7 @@
 .idea
 cmake-build-debug
 cmake-build-release
-workspace
+workspace/*.csv
+workspace/*.blitz
+workspace/temp.index
 *.txt
