@@ -354,13 +354,10 @@ bool TPCCTables::newOrderHome(int32_t warehouse_id, int32_t district_id,
         }
 
         assert(sizeof(output->items[i].i_name) == sizeof(item_tuples[i]->i_name));
-        memcpy(output->items[i].i_name, item_tuples[i]->i_name,
-               sizeof(output->items[i].i_name));
+        memcpy(output->items[i].i_name, item_tuples[i]->i_name, sizeof(output->items[i].i_name));
         output->items[i].i_price = item_tuples[i]->i_price;
-        output->items[i].ol_amount =
-                static_cast<float>(items[i].ol_quantity) * item_tuples[i]->i_price;
+        output->items[i].ol_amount = static_cast<float>(items[i].ol_quantity) * item_tuples[i]->i_price;
         ol_buffer_.attr_[1].value_ = output->items[i].ol_amount;
-        // line.ol_amount = output->items[i].ol_amount;
         output->total += output->items[i].ol_amount;
         if (undo != NULL) {
             OrderLine *ol = insertOrderLine(line);
@@ -838,13 +835,7 @@ void TPCCTables::insertStockBlitz(db_compress::AttrVector &stock, int32_t stop_i
     int32_t key = makeStockKey(stock.attr_[16].Int(), stock.attr_[15].Int());
     std::vector<uint8_t> compressed = stock_compressor_->TransformTupleToBits(stock, stop_idx);
     // sub-tuple should not be written to B+-tree
-    if (stop_idx == StockBlitz::kNumAttrs) {
-        std::vector<uint8_t> *old = find(stock_blitz_, key);
-        if (old != nullptr)
-            *old = compressed;
-        else
-            insert(&stock_blitz_, key, compressed);
-    }
+    if (stop_idx == StockBlitz::kNumAttrs) { insert(&stock_blitz_, key, compressed); }
 }
 
 Stock *TPCCTables::findStock(int32_t w_id, int32_t s_id) {
@@ -853,12 +844,9 @@ Stock *TPCCTables::findStock(int32_t w_id, int32_t s_id) {
 
 db_compress::AttrVector *TPCCTables::findStockBlitz(int32_t w_id, int32_t s_id,
                                                     int32_t stop_idx) {
-    std::vector<uint8_t> *compressed =
-            find(stock_blitz_, makeStockKey(w_id, s_id));
-    if (compressed == nullptr)
-        return nullptr;
-    stock_decompressor_->TransformBytesToTuple(compressed, &stock_buffer_,
-                                               stop_idx);
+    std::vector<uint8_t> *compressed = find(stock_blitz_, makeStockKey(w_id, s_id));
+    if (compressed == nullptr) return nullptr;
+    stock_decompressor_->TransformBytesToTuple(compressed, &stock_buffer_, stop_idx);
     return &stock_buffer_;
 }
 
@@ -883,9 +871,8 @@ static int32_t makeCustomerKey(int32_t w_id, int32_t d_id, int32_t c_id) {
     assert(1 <= w_id && w_id <= Warehouse::MAX_WAREHOUSE_ID);
     assert(1 <= d_id && d_id <= District::NUM_PER_WAREHOUSE);
     assert(1 <= c_id && c_id <= Customer::NUM_PER_DISTRICT);
-    int32_t id =
-            (w_id * District::NUM_PER_WAREHOUSE + d_id) * Customer::NUM_PER_DISTRICT +
-            c_id;
+    int32_t id = (w_id * District::NUM_PER_WAREHOUSE + d_id) * Customer::NUM_PER_DISTRICT +
+                 c_id;
     assert(id >= 0);
     return id;
 }
@@ -902,13 +889,7 @@ void TPCCTables::insertCustomerBlitz(db_compress::AttrVector &customer, int32_t 
                                   customer.attr_[0].Int());
     std::vector<uint8_t> compressed = customer_compressor_->TransformTupleToBits(customer, stop_idx);
     // sub-tuple should not be written to B+-tree
-    if (stop_idx == CustomerBlitz::kNumAttrs) {
-        std::vector<uint8_t> *old = find(customers_blitz_, key);
-        if (old != nullptr)
-            *old = compressed;
-        else
-            insert(&customers_blitz_, key, compressed);
-    }
+    if (stop_idx == CustomerBlitz::kNumAttrs) insert(&customers_blitz_, key, compressed);
 }
 
 Customer *TPCCTables::findCustomer(int32_t w_id, int32_t d_id, int32_t c_id) {
@@ -1075,13 +1056,7 @@ void TPCCTables::insertOrderLineBlitz(db_compress::AttrVector &orderline, int32_
                                    orderline.attr_[7].Int(), orderline.attr_[2].Int());
     std::vector<uint8_t> compressed = orderline_compressor_->TransformTupleToBits(orderline, stop_idx);
     // sub-tuple should not be written to B+-tree
-    if (stop_idx == OrderLineBlitz::kNumAttrs) {
-        std::vector<uint8_t> *old = find(orderlines_blitz_, key);
-        if (old != nullptr)
-            *old = compressed;
-        else
-            insert(&orderlines_blitz_, key, compressed);
-    }
+    if (stop_idx == OrderLineBlitz::kNumAttrs) insert(&orderlines_blitz_, key, compressed);
 }
 
 OrderLine *TPCCTables::findOrderLine(int32_t w_id, int32_t d_id, int32_t o_id,

@@ -11,10 +11,10 @@ TPCCGenerator::TPCCGenerator(tpcc::RandomGenerator *random, const char *now,
                              int num_items, int districts_per_warehouse,
                              int customers_per_district,
                              int new_orders_per_district)
-        : random_(random), num_items_(num_items),
-          districts_per_warehouse_(districts_per_warehouse),
-          customers_per_district_(customers_per_district),
-          new_orders_per_district_(new_orders_per_district) {
+    : random_(random), num_items_(num_items),
+      districts_per_warehouse_(districts_per_warehouse),
+      customers_per_district_(customers_per_district),
+      new_orders_per_district_(new_orders_per_district) {
     assert(strlen(now) == DATETIME_SIZE);
     strcpy(now_, now);
 
@@ -179,12 +179,12 @@ void TPCCGenerator::generateCustomer(int32_t id, int32_t d_id, int32_t w_id,
     random_->customerString(customer->c_zip, Address::ZIP, "zip");
     random_->phoneData(customer->c_phone, Customer::PHONE);
 
-//    random_->astring(customer->c_street_1, Address::MIN_STREET, Address::MAX_STREET, 26);
-//    random_->astring(customer->c_street_2, Address::MIN_STREET, Address::MAX_STREET, 26);
-//    random_->astring(customer->c_city, Address::MIN_CITY, Address::MAX_CITY, 26);
-//    random_->astring(customer->c_state, Address::STATE, Address::STATE, 26);
-//    makeZip(random_, customer->c_zip);
-//    random_->nstring(customer->c_phone, Customer::PHONE, Customer::PHONE);
+    //    random_->astring(customer->c_street_1, Address::MIN_STREET, Address::MAX_STREET, 26);
+    //    random_->astring(customer->c_street_2, Address::MIN_STREET, Address::MAX_STREET, 26);
+    //    random_->astring(customer->c_city, Address::MIN_CITY, Address::MAX_CITY, 26);
+    //    random_->astring(customer->c_state, Address::STATE, Address::STATE, 26);
+    //    makeZip(random_, customer->c_zip);
+    //    random_->nstring(customer->c_phone, Customer::PHONE, Customer::PHONE);
     strcpy(customer->c_since, now_);
     assert(strlen(customer->c_since) == DATETIME_SIZE);
     if (bad_credit) {
@@ -193,8 +193,8 @@ void TPCCGenerator::generateCustomer(int32_t id, int32_t d_id, int32_t w_id,
         strcpy(customer->c_credit, Customer::GOOD_CREDIT);
     }
     random_->customerData(customer->c_data, Customer::MAX_DATA);
-//    random_->astring(customer->c_data, Customer::MIN_DATA, Customer::MAX_DATA,
-//                     26);
+    //    random_->astring(customer->c_data, Customer::MIN_DATA, Customer::MAX_DATA,
+    //                     26);
 }
 
 void TPCCGenerator::generateOrder(int32_t id, int32_t c_id, int32_t d_id,
@@ -222,23 +222,17 @@ void TPCCGenerator::generateOrderLine(int32_t number, int32_t o_id,
     orderline->ol_d_id = d_id;
     orderline->ol_w_id = w_id;
     orderline->ol_number = number;
-    orderline->ol_i_id =
-            random_->number(OrderLine::MIN_I_ID, OrderLine::MAX_I_ID);
+    orderline->ol_i_id = random_->number(OrderLine::MIN_I_ID, OrderLine::MAX_I_ID);
     orderline->ol_supply_w_id = w_id;
-    // orderline->ol_quantity = OrderLine::INITIAL_QUANTITY;
     orderline->ol_quantity = random_->number(1, Stock::MAX_QUANTITY);
     if (!new_order) {
         orderline->ol_amount = 0.00;
         strcpy(orderline->ol_delivery_d, now_);
     } else {
-        orderline->ol_amount =
-                random_->fixedPoint(2, OrderLine::MIN_AMOUNT, OrderLine::MAX_AMOUNT);
+        orderline->ol_amount = random_->fixedPoint(2, OrderLine::MIN_AMOUNT, OrderLine::MAX_AMOUNT);
         // HACK: Empty delivery date == null
         orderline->ol_delivery_d[0] = '\0';
     }
-    //  random_->astring(orderline->ol_dist_info, sizeof(orderline->ol_dist_info)
-    //  - 1,
-    //                   sizeof(orderline->ol_dist_info) - 1, 26);
     assert(sizeof(orderline->ol_dist_info) - 1 == 24);
     random_->distInfo(orderline->ol_dist_info, d_id, w_id, orderline->ol_i_id);
 }
