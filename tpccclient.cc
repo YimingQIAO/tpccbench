@@ -12,7 +12,8 @@
 using std::vector;
 
 TPCCClient::TPCCClient(Clock *clock, tpcc::RandomGenerator *generator, TPCCDB *db, int num_items,
-                       int num_warehouses, int districts_per_warehouse, int customers_per_district) :
+                       int num_warehouses, int districts_per_warehouse, int customers_per_district)
+        :
         clock_(clock),
         generator_(generator),
         db_(db),
@@ -142,7 +143,8 @@ uint64_t TPCCClient::doNewOrder() {
     int ol_cnt = generator_->number(Order::MIN_OL_CNT, Order::MAX_OL_CNT);
 
     // 1% of transactions roll back
-    bool rollback = generator_->number(1, 100) == 1;
+    // bool rollback = generator_->number(1, 100) == 1;
+    bool rollback = false;
 
     vector<NewOrderItem> items(ol_cnt);
     for (int i = 0; i < ol_cnt; ++i) {
@@ -169,9 +171,6 @@ uint64_t TPCCClient::doNewOrder() {
     int32_t dist = generateDistrict();
     int32_t cid = generateCID();
     auto beg = std::chrono::high_resolution_clock::now();
-//    bool result = db_->newOrder(
-//            w_id, generateDistrict(), generateCID(), items, now, &output, NULL);
-//    assert(result == !rollback);
     db_->newOrder(w_id, dist, cid, items, now, &output, nullptr);
     auto end = std::chrono::high_resolution_clock::now();
     return std::chrono::duration_cast<std::chrono::nanoseconds>(end - beg).count();
