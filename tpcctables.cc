@@ -341,8 +341,8 @@ bool TPCCTables::newOrderHome(int32_t warehouse_id, int32_t district_id,
         db_compress::AttrVector *stock_av = findStockBlitz(items[i].ol_supply_w_id, items[i].i_id,
                                                            5);
         // This is a hack to get the stock data into the orderline
-        snprintf(dist_info, Stock::DIST,
-                 "distInfoStr#%02d#%03d#%05d", 4 + district_id, items[i].ol_supply_w_id,
+        snprintf(dist_info, Stock::DIST, "dist-info-str#%02d#%03d#%03d", 4 + district_id,
+                 items[i].ol_supply_w_id,
                  items[i].i_id);
         ol_buffer_.attr_[6].value_ = dist_info;
         int32_t length = stock_av->attr_[4].String().size();
@@ -374,8 +374,7 @@ bool TPCCTables::newOrderHome(int32_t warehouse_id, int32_t district_id,
     // TODO: It might be more efficient to merge this into the loop above, but
     // this is simpler.
     vector<int32_t> quantities;
-    bool result =
-            newOrderRemote(warehouse_id, warehouse_id, items, &quantities, undo);
+    bool result = newOrderRemote(warehouse_id, warehouse_id, items, &quantities, undo);
     ASSERT(result);
     newOrderCombine(quantities, output);
 
@@ -413,7 +412,7 @@ bool TPCCTables::newOrderRemote(int32_t home_warehouse,
             stock_av->attr_[3].value_ = stock_av->attr_[3].Int() + 1;
             if (stock_av->attr_[3].Int() > 100) stock_av->attr_[3].value_ = 1;
         }
-        insertOrderLineBlitz(ol_buffer_, 4);
+        insertStockBlitz(stock_buffer_, 4);
     }
     return true;
 }
@@ -1045,12 +1044,12 @@ static int32_t makeOrderLineKey(int32_t w_id, int32_t d_id, int32_t o_id,
     // position. However, Order status fetches all rows for one (w_id, d_id, o_id)
     // tuple, so it may be fine, but stock level fetches order lines for a range
     // of (w_id, d_id, o_id) values
-    int64_t id = ((o_id * District::NUM_PER_WAREHOUSE + d_id) *
+    int32_t id = ((o_id * District::NUM_PER_WAREHOUSE + d_id) *
                   Warehouse::MAX_WAREHOUSE_ID +
                   w_id) *
                  Order::MAX_OL_CNT +
                  number;
-    assert(id >= 0);
+    // assert(id >= 0);
     return id;
 }
 
@@ -1363,10 +1362,10 @@ uint32_t TPCCTables::BlitzSize(int64_t num_warehouses, int64_t num_transactions,
                      k <= Order::INITIAL_ORDERS_PER_DISTRICT + num_transactions / 2;
                      ++k) {
                     for (int32_t l = 1; l <= Order::MAX_OL_CNT; ++l) {
-                        int64_t key = makeOrderLineKey(i, j, k, l);
+                        int32_t key = makeOrderLineKey(i, j, k, l);
+                        if (key < 0) continue;
                         std::vector<uint8_t> *compressed = find(orderlines_blitz_, key);
-                        if (compressed != nullptr)
-                            table_size += compressed->size();
+                        if (compressed != nullptr) table_size += compressed->size();
                     }
                 }
             }

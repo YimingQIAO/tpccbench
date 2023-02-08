@@ -264,8 +264,7 @@ void TPCCGenerator::makeWarehouse(TPCCTables *tables, int32_t w_id) {
     makeWarehouseWithoutStock(tables, w_id);
 }
 
-void TPCCGenerator::makeWarehouseWithoutStock(TPCCTables *tables,
-                                              int32_t w_id) {
+void TPCCGenerator::makeWarehouseWithoutStock(TPCCTables* tables, int32_t w_id) {
     Warehouse w;
     generateWarehouse(w_id, &w);
     tables->insertWarehouse(w);
@@ -276,8 +275,8 @@ void TPCCGenerator::makeWarehouseWithoutStock(TPCCTables *tables,
         tables->insertDistrict(d);
 
         // Select 10% of the customers to have bad credit
-        set<int> selected_rows = selectUniqueIds(random_, customers_per_district_ / 10, 1,
-                                                 customers_per_district_);
+        set<int> selected_rows = selectUniqueIds(random_, customers_per_district_/10, 1,
+                customers_per_district_);
         for (int c_id = 1; c_id <= customers_per_district_; ++c_id) {
             Customer c;
             bool bad_credit = selected_rows.find(c_id) != selected_rows.end();
@@ -292,12 +291,12 @@ void TPCCGenerator::makeWarehouseWithoutStock(TPCCTables *tables,
         // TODO: TPC-C 4.3.3.1. says that this should be a permutation of [1, 3000]. But since it is
         // for a c_id field, it seems to make sense to have it be a permutation of the customers.
         // For the "real" thing this will be equivalent
-        int *permutation = random_->makePermutation(1, customers_per_district_);
+        int* permutation = random_->makePermutation(1, customers_per_district_);
         for (int o_id = 1; o_id <= customers_per_district_; ++o_id) {
             // The last new_orders_per_district_ orders are new
             bool new_order = customers_per_district_ - new_orders_per_district_ < o_id;
             Order o;
-            generateOrder(o_id, permutation[o_id - 1], d_id, w_id, new_order, &o);
+            generateOrder(o_id, permutation[o_id-1], d_id, w_id, new_order, &o);
             tables->insertOrder(o);
 
             // Generate each OrderLine for the order
