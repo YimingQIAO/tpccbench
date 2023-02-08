@@ -72,7 +72,7 @@ namespace tpcc {
 
         void stockData(char *s, int upper_length);
 
-        void customerData(char *s, int upper_length);
+        void customerData(char *s, int upper_length, bool bad_credit);
 
         void phoneData(char *s, int length);
 

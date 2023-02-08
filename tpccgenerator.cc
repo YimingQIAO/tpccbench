@@ -11,10 +11,10 @@ TPCCGenerator::TPCCGenerator(tpcc::RandomGenerator *random, const char *now,
                              int num_items, int districts_per_warehouse,
                              int customers_per_district,
                              int new_orders_per_district)
-    : random_(random), num_items_(num_items),
-      districts_per_warehouse_(districts_per_warehouse),
-      customers_per_district_(customers_per_district),
-      new_orders_per_district_(new_orders_per_district) {
+        : random_(random), num_items_(num_items),
+          districts_per_warehouse_(districts_per_warehouse),
+          customers_per_district_(customers_per_district),
+          new_orders_per_district_(new_orders_per_district) {
     assert(strlen(now) == DATETIME_SIZE);
     strcpy(now_, now);
 
@@ -179,12 +179,6 @@ void TPCCGenerator::generateCustomer(int32_t id, int32_t d_id, int32_t w_id,
     random_->customerString(customer->c_zip, Address::ZIP, "zip");
     random_->phoneData(customer->c_phone, Customer::PHONE);
 
-    //    random_->astring(customer->c_street_1, Address::MIN_STREET, Address::MAX_STREET, 26);
-    //    random_->astring(customer->c_street_2, Address::MIN_STREET, Address::MAX_STREET, 26);
-    //    random_->astring(customer->c_city, Address::MIN_CITY, Address::MAX_CITY, 26);
-    //    random_->astring(customer->c_state, Address::STATE, Address::STATE, 26);
-    //    makeZip(random_, customer->c_zip);
-    //    random_->nstring(customer->c_phone, Customer::PHONE, Customer::PHONE);
     strcpy(customer->c_since, now_);
     assert(strlen(customer->c_since) == DATETIME_SIZE);
     if (bad_credit) {
@@ -192,9 +186,7 @@ void TPCCGenerator::generateCustomer(int32_t id, int32_t d_id, int32_t w_id,
     } else {
         strcpy(customer->c_credit, Customer::GOOD_CREDIT);
     }
-    random_->customerData(customer->c_data, Customer::MAX_DATA);
-    //    random_->astring(customer->c_data, Customer::MIN_DATA, Customer::MAX_DATA,
-    //                     26);
+    random_->customerData(customer->c_data, Customer::MAX_DATA, bad_credit);
 }
 
 void TPCCGenerator::generateOrder(int32_t id, int32_t c_id, int32_t d_id,

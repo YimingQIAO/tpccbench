@@ -68,7 +68,8 @@ protected:
         for (int i = 0; i < config_.size(); ++i) {
             AttrConfig &ac = config_[i];
             if (ac.type == kEnum)
-                db_compress::RegisterAttrInterpreter(i, new SimpleCategoricalInterpreter(ac.capacity));
+                db_compress::RegisterAttrInterpreter(i,
+                                                     new SimpleCategoricalInterpreter(ac.capacity));
             else
                 db_compress::RegisterAttrInterpreter(i, new db_compress::AttrInterpreter());
         }
@@ -87,16 +88,16 @@ public:
 
     OrderLineBlitz() {
         config_ = {
-                {kEnum, Item::NUM_ITEMS, 0},
-                {kDouble, 0, 0.0025},
-                {kEnum, 15, 0},
-                {kEnum, 5, 0},
-                {kEnum, 100, 0},
-                {kString, 0, 0},
-                {kString, 0, 0},
-                {kInteger, 0, 0.5},
-                {kEnum, 10, 0},
-                {kEnum, 5, 0},
+                {kEnum,    Item::NUM_ITEMS, 0},
+                {kDouble,  0,               0.0025},
+                {kEnum,    15,              0},
+                {kEnum,    5,               0},
+                {kEnum,    100,             0},
+                {kString,  0,               0},
+                {kString,  0,               0},
+                {kInteger, 0,               0.5},
+                {kEnum,    10,              0},
+                {kEnum,    5,               0},
         };
         RegisterAttrInterpreter();
     }
@@ -110,23 +111,23 @@ public:
 
     StockBlitz() {
         config_ = {
-                {kEnum, 100, 0},
-                {kInteger, 0, 0.5},
-                {kEnum, 2000, 0},
-                {kEnum, 100, 0},
-                {kString, 0, 0},
-                {kString, 0, 0},
-                {kString, 0, 0},
-                {kString, 0, 0},
-                {kString, 0, 0},
-                {kString, 0, 0},
-                {kString, 0, 0},
-                {kString, 0, 0},
-                {kString, 0, 0},
-                {kString, 0, 0},
-                {kString, 0, 0},
-                {kInteger, 0, 0.5},
-                {kEnum, 5, 0},
+                {kEnum,    100,  0},
+                {kInteger, 0,    0.5},
+                {kEnum,    2000, 0},
+                {kEnum,    100,  0},
+                {kString,  0,    0},
+                {kString,  0,    0},
+                {kString,  0,    0},
+                {kString,  0,    0},
+                {kString,  0,    0},
+                {kString,  0,    0},
+                {kString,  0,    0},
+                {kString,  0,    0},
+                {kString,  0,    0},
+                {kString,  0,    0},
+                {kString,  0,    0},
+                {kInteger, 0,    0.5},
+                {kEnum,    5,    0},
         };
         RegisterAttrInterpreter();
     }
@@ -147,27 +148,27 @@ public:
 
     CustomerBlitz() {
         config_ = {
-                {kEnum, Customer::NUM_PER_DISTRICT, 0},
-                {kEnum, District::NUM_PER_WAREHOUSE, 0},
-                {kEnum, 5, 0},
-                {kEnum, 1, 0},
-                {kDouble, 0, 0.000025},
-                {kEnum, 200, 0},
-                {kDouble, 0, 0.0025},
-                {kDouble, 0, 0.0025},
-                {kEnum, 200, 0},
-                {kEnum, 2, 0},
-                {kString, 0, 0},
-                {kString, 0, 0},
-                {kEnum, 1, 0},
-                {kString, 0, 0},
-                {kString, 0, 0},
-                {kString, 0, 0},
-                {kEnum, 50, 0},
-                {kString, 0, 0},
-                {kString, 0, 0},
-                {kString, 0, 0},
-                {kString, 0, 0}};
+                {kEnum,   Customer::NUM_PER_DISTRICT,  0},
+                {kEnum,   District::NUM_PER_WAREHOUSE, 0},
+                {kEnum,   5,                           0},
+                {kEnum,   1,                           0},
+                {kDouble, 0,                           0.000025},
+                {kEnum,   200,                         0},
+                {kDouble, 0,                           0.0025},
+                {kDouble, 0,                           0.0025},
+                {kEnum,   200,                         0},
+                {kEnum,   2,                           0},
+                {kString, 0,                           0},
+                {kString, 0,                           0},
+                {kEnum,   1,                           0},
+                {kString, 0,                           0},
+                {kString, 0,                           0},
+                {kString, 0,                           0},
+                {kEnum,   50,                          0},
+                {kString, 0,                           0},
+                {kString, 0,                           0},
+                {kString, 0,                           0},
+                {kString, 0,                           0}};
         RegisterAttrInterpreter();
     }
 
