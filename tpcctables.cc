@@ -1003,7 +1003,9 @@ Order *TPCCTables::insertOrder(const Order &order) {
 }
 
 Order *TPCCTables::findOrder(int32_t w_id, int32_t d_id, int32_t o_id) {
-    return find(orders_, makeOrderKey(w_id, d_id, o_id));
+    int32_t key = makeOrderKey(w_id, d_id, o_id);
+    if (key < 0) return nullptr;
+    return find(orders_, key);
 }
 
 Order *TPCCTables::findLastOrderByCustomer(const int32_t w_id,
@@ -1071,7 +1073,9 @@ void TPCCTables::insertOrderLineBlitz(db_compress::AttrVector &orderline, int32_
 
 OrderLine *TPCCTables::findOrderLine(int32_t w_id, int32_t d_id, int32_t o_id,
                                      int32_t number) {
-    return find(orderlines_, makeOrderLineKey(w_id, d_id, o_id, number));
+    int32_t key = makeOrderLineKey(w_id, d_id, o_id, number);
+    if (key < 0) return nullptr;
+    return find(orderlines_, key);
 }
 
 db_compress::AttrVector *
@@ -1165,8 +1169,7 @@ void TPCCTables::DBSize(int64_t num_warehouses, uint32_t &total_size,
                         bool print) {
     // item
     uint32_t item_size = 0;
-    for (Item &item: items_)
-        item_size += item.Size();
+    for (Item &item: items_) item_size += item.Size();
 
     // warehouse
     uint32_t w_size = 0;
@@ -1212,11 +1215,9 @@ void TPCCTables::DBSize(int64_t num_warehouses, uint32_t &total_size,
     uint32_t order_size = 0;
     for (int32_t i = 1; i <= num_warehouses; ++i) {
         for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
-            for (int32_t k = 1; k <= Order::INITIAL_ORDERS_PER_DISTRICT + num_trans;
-                 ++k) {
+            for (int32_t k = 1; k <= Order::INITIAL_ORDERS_PER_DISTRICT + num_trans / 2; ++k) {
                 Order *o = findOrder(i, j, k);
-                if (o != nullptr)
-                    order_size += o->size();
+                if (o != nullptr) order_size += o->size();
             }
         }
     }
@@ -1229,9 +1230,7 @@ void TPCCTables::DBSize(int64_t num_warehouses, uint32_t &total_size,
                  k <= Order::INITIAL_ORDERS_PER_DISTRICT + num_trans / 2; ++k) {
                 for (int32_t l = 1; l <= Order::MAX_OL_CNT; ++l) {
                     OrderLine *ol = findOrderLine(i, j, k, l);
-                    if (ol == nullptr)
-                        continue;
-                    ol_size += ol->size();
+                    if (ol != nullptr) ol_size += ol->size();
                 }
             }
         }
@@ -1239,21 +1238,11 @@ void TPCCTables::DBSize(int64_t num_warehouses, uint32_t &total_size,
 
     // new order
     uint32_t no_size = 0;
-    for (int32_t i = 1; i <= num_warehouses; ++i) {
-        for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
-            for (int32_t k = 1; k <= Order::INITIAL_ORDERS_PER_DISTRICT + num_trans;
-                 ++k) {
-                NewOrder *no = findNewOrder(i, j, k);
-                if (no != nullptr)
-                    no_size += no->size();
-            }
-        }
-    }
+    for (auto &no: neworders_) no_size += no.second->size();
 
     // history
     uint32_t history_size = 0;
-    for (const History *h: history_)
-        history_size += h->size();
+    for (const History *h: history_) history_size += h->size();
 
     total_size = item_size + w_size + district_size + stock_size + customer_size +
                  order_size + ol_size + no_size + history_size;

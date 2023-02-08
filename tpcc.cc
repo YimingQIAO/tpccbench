@@ -15,7 +15,7 @@
 #include "tpccgenerator.h"
 #include "tpcctables.h"
 
-static const int NUM_TRANSACTIONS = 200000;
+static const int NUM_TRANSACTIONS = 1000000;
 static bool mode = 0;
 static long num_warehouses = 1;
 
@@ -149,6 +149,9 @@ int main(int argc, const char *argv[]) {
         printf("orderline blitz size: %u\nstock blitz size: %u\ncustomer blitz size: %u\n",
                orderline_blitz_size,
                stock_blitz_size, customer_blitz_size);
+
+        tables->DBSize(num_warehouses, initial_total_size, uncompressed_ol_size,
+                       NUM_TRANSACTIONS, true);
 
         //        std::cout << "----------------- Result ----------------- \n";
         //        double ol_compression_ratio =
