@@ -195,10 +195,7 @@ void TPCCGenerator::generateCustomer(int32_t id, int32_t d_id, int32_t w_id,
   } else {
     strcpy(customer->c_credit, Customer::GOOD_CREDIT);
   }
-  random_->customerData(customer->c_data, Customer::MAX_DATA);
-  //    random_->astring(customer->c_data, Customer::MIN_DATA,
-  //    Customer::MAX_DATA,
-  //                     26);
+  random_->customerData(customer->c_data, Customer::MAX_DATA, bad_credit);
 }
 
 void TPCCGenerator::generateOrder(int32_t id, int32_t c_id, int32_t d_id,

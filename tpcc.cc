@@ -59,7 +59,7 @@ int main(int argc, const char *argv[]) {
     }
     int64_t end = clock->getMicroseconds();
     printf("%" PRId64 " ms\n", (end - begin + 500) / 1000);
-    tables->DBSize(num_warehouses);
+    tables->DBSize(num_warehouses, NUM_TRANSACTIONS);
 
     // Change the constants for run
     random = new tpcc::RealRandomGenerator();
@@ -81,6 +81,7 @@ int main(int argc, const char *argv[]) {
 
     tables->StockToCSV(num_warehouses);
     tables->CustomerToCSV(num_warehouses);
+    tables->DBSize(num_warehouses, NUM_TRANSACTIONS);
 
     return 0;
 }

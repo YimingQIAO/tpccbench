@@ -122,7 +122,7 @@ public:
     // Stores order in the database. Returns a pointer to the database's tuple.
     History *insertHistory(const History &history);
 
-    void DBSize(int32_t num_warehouses) {
+    void DBSize(int32_t num_warehouses, int32_t num_transactions) {
         // item
         uint32_t item_size = 0;
         for (Item &item: items_) item_size += item.Size();
@@ -189,7 +189,8 @@ public:
         uint32_t ol_size = 0;
         for (int32_t i = 1; i <= num_warehouses; ++i) {
             for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
-                for (int32_t k = 1; k <= Order::INITIAL_ORDERS_PER_DISTRICT; ++k) {
+                for (int32_t k = 1;
+                     k <= Order::INITIAL_ORDERS_PER_DISTRICT + num_transactions / 2; ++k) {
                     for (int32_t l = 1; l <= Order::MAX_OL_CNT; ++l) {
                         OrderLine *ol = findOrderLine(i, j, k, l);
                         if (ol != nullptr) ol_size += ol->size();

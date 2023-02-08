@@ -69,7 +69,7 @@ namespace tpcc {
     }
 
     void RandomGenerator::distInfo(char *s, int d_id, int w_id, int i_id) {
-        snprintf(s, 24 + 1, "distInfoStr#%02d#%02d#%06d", d_id, w_id, i_id);
+        snprintf(s, 24 + 1, "dist-info-str#%02d#%03d#%03d", d_id, w_id, i_id);
     }
 
     void RandomGenerator::lastName(char *c_last, int max_cid) {
@@ -210,6 +210,157 @@ namespace tpcc {
         }
         in.close();
         return true;
+    }
+
+    void RandomGenerator::stockData(char *s, int upper_length) {
+        std::vector<int> word_idx(4);
+        int total_length = upper_length + 1;
+        while (total_length > upper_length) {
+            total_length = 3;
+            for (int i = 0; i < 4; i++) {
+                word_idx[i] = number(0, stock_data_corpus_.size() - 1);
+                total_length += stock_data_corpus_[word_idx[i]].size();
+            }
+        }
+        for (int i = 0; i < 4; i++) {
+            std::string &word = stock_data_corpus_[word_idx[i]];
+            strncpy(s, word.c_str(), word.size());
+
+            s += word.size();
+            if (i != 3) {
+                *s = ' ';
+                s++;
+            }
+        }
+        *s = '\0';
+    }
+
+    void RandomGenerator::customerData(char *s, int upper_length, bool bad_credit) {
+        int32_t word_num = 10;
+        std::vector<int> word_idx(word_num);
+        int total_length = upper_length + 1;
+        while (total_length > upper_length) {
+            total_length = word_num - 1;
+            for (int i = 0; i < word_num; i++) {
+                word_idx[i] = number(0, stock_data_corpus_.size() - 1);
+                total_length += stock_data_corpus_[word_idx[i]].size();
+            }
+        }
+        for (int i = 0; i < word_num; i++) {
+            std::string &word = stock_data_corpus_[word_idx[i]];
+            strncpy(s, word.c_str(), word.size());
+
+            s += word.size();
+            if (i != word_num - 1) {
+                *s = ' ';
+                s++;
+            }
+        }
+        *s = '\0';
+
+        // Bad credit: insert history into c_data
+        if (bad_credit) {
+            static const int HISTORY_SIZE = 30;
+            char history[HISTORY_SIZE];
+            int record_num = number(1, 5);
+            for (int i = 0; i < record_num; ++i) {
+                int characters = snprintf(history, HISTORY_SIZE, " %04d-%02d-%03d-%02d-%03d-%04d",
+                                          number(1, 3000), number(1, 10), number(1, 100),
+                                          number(1, 10), number(1, 100), number(1, 10000));
+                if (total_length + HISTORY_SIZE < upper_length) {
+                    strncpy(s, history, characters);
+                    s += characters;
+                    *s = '\0';
+                    total_length += characters;
+                }
+            }
+        }
+    }
+
+    void RandomGenerator::phoneData(char *s, int length) {
+        if (length == 16) {
+            memcpy(s, "+01-", 4);
+            std::string &word = phone_district_code[number(0, phone_district_code.size() - 1)];
+            memcpy(s + 4, word.c_str(), 3);
+            s[7] = '-';
+            nstring(s + 8, 3, 3);
+            s[11] = '-';
+            nstring(s + 12, 4, 4);
+        }
+    }
+
+    void RandomGenerator::departmentData(char *s, int upper_length) {
+        if (upper_length > 13) {
+            memcpy(s, "Department#", 11);
+            nstring(s + 11, 1, 2);
+        }
+    }
+
+    void RandomGenerator::customerString(char *s, int upper_length,
+                                         const std::string &corpus_name) {
+        std::vector<std::string> *corpus;
+        if (corpus_name == "first_name") {
+            corpus = &first_names_;
+        } else if (corpus_name == "street") {
+            corpus = &street_;
+        } else if (corpus_name == "city") {
+            corpus = &city_;
+        } else if (corpus_name == "state") {
+            corpus = &state_;
+        } else if (corpus_name == "zip") {
+            corpus = &zip_;
+        } else if (corpus_name == "stock_data") {
+            corpus = &stock_data_corpus_;
+        } else {
+            printf("Corpus name %s is not supported\n", corpus_name.c_str());
+            return;
+        }
+
+        std::string &word = (*corpus)[number(0, corpus->size() - 1)];
+        while (word.length() > upper_length) word = (*corpus)[number(0, corpus->size() - 1)];
+        strncpy(s, word.c_str(), word.size());
+        s[word.size()] = '\0';
+    }
+
+    uint32_t RandomGenerator::stockIntDist(const std::string &name) {
+        if (name == "ytd") return stock_ytd_dist_[number(0, stock_ytd_dist_.size() - 1)];
+        else if (name == "order_cnt")
+            return stock_order_cnt_dist_[number(0,
+                                                stock_order_cnt_dist_.size() -
+                                                1)];
+        else if (name == "remote_cnt")
+            return stock_remote_cnt_dist_[number(0,
+                                                 stock_remote_cnt_dist_.size() -
+                                                 1)];
+        else {
+            printf("Stock num dist name %s is not supported\n", name.c_str());
+        }
+        return 0;
+    }
+
+    uint32_t RandomGenerator::customerIntDist(const std::string &name) {
+        if (name == "payment_cnt")
+            return cus_payment_cnt_dist_[number(0,
+                                                cus_payment_cnt_dist_.size() -
+                                                1)];
+        else if (name == "delivery_cnt")
+            return cus_delivery_cnt_dist_[number(0, cus_delivery_cnt_dist_.size() - 1)];
+        else {
+            printf("Customer num dist name %s is not supported\n", name.c_str());
+        }
+        return 0;
+    }
+
+    float RandomGenerator::customerFloatDist(const std::string &name) {
+        if (name == "balance") return cus_balance_dist_[number(0, cus_balance_dist_.size() - 1)];
+        else if (name == "ytd_payment")
+            return cus_ytd_payment_dist_[number(0,
+                                                cus_ytd_payment_dist_.size() -
+                                                1)];
+        else {
+            printf("Customer float dist name %s is not supported\n", name.c_str());
+        }
+        return 0;
     }
 
     // Defined by TPC-C 4.3.2.3.
