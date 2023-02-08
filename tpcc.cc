@@ -23,7 +23,8 @@ int main(int argc, const char *argv[]) {
     if (argc == 2) {
         num_warehouses = strtol(argv[1], NULL, 10);
     } else if (argc == 3) {
-        if (atoi(argv[2]) == 1) mode = 1;
+        num_warehouses = strtol(argv[1], NULL, 10);
+        mode = strtol(argv[2], NULL, 10);
     } else {
         fprintf(stderr,
                 "tpcc [num warehouses] [mode]\n Option: mode = 0 (default) for running test, mode = 1 for generating data\n");
@@ -58,7 +59,8 @@ int main(int argc, const char *argv[]) {
     fflush(stdout);
     char now[Clock::DATETIME_SIZE + 1];
     clock->getDateTimestamp(now);
-    TPCCGenerator generator(random, now, Item::NUM_ITEMS, District::NUM_PER_WAREHOUSE, Customer::NUM_PER_DISTRICT,
+    TPCCGenerator generator(random, now, Item::NUM_ITEMS, District::NUM_PER_WAREHOUSE,
+                            Customer::NUM_PER_DISTRICT,
                             NewOrder::INITIAL_NUM_PER_DISTRICT);
 
     int64_t begin = clock->getMicroseconds();
@@ -84,9 +86,11 @@ int main(int argc, const char *argv[]) {
         OrderLineBlitz order_line_blitz;
         tables->OrderLineToBlitz(order_line_blitz, num_warehouses);
         db_compress::RelationCompressor ol_compressor("ol_model.blitz", order_line_blitz.schema(),
-                                                      order_line_blitz.compressionConfig(), kBlockSize);
+                                                      order_line_blitz.compressionConfig(),
+                                                      kBlockSize);
         BlitzLearning(order_line_blitz, ol_compressor);
-        db_compress::RelationDecompressor ol_decompressor("ol_model.blitz", order_line_blitz.schema(), kBlockSize);
+        db_compress::RelationDecompressor ol_decompressor("ol_model.blitz",
+                                                          order_line_blitz.schema(), kBlockSize);
         ol_decompressor.InitWithoutIndex();
         tables->MountCompressor(ol_compressor, ol_decompressor, num_warehouses, "orderline");
         db_compress::NextTableAttrInterpreter();
@@ -95,9 +99,11 @@ int main(int argc, const char *argv[]) {
         StockBlitz stock_blitz;
         tables->StockToBlitz(stock_blitz, num_warehouses);
         db_compress::RelationCompressor stock_compressor("stock_model.blitz", stock_blitz.schema(),
-                                                         stock_blitz.compressionConfig(), kBlockSize);
+                                                         stock_blitz.compressionConfig(),
+                                                         kBlockSize);
         BlitzLearning(stock_blitz, stock_compressor);
-        db_compress::RelationDecompressor stock_decompressor("stock_model.blitz", stock_blitz.schema(), kBlockSize);
+        db_compress::RelationDecompressor stock_decompressor("stock_model.blitz",
+                                                             stock_blitz.schema(), kBlockSize);
         stock_decompressor.InitWithoutIndex();
         tables->MountCompressor(stock_compressor, stock_decompressor, num_warehouses, "stock");
         db_compress::NextTableAttrInterpreter();
@@ -108,17 +114,16 @@ int main(int argc, const char *argv[]) {
         db_compress::RelationCompressor cust_compressor("cust_model.blitz", cust_blitz.schema(),
                                                         cust_blitz.compressionConfig(), kBlockSize);
         BlitzLearning(cust_blitz, cust_compressor);
-        db_compress::RelationDecompressor cust_decompressor("cust_model.blitz", cust_blitz.schema(), kBlockSize);
+        db_compress::RelationDecompressor cust_decompressor("cust_model.blitz", cust_blitz.schema(),
+                                                            kBlockSize);
         cust_decompressor.InitWithoutIndex();
         tables->MountCompressor(cust_compressor, cust_decompressor, num_warehouses, "customer");
         db_compress::NextTableAttrInterpreter();
 
         std::cout << "---------------- Compressed ---------------- \n";
-        uint32_t orderline_blitz_size = tables->BlitzSize(num_warehouses, NUM_TRANSACTIONS, "orderline");
-        uint32_t stock_blitz_size = tables->BlitzSize(num_warehouses, NUM_TRANSACTIONS, "stock");
-        uint32_t customer_blitz_size = tables->BlitzSize(num_warehouses, NUM_TRANSACTIONS, "customer");
-        printf("orderline blitz size: %u\nstock blitz size: %u\ncustomer blitz size: %u\n", orderline_blitz_size,
-               stock_blitz_size, customer_blitz_size);
+        uint32_t orderline_blitz_size = tables->BlitzSize(num_warehouses, NUM_TRANSACTIONS,
+                                                          "orderline");
+        printf("orderline blitz size: %u\n", orderline_blitz_size);
 
         // Change the constants for run
         random = new tpcc::RealRandomGenerator();
@@ -138,9 +143,11 @@ int main(int argc, const char *argv[]) {
         printf("%d transactions in %" PRId64 " ms = %f txns/s\n", NUM_TRANSACTIONS,
                (microseconds + 500) / 1000, NUM_TRANSACTIONS / (double) microseconds * 1000000.0);
         orderline_blitz_size = tables->BlitzSize(num_warehouses, NUM_TRANSACTIONS, "orderline");
-        stock_blitz_size = tables->BlitzSize(num_warehouses, NUM_TRANSACTIONS, "stock");
-        customer_blitz_size = tables->BlitzSize(num_warehouses, NUM_TRANSACTIONS, "customer");
-        printf("orderline blitz size: %u\nstock blitz size: %u\ncustomer blitz size: %u\n", orderline_blitz_size,
+        int32_t stock_blitz_size = tables->BlitzSize(num_warehouses, NUM_TRANSACTIONS, "stock");
+        int32_t customer_blitz_size = tables->BlitzSize(num_warehouses, NUM_TRANSACTIONS,
+                                                        "customer");
+        printf("orderline blitz size: %u\nstock blitz size: %u\ncustomer blitz size: %u\n",
+               orderline_blitz_size,
                stock_blitz_size, customer_blitz_size);
 
         //        std::cout << "----------------- Result ----------------- \n";

@@ -262,13 +262,17 @@ namespace tpcc {
         if (bad_credit) {
             static const int HISTORY_SIZE = 30;
             char history[HISTORY_SIZE];
-            int characters = snprintf(history, HISTORY_SIZE, " %04d-%02d-%03d-%02d-%03d-%04d",
-                                      number(1, 3000), number(1, 10), number(1, 100), number(1, 10),
-                                      number(1, 100), number(1, 10000));
-            if (total_length + HISTORY_SIZE < upper_length) {
-                strncpy(s, history, characters);
-                s += characters;
-                *s = '\0';
+            int record_num = number(1, 5);
+            for (int i = 0; i < record_num; ++i) {
+                int characters = snprintf(history, HISTORY_SIZE, " %04d-%02d-%03d-%02d-%03d-%04d",
+                                          number(1, 3000), number(1, 10), number(1, 100),
+                                          number(1, 10), number(1, 100), number(1, 10000));
+                if (total_length + HISTORY_SIZE < upper_length) {
+                    strncpy(s, history, characters);
+                    s += characters;
+                    *s = '\0';
+                    total_length += characters;
+                }
             }
         }
     }
