@@ -36,3 +36,28 @@ History: 54808389 byte
 Total: 422687293 byte
 
 Process finished with exit code 0
+
+Loading 30 warehouses... 9011 ms
+------------ Uncompressed Size ------------
+Warehouse: 2542 byte
+District: 27169 byte
+Customer: 216839919 byte
+Order: 29410468 byte
+Orderline: 560877845 byte
+NewOrder: 1836000 byte
+Item: 7165769 byte
+Stock: 850871975 byte
+History: 53948740 byte
+Total: 1720980427 byte
+Running... 200000 transactions in 2534 ms = 78916.134246 txns/s
+------------ Uncompressed Size ------------
+Warehouse: 2572 byte
+District: 27469 byte
+Customer: 217161962 byte
+Order: 29418418 byte
+Orderline: 575905325 byte
+NewOrder: 1912279 byte
+Item: 7165769 byte
+Stock: 851018984 byte
+History: 59057555 byte
+Total: 1741670333 byte
