@@ -9,7 +9,7 @@ class Clock {
 public:
     virtual ~Clock() {}
 
-    static const int DATETIME_SIZE = 14;
+    static const int DATETIME_SIZE = 19;
 
     // now must have at least DATETIME_SIZE+1 bytes.
     virtual void getDateTimestamp(char* now) = 0;

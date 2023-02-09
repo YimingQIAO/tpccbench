@@ -122,13 +122,31 @@ public:
     // Stores order in the database. Returns a pointer to the database's tuple.
     History *insertHistory(const History &history);
 
-    void DBSize(int32_t num_warehouses, int32_t num_transactions);
+    int32_t itemSize();
+
+    int32_t warehouseSize(int64_t num_warehouses);
+
+    int32_t districtSize(int64_t num_warehouses);
+
+    int32_t stockSize(int64_t num_warehouses);
+
+    int32_t customerSize(int64_t num_warehouses);
+
+    int32_t orderSize(int64_t num_warehouses, int64_t num_transactions);
+
+    int32_t orderlineSize(int64_t num_warehouses, int64_t num_transactions);
+
+    int32_t newOrderSize();
+
+    int32_t historySize();
 
     void OrderlineToCSV(int64_t num_warehouses);
 
     void StockToCSV(int64_t num_warehouses);
 
     void CustomerToCSV(int64_t num_warehouses);
+
+    void HistoryToCSV(int64_t num_warehouses);
 
     static const int KEYS_PER_INTERNAL = 8;
     static const int KEYS_PER_LEAF = 8;

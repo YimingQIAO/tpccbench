@@ -1043,91 +1043,117 @@ void TPCCTables::CustomerToCSV(int64_t num_warehouses) {
     cus_f.close();
 }
 
-void TPCCTables::DBSize(int32_t num_warehouses, int32_t num_transactions) {
-    // item
-    uint32_t item_size = 0;
-    for (Item &item: items_) item_size += item.Size();
-    printf("item size: %u byte\n", item_size);
+void TPCCTables::HistoryToCSV(int64_t num_warehouses) {
+    std::ios::sync_with_stdio(false);
+    std::ofstream his_f("history.csv", std::ofstream::trunc);
+    for (auto &h: history_) {
+        his_f << h->h_c_id << ","
+              << h->h_c_d_id << ","
+              << h->h_c_w_id << ","
+              << h->h_d_id << ","
+              << h->h_w_id << ","
+              << h->h_date << ","
+              << h->h_amount << ","
+              << h->h_data << "\n";
+    }
+    his_f.close();
+}
 
-    // warehouse
-    uint32_t w_size = 0;
+int32_t TPCCTables::itemSize() {
+    int32_t ret = 0;
+    for (Item &item: items_) ret += item.Size();
+    return ret;
+}
+
+int32_t TPCCTables::warehouseSize(int64_t num_warehouses) {
+    int32_t ret = 0;
     for (int32_t i = 1; i <= num_warehouses; ++i) {
         Warehouse *w = findWarehouse(i);
         assert(w != nullptr);
-        w_size += w->size();
+        ret += w->size();
     }
-    printf("warehouse size: %u byte\n", w_size);
+    return ret;
+}
 
-    // district
-    uint32_t district_size = 0;
+int32_t TPCCTables::districtSize(int64_t num_warehouses) {
+    int32_t ret = 0;
     for (int32_t i = 1; i <= num_warehouses; ++i) {
         for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
             District *d = findDistrict(i, j);
             assert(d != nullptr);
-            district_size += d->size();
+            ret += d->size();
         }
     }
-    printf("district size: %u byte\n", district_size);
+    return ret;
+}
 
-    // stock
-    uint32_t stock_size = 0;
+int32_t TPCCTables::stockSize(int64_t num_warehouses) {
+    int32_t ret = 0;
     for (int32_t i = 1; i <= num_warehouses; ++i) {
         for (int32_t j = 1; j <= Stock::NUM_STOCK_PER_WAREHOUSE; ++j) {
             Stock *s = findStock(i, j);
             assert(s != nullptr);
-            stock_size += s->size();
+            ret += s->size();
         }
     }
-    printf("stock size: %u byte\n", stock_size);
+    return ret;
+}
 
-    // customer
-    uint32_t customer_size = 0;
+int32_t TPCCTables::customerSize(int64_t num_warehouses) {
+    int32_t ret = 0;
     for (int32_t i = 1; i <= num_warehouses; ++i) {
         for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
             for (int32_t k = 1; k <= Customer::NUM_PER_DISTRICT; ++k) {
                 Customer *c = findCustomer(i, j, k);
                 assert(c != nullptr);
-                customer_size += c->size();
+                ret += c->size();
             }
         }
     }
-    printf("customer size: %u byte\n", customer_size);
+    return ret;
+}
 
-    // order
-    uint32_t order_size = 0;
+int32_t TPCCTables::orderSize(int64_t num_warehouses, int64_t num_transactions) {
+    int32_t ret = 0;
+    int32_t krange = Order::INITIAL_ORDERS_PER_DISTRICT + num_transactions;
     for (int32_t i = 1; i <= num_warehouses; ++i) {
         for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
             for (int32_t k = 1;
-                 k <= Order::INITIAL_ORDERS_PER_DISTRICT + num_transactions; ++k) {
+                 k <= krange; ++k) {
                 Order *o = findOrder(i, j, k);
-                if (o != nullptr) order_size += o->size();
+                if (o != nullptr)
+                    ret += o->size();
             }
         }
     }
-    printf("order size: %u byte\n", order_size);
+    return ret;
+}
 
-    // orderline
-    uint32_t ol_size = 0;
+int32_t TPCCTables::orderlineSize(int64_t num_warehouses, int64_t num_transactions) {
+    int32_t ret = 0;
+    int32_t krange = Order::INITIAL_ORDERS_PER_DISTRICT + num_transactions;
     for (int32_t i = 1; i <= num_warehouses; ++i) {
         for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
-            for (int32_t k = 1;
-                 k <= Order::INITIAL_ORDERS_PER_DISTRICT + num_transactions; ++k) {
+            for (int32_t k = 1; k <= krange; ++k) {
                 for (int32_t l = 1; l <= Order::MAX_OL_CNT; ++l) {
                     OrderLine *ol = findOrderLine(i, j, k, l);
-                    if (ol != nullptr) ol_size += ol->size();
+                    if (ol != nullptr)
+                        ret += ol->size();
                 }
             }
         }
     }
-    printf("orderline size: %u byte\n", ol_size);
+    return ret;
+}
 
-    // new order
-    uint32_t no_size = 0;
-    for (auto &no: neworders_) no_size += no.second->size();
-    printf("new order size: %u byte\n", no_size);
+int32_t TPCCTables::newOrderSize() {
+    int32_t ret = 0;
+    for (auto &no: neworders_) ret += no.second->size();
+    return ret;
+}
 
-    // history
-    uint32_t history_size = 0;
-    for (const History *h: history_) history_size += h->size();
-    printf("History size: %u byte\n", history_size);
+int32_t TPCCTables::historySize() {
+    int32_t ret = 0;
+    for (auto &h: history_) ret += h->size();
+    return ret;
 }
