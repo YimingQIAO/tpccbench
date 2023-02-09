@@ -211,6 +211,7 @@ void DelayedCoding(const std::vector<Branch *> &prob_intervals, int &interval_si
   for (int i = 0; i < interval_size; ++i) {
     assert(prob_intervals[i]->segments_.size() > 0);
     assert(prob_intervals[i]->total_weights_ > 0);
+    if (prob_intervals[i]->segments_.empty() || prob_intervals[i]->total_weights_ == 0) return;
   }
 
   bit_string->num_ = 0;

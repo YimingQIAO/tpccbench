@@ -70,7 +70,13 @@ namespace tpcc {
 
         void setC(const NURandC &c) { c_values_ = c; }
 
-        void stockData(char *s, int upper_length);
+        void stockData(char *s, int upper_length){
+            wordsData(s, upper_length, 4);
+        }
+
+        void historyData(char *s, int upper_length){
+            wordsData(s, upper_length, 3);
+        }
 
         void customerData(char *s, int upper_length, bool bad_credit);
 
@@ -119,6 +125,8 @@ namespace tpcc {
         std::vector<float> cus_balance_dist_;
         std::vector<float> cus_ytd_payment_dist_;
         std::vector<uint32_t> cus_payment_cnt_dist_;
+
+        void wordsData(char *s, int upper_length, int num_word);
 
         void loadCorpus() {
             if (!loadStockDataCorpus()) {
@@ -181,7 +189,8 @@ namespace tpcc {
                 const int32_t state_length = 2;
                 zip_.push_back(line.substr(0, zip_length));
                 state_.push_back(line.substr(line.size() - state_length, state_length));
-                city_.push_back(line.substr(zip_length + 1, line.size() - zip_length - state_length - 2));
+                city_.push_back(
+                        line.substr(zip_length + 1, line.size() - zip_length - state_length - 2));
             }
             in.close();
             return true;

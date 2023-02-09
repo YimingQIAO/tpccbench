@@ -137,8 +137,7 @@ uint64_t TPCCClient::doNewOrder() {
     int ol_cnt = generator_->number(Order::MIN_OL_CNT, Order::MAX_OL_CNT);
 
     // 1% of transactions roll back
-    // bool rollback = generator_->number(1, 100) == 1;
-    bool rollback = false;
+    bool rollback = generator_->number(1, 100) == 1;
 
     vector<NewOrderItem> items(ol_cnt);
     for (int i = 0; i < ol_cnt; ++i) {

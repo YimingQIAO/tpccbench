@@ -212,29 +212,6 @@ namespace tpcc {
         return true;
     }
 
-    void RandomGenerator::stockData(char *s, int upper_length) {
-        std::vector<int> word_idx(4);
-        int total_length = upper_length + 1;
-        while (total_length > upper_length) {
-            total_length = 3;
-            for (int i = 0; i < 4; i++) {
-                word_idx[i] = number(0, stock_data_corpus_.size() - 1);
-                total_length += stock_data_corpus_[word_idx[i]].size();
-            }
-        }
-        for (int i = 0; i < 4; i++) {
-            std::string &word = stock_data_corpus_[word_idx[i]];
-            strncpy(s, word.c_str(), word.size());
-
-            s += word.size();
-            if (i != 3) {
-                *s = ' ';
-                s++;
-            }
-        }
-        *s = '\0';
-    }
-
     void RandomGenerator::customerData(char *s, int upper_length, bool bad_credit) {
         int32_t word_num = 10;
         std::vector<int> word_idx(word_num);
@@ -361,6 +338,29 @@ namespace tpcc {
             printf("Customer float dist name %s is not supported\n", name.c_str());
         }
         return 0;
+    }
+
+    void RandomGenerator::wordsData(char *s, int upper_length, int num_word) {
+        std::vector<int> word_idx(num_word);
+        int total_length = upper_length + 1;
+        while (total_length > upper_length) {
+            total_length = num_word - 1;
+            for (int i = 0; i < num_word; i++) {
+                word_idx[i] = number(0, stock_data_corpus_.size() - 1);
+                total_length += stock_data_corpus_[word_idx[i]].size();
+            }
+        }
+        for (int i = 0; i < num_word; i++) {
+            std::string &word = stock_data_corpus_[word_idx[i]];
+            strncpy(s, word.c_str(), word.size());
+
+            s += word.size();
+            if (i != num_word - 1) {
+                *s = ' ';
+                s++;
+            }
+        }
+        *s = '\0';
     }
 
     // Defined by TPC-C 4.3.2.3.

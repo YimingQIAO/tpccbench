@@ -1,0 +1,38 @@
+/Users/yiqiao/Documents/GitHub/tpccbench/cmake-build-release/tpcc 30 0
+Loading 30 warehouses... 9018 ms
+------------ Initial and uncompressed Size ------------
+Warehouse: 2615 byte
+District: 27245 byte
+Customer: 216766592 byte
+Order: 29410032 byte
+Orderline: 560928773 byte
+NewOrder: 1836000 byte
+Item: 7167657 byte
+Stock: 850880337 byte
+History: 49705786 byte
+Total: 1716725037 byte
+Learning 30 warehouses...
+------------ Initial but compressed Size ------------
+Warehouse: 2615 byte
+District: 27245 byte
+Customer: 216766592 byte --> 43010588 byte
+Order: 29410032 byte
+Orderline: 560928773 byte --> 144090386 byte
+NewOrder: 1836000 byte
+Item: 7167657 byte
+Stock: 850880337 byte --> 127961806 byte
+History: 49705786 byte
+Running... 200000 transactions in 6942 ms = 28810.456582 txns/s
+----------- After transactions Size ------------
+Warehouse: 2645 byte
+District: 27545 byte
+Customer: 43010588 byte
+Order: 29417662 byte
+Orderline: 158390058 byte
+NewOrder: 1900943 byte
+Item: 7167657 byte
+Stock: 127961806 byte
+History: 54808389 byte
+Total: 422687293 byte
+
+Process finished with exit code 0

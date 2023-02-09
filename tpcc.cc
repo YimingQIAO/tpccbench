@@ -25,8 +25,6 @@ static long num_warehouses = 1;
 
 void tableSize(TPCCTables *tables, bool is_initial, bool is_compressed);
 
-void Blitz(TPCCTables *tables);
-
 void welcome(int argc, const char *const *argv);
 
 int main(int argc, const char *argv[]) {
@@ -62,6 +60,7 @@ int main(int argc, const char *argv[]) {
             tables->StockToCSV(num_warehouses);
             tables->CustomerToCSV(num_warehouses);
             tables->HistoryToCSV(num_warehouses);
+            break;
         }
         case Benchmark: {
             printf("Learning %ld warehouses...\n", num_warehouses);
@@ -130,7 +129,10 @@ int main(int argc, const char *argv[]) {
                    (microseconds + 500) / 1000,
                    NUM_TRANSACTIONS / (double) microseconds * 1000000.0);
             tableSize(tables, false, true);
+            break;
         }
+        default:
+            printf("Unknown mode\n");
     }
     return 0;
 }
@@ -140,9 +142,9 @@ void welcome(int argc, const char *const *argv) {
         num_warehouses = strtol(argv[1], NULL, 10);
     } else if (argc == 3) {
         num_warehouses = strtol(argv[1], NULL, 10);
-        bool is_benchmark = std::stoi(argv[2]);
-        if (is_benchmark) mode = Benchmark;
-        else mode = GenerateCSV;
+        bool is_download = std::stoi(argv[2]);
+        if (is_download) mode = GenerateCSV;
+        else mode = Benchmark;
     } else {
         fprintf(stderr,
                 "tpcc [num warehouses] [mode]\n Option: mode = 0 (default) for running test, mode = 1 for generating data\n");
@@ -191,8 +193,9 @@ void tableSize(TPCCTables *tables, bool is_initial, bool is_compressed) {
         std::cout << "Item: " << ini_items << " byte" << std::endl;
         std::cout << "Stock: " << ini_stocks << " byte" << std::endl;
         std::cout << "History: " << ini_history << " byte" << std::endl;
-        int32_t total = ini_warehouses + ini_districts + ini_customers + ini_orders + ini_orderline +
-                        ini_neworders + ini_items + ini_stocks + ini_history;
+        int32_t total =
+                ini_warehouses + ini_districts + ini_customers + ini_orders + ini_orderline +
+                ini_neworders + ini_items + ini_stocks + ini_history;
         std::cout << "Total: " << total << " byte" << std::endl;
     } else if (is_initial && is_compressed) {
         std::cout << "------------ Initial but compressed Size ------------ \n";
@@ -219,8 +222,9 @@ void tableSize(TPCCTables *tables, bool is_initial, bool is_compressed) {
         std::cout << "Item: " << ini_items << " byte" << std::endl;
         std::cout << "Stock: " << com_stock << " byte" << std::endl;
         std::cout << "History: " << ini_history << " byte" << std::endl;
-        int32_t total = ini_warehouses + ini_districts + com_customers + ini_orders + com_orderline +
-                        ini_neworders + ini_items + com_stock + ini_history;
+        int32_t total =
+                ini_warehouses + ini_districts + com_customers + ini_orders + com_orderline +
+                ini_neworders + ini_items + com_stock + ini_history;
         std::cout << "Total: " << total << " byte" << std::endl;
     } else {
         std::cout << "Meaningless" << std::endl;
