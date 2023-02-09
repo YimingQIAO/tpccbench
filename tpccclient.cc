@@ -41,8 +41,10 @@ TPCCClient::~TPCCClient() {
 
 uint64_t TPCCClient::doStockLevel() {
     int32_t threshold = generator_->number(MIN_STOCK_LEVEL_THRESHOLD, MAX_STOCK_LEVEL_THRESHOLD);
+    int32_t w_id = generateWarehouse();
+    int32_t d_id = generateDistrict();
     auto beg = std::chrono::high_resolution_clock::now();
-    int result = db_->stockLevel(generateWarehouse(), generateDistrict(), threshold);
+    int result = db_->stockLevel(w_id, d_id, threshold);
     ASSERT(result >= 0);
     auto end = std::chrono::high_resolution_clock::now();
     return std::chrono::duration_cast<std::chrono::nanoseconds>(end - beg).count();
@@ -51,21 +53,24 @@ uint64_t TPCCClient::doStockLevel() {
 uint64_t TPCCClient::doOrderStatus() {
     OrderStatusOutput output;
     int y = generator_->number(1, 100);
+    int32_t w_id = generateWarehouse();
+    int32_t d_id = generateDistrict();
     if (y <= 60) {
         // 60%: order status by last name
         char c_last[Customer::MAX_LAST + 1];
         generator_->lastName(c_last, customers_per_district_);
 
         auto beg = std::chrono::high_resolution_clock::now();
-        db_->orderStatus(generateWarehouse(), generateDistrict(), c_last, &output);
+        db_->orderStatus(w_id, d_id, c_last, &output);
         auto end = std::chrono::high_resolution_clock::now();
         return std::chrono::duration_cast<std::chrono::nanoseconds>(end - beg).count();
     } else {
         // 40%: order status by id
         ASSERT(y > 60);
 
+        int32_t c_id = generateCID();
         auto beg = std::chrono::high_resolution_clock::now();
-        db_->orderStatus(generateWarehouse(), generateDistrict(), generateCID(), &output);
+        db_->orderStatus(w_id, d_id, c_id, &output);
         auto end = std::chrono::high_resolution_clock::now();
         return std::chrono::duration_cast<std::chrono::nanoseconds>(end - beg).count();
     }
@@ -76,9 +81,10 @@ uint64_t TPCCClient::doDelivery() {
     char now[Clock::DATETIME_SIZE + 1];
     clock_->getDateTimestamp(now);
 
+    int32_t w_id = generateWarehouse();
     auto beg = std::chrono::high_resolution_clock::now();
     vector<DeliveryOrderInfo> orders;
-    db_->delivery(generateWarehouse(), carrier, now, &orders, NULL);
+    db_->delivery(w_id, carrier, now, &orders, NULL);
     if (orders.size() != District::NUM_PER_WAREHOUSE) {
         printf("Only delivered from %zd districts\n", orders.size());
     }
@@ -111,9 +117,8 @@ uint64_t TPCCClient::doPayment() {
 
     char now[Clock::DATETIME_SIZE + 1];
     clock_->getDateTimestamp(now);
-
-    if (y <= 40) {
-        // 40%: payment by last name
+    if (y <= 60) {
+        // 60%: payment by last name
         char c_last[Customer::MAX_LAST + 1];
         generator_->lastName(c_last, customers_per_district_);
 
@@ -122,11 +127,11 @@ uint64_t TPCCClient::doPayment() {
         auto end = std::chrono::high_resolution_clock::now();
         return std::chrono::duration_cast<std::chrono::nanoseconds>(end - beg).count();
     } else {
-        // 60%: payment by id
-        ASSERT(y > 40);
-        int32_t c_id = generateCID();
+        // 40%: payment by id
+        ASSERT(y > 60);
+        int32_t cid = generateCID();
         auto beg = std::chrono::high_resolution_clock::now();
-        db_->payment(w_id, d_id, c_w_id, c_d_id, c_id, h_amount, now, &output, NULL);
+        db_->payment(w_id, d_id, c_w_id, c_d_id, cid, h_amount, now, &output, NULL);
         auto end = std::chrono::high_resolution_clock::now();
         return std::chrono::duration_cast<std::chrono::nanoseconds>(end - beg).count();
     }
@@ -161,9 +166,10 @@ uint64_t TPCCClient::doNewOrder() {
     char now[Clock::DATETIME_SIZE + 1];
     clock_->getDateTimestamp(now);
     NewOrderOutput output;
-
+    int32_t dist = generateDistrict();
+    int32_t cid = generateCID();
     auto beg = std::chrono::high_resolution_clock::now();
-    db_->newOrder(w_id, generateDistrict(), generateCID(), items, now, &output, nullptr);
+    db_->newOrder(w_id, dist, cid, items, now, &output, nullptr);
     auto end = std::chrono::high_resolution_clock::now();
     return std::chrono::duration_cast<std::chrono::nanoseconds>(end - beg).count();
 }
