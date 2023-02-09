@@ -88,16 +88,16 @@ public:
 
     OrderLineBlitz() {
         config_ = {
-                {kEnum,    Item::NUM_ITEMS, 0},
-                {kDouble,  0,               0.0025},
-                {kEnum,    15,              0},
-                {kEnum,    5,               0},
-                {kEnum,    100,             0},
-                {kString,  0,               0},
-                {kString,  0,               0},
-                {kInteger, 0,               0.5},
-                {kEnum,    10,              0},
-                {kEnum,    5,               0},
+                {kInteger, 0,   0.5},
+                {kDouble,  0,   0.0025},
+                {kEnum,    15,  0},
+                {kEnum,    5,   0},
+                {kEnum,    100, 0},
+                {kString,  0,   0},
+                {kString,  0,   0},
+                {kInteger, 0,   0.5},
+                {kEnum,    10,  0},
+                {kEnum,    5,   0},
         };
         RegisterAttrInterpreter();
     }

@@ -39,7 +39,7 @@ private:
 };
 
 struct Item {
-    static const int NUM_ITEMS = 1000;
+    static const int NUM_ITEMS = 100000;
     static const int MAX_IM = 10000;
     static const int MIN_IM = 1;
     static constexpr float MIN_PRICE = 1.00;

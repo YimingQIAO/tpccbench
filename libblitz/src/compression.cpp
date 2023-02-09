@@ -231,4 +231,54 @@ std::vector<uint8_t> RelationCompressor::TransformTupleToBits(AttrVector &tuple,
 
   return bit_string_.SubVector();
 }
+
+std::vector<uint8_t> RelationCompressor::SingleAttrToBits(AttrVector &tuple, int32_t attr_index){
+    switch (schema_.attr_type_[attr_index]) {
+            case 0: {
+                // attribute types are recorded in schema, thus dynamic_cast is not
+                // needed, and we are sure the static_cast result is correct.
+                auto *model = static_cast<TableCategorical *>(model_[attr_index].get());
+                CategoricalSquID *squid = model->GetSquID(tuple);
+                squid->GetProbIntervals(prob_intervals_, prob_intervals_index_,
+                                        tuple.attr_[model->GetTargetVar()]);
+                break;
+            }
+            case 1: {
+                auto *model = static_cast<TableNumerical *>(model_[attr_index].get());
+                NumericalSquID *squid = model->GetSquID(tuple);
+                squid->GetProbIntervals(prob_intervals_, prob_intervals_index_,
+                                        tuple.attr_[model->GetTargetVar()]);
+                break;
+            }
+            case 2: {
+                auto *model = static_cast<TableNumerical *>(model_[attr_index].get());
+                NumericalSquID *squid = model->GetSquID(tuple);
+                squid->GetProbIntervals(prob_intervals_, prob_intervals_index_,
+                                        tuple.attr_[model->GetTargetVar()]);
+                break;
+            }
+            case 3: {
+                auto *model = static_cast<StringModel *>(model_[attr_index].get());
+                StringSquID *squid = model->GetSquID(tuple);
+                squid->GetProbIntervals(prob_intervals_, prob_intervals_index_,
+                                        tuple.attr_[model->GetTargetVar()]);
+                break;
+            }
+            case 5: {
+                auto *model = static_cast<TableMarkov *>(model_[attr_index].get());
+                CategoricalSquID *squid = model->GetSquID(tuple);
+                squid->GetProbIntervals(prob_intervals_, prob_intervals_index_,
+                                        tuple.attr_[model->GetTargetVar()]);
+                model->SetState(tuple.attr_[model->GetTargetVar()].Int());
+                break;
+            }
+            default:
+                std::cerr << "Unsupported Data Attribute.\n";
+        }
+
+    DelayedCoding(prob_intervals_, prob_intervals_index_, &bit_string_, is_virtual_);
+    prob_intervals_index_ = 0;
+
+    return bit_string_.SubVector();
+}
 }  // namespace db_compress

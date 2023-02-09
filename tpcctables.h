@@ -17,7 +17,8 @@ public:
 // Stores all the tables in TPC-C
 class TPCCTables : public TPCCDB {
 public:
-    TPCCTables() : ol_buffer_(10), stock_buffer_(District::NUM_PER_WAREHOUSE + 7), customer_buffer_(21) {}
+    TPCCTables() : ol_buffer_(10), stock_buffer_(District::NUM_PER_WAREHOUSE + 7),
+                   customer_buffer_(21) {}
 
     virtual ~TPCCTables();
 
@@ -111,11 +112,13 @@ public:
 
     void insertCustomer(const Customer &customer);
 
-    void insertCustomerBlitz(db_compress::AttrVector &customer, int32_t stop_idx);
+    void insertCustomerBlitz(db_compress::AttrVector &customer, int32_t attr_idx,
+                             bool single_attr);
 
     Customer *findCustomer(int32_t w_id, int32_t d_id, int32_t c_id);
 
-    db_compress::AttrVector *findCustomerBlitz(int32_t w_id, int32_t d_id, int32_t c_id, int32_t stop_idx);
+    db_compress::AttrVector *
+    findCustomerBlitz(int32_t w_id, int32_t d_id, int32_t c_id, int32_t stop_idx);
 
     // Finds all customers that match (w_id, d_id, *, c_last), taking the n/2th
     // one (rounded up).
@@ -151,8 +154,29 @@ public:
     // Stores order in the database. Returns a pointer to the database's tuple.
     History *insertHistory(const History &history);
 
-    void DBSize(int64_t num_warehouses, uint32_t &total_size, uint32_t &ol_size,
-                const int32_t &num_trans, bool print);
+    int32_t itemSize();
+
+    int32_t warehouseSize(int64_t num_warehouses);
+
+    int32_t districtSize(int64_t num_warehouses);
+
+    int32_t stockSize(int64_t num_warehouses);
+
+    int32_t stockBlitzSize(int64_t num_warehouses);
+
+    int32_t customerSize(int64_t num_warehouses);
+
+    int32_t customerBlitzSize(int64_t num_warehouses);
+
+    int32_t orderSize(int64_t num_warehouses, int64_t num_transactions);
+
+    int32_t orderlineSize(int64_t num_warehouses, int64_t num_transactions);
+
+    int32_t orderlineBlitzSize(int64_t num_warehouses, int64_t num_transactions);
+
+    int32_t newOrderSize();
+
+    int32_t historySize();
 
     void OrderLineToBlitz(OrderLineBlitz &table, int64_t num_warehouses);
 
@@ -160,16 +184,17 @@ public:
 
     void CustomerToBlitz(CustomerBlitz &table, int64_t num_warehouses);
 
-    void MountCompressor(db_compress::RelationCompressor &compressor, db_compress::RelationDecompressor &decompressor,
+    void MountCompressor(db_compress::RelationCompressor &compressor,
+                         db_compress::RelationDecompressor &decompressor,
                          int64_t num_warehouses, const std::string &table_name);
-
-    uint32_t BlitzSize(int64_t num_warehouses, int64_t num_transactions, const std::string &table_name);
 
     void OrderlineToCSV(int64_t num_warehouses);
 
     void StockToCSV(int64_t num_warehouses);
 
     void CustomerToCSV(int64_t num_warehouses);
+
+    void HistoryToCSV(int64_t num_warehouses);
 
     static const int KEYS_PER_INTERNAL = 8;
     static const int KEYS_PER_LEAF = 8;
@@ -193,7 +218,8 @@ private:
                                TPCCUndo **undo);
 
     void internalPaymentRemoteBlitz(int32_t warehouse_id, int32_t district_id,
-                                    db_compress::AttrVector *c, float h_amount, PaymentOutput *output,
+                                    db_compress::AttrVector *c, float h_amount,
+                                    PaymentOutput *output,
                                     TPCCUndo **undo);
 
     // Erases order from the database. NOTE: This is only for undoing

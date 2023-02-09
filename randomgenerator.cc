@@ -69,7 +69,7 @@ namespace tpcc {
     }
 
     void RandomGenerator::distInfo(char *s, int d_id, int w_id, int i_id) {
-        snprintf(s, 24 + 1, "dist-info-str#%02d#%03d#%03d", d_id, w_id, i_id);
+        snprintf(s, 24 + 1, "dist-info-str#%02d#%02d#%04d", d_id, w_id, i_id);
     }
 
     void RandomGenerator::lastName(char *c_last, int max_cid) {
