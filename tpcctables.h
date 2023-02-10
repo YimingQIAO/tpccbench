@@ -154,29 +154,29 @@ public:
     // Stores order in the database. Returns a pointer to the database's tuple.
     History *insertHistory(const History &history);
 
-    int32_t itemSize();
+    int64_t itemSize();
 
-    int32_t warehouseSize(int64_t num_warehouses);
+    int64_t warehouseSize(int64_t num_warehouses);
 
-    int32_t districtSize(int64_t num_warehouses);
+    int64_t districtSize(int64_t num_warehouses);
 
-    int32_t stockSize(int64_t num_warehouses);
+    int64_t stockSize(int64_t num_warehouses);
 
-    int32_t stockBlitzSize(int64_t num_warehouses);
+    int64_t stockBlitzSize(int64_t num_warehouses);
 
-    int32_t customerSize(int64_t num_warehouses);
+    int64_t customerSize(int64_t num_warehouses);
 
-    int32_t customerBlitzSize(int64_t num_warehouses);
+    int64_t customerBlitzSize(int64_t num_warehouses);
 
-    int32_t orderSize(int64_t num_warehouses, int64_t num_transactions);
+    int64_t orderSize(int64_t num_warehouses, int64_t num_transactions);
 
-    int32_t orderlineSize(int64_t num_warehouses, int64_t num_transactions);
+    int64_t orderlineSize(int64_t num_warehouses, int64_t num_transactions);
 
-    int32_t orderlineBlitzSize(int64_t num_warehouses, int64_t num_transactions);
+    int64_t orderlineBlitzSize(int64_t num_warehouses, int64_t num_transactions);
 
-    int32_t newOrderSize();
+    int64_t newOrderSize();
 
-    int32_t historySize();
+    int64_t historySize();
 
     void OrderLineToBlitz(OrderLineBlitz &table, int64_t num_warehouses);
 

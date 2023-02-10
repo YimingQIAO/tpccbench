@@ -1334,14 +1334,14 @@ void TPCCTables::HistoryToCSV(int64_t num_warehouses) {
     his_f.close();
 }
 
-int32_t TPCCTables::itemSize() {
-    int32_t ret = 0;
+int64_t TPCCTables::itemSize() {
+    int64_t ret = 0;
     for (Item &item: items_) ret += item.Size();
     return ret;
 }
 
-int32_t TPCCTables::warehouseSize(int64_t num_warehouses) {
-    int32_t ret = 0;
+int64_t TPCCTables::warehouseSize(int64_t num_warehouses) {
+    int64_t ret = 0;
     for (int32_t i = 1; i <= num_warehouses; ++i) {
         Warehouse *w = findWarehouse(i);
         assert(w != nullptr);
@@ -1350,8 +1350,8 @@ int32_t TPCCTables::warehouseSize(int64_t num_warehouses) {
     return ret;
 }
 
-int32_t TPCCTables::districtSize(int64_t num_warehouses) {
-    int32_t ret = 0;
+int64_t TPCCTables::districtSize(int64_t num_warehouses) {
+    int64_t ret = 0;
     for (int32_t i = 1; i <= num_warehouses; ++i) {
         for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
             District *d = findDistrict(i, j);
@@ -1362,8 +1362,8 @@ int32_t TPCCTables::districtSize(int64_t num_warehouses) {
     return ret;
 }
 
-int32_t TPCCTables::stockSize(int64_t num_warehouses) {
-    int32_t ret = 0;
+int64_t TPCCTables::stockSize(int64_t num_warehouses) {
+    int64_t ret = 0;
     for (int32_t i = 1; i <= num_warehouses; ++i) {
         for (int32_t j = 1; j <= Stock::NUM_STOCK_PER_WAREHOUSE; ++j) {
             Stock *s = findStock(i, j);
@@ -1374,8 +1374,8 @@ int32_t TPCCTables::stockSize(int64_t num_warehouses) {
     return ret;
 }
 
-int32_t TPCCTables::stockBlitzSize(int64_t num_warehouses) {
-    int32_t ret = 0;
+int64_t TPCCTables::stockBlitzSize(int64_t num_warehouses) {
+    int64_t ret = 0;
     for (int32_t i = 1; i <= num_warehouses; ++i) {
         for (int32_t j = 1; j <= Stock::NUM_STOCK_PER_WAREHOUSE; ++j) {
             std::vector<uint8_t> *s = find(stock_blitz_, makeStockKey(i, j));
@@ -1386,8 +1386,8 @@ int32_t TPCCTables::stockBlitzSize(int64_t num_warehouses) {
     return ret;
 }
 
-int32_t TPCCTables::customerSize(int64_t num_warehouses) {
-    int32_t ret = 0;
+int64_t TPCCTables::customerSize(int64_t num_warehouses) {
+    int64_t ret = 0;
     for (int32_t i = 1; i <= num_warehouses; ++i) {
         for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
             for (int32_t k = 1; k <= Customer::NUM_PER_DISTRICT; ++k) {
@@ -1400,8 +1400,8 @@ int32_t TPCCTables::customerSize(int64_t num_warehouses) {
     return ret;
 }
 
-int32_t TPCCTables::customerBlitzSize(int64_t num_warehouses) {
-    int32_t ret = 0;
+int64_t TPCCTables::customerBlitzSize(int64_t num_warehouses) {
+    int64_t ret = 0;
     for (int32_t i = 1; i <= num_warehouses; ++i) {
         for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
             for (int32_t k = 1; k <= Customer::NUM_PER_DISTRICT; ++k) {
@@ -1413,9 +1413,9 @@ int32_t TPCCTables::customerBlitzSize(int64_t num_warehouses) {
     return ret;
 }
 
-int32_t TPCCTables::orderSize(int64_t num_warehouses, int64_t num_transactions) {
-    int32_t ret = 0;
-    int32_t krange = Order::INITIAL_ORDERS_PER_DISTRICT + num_transactions;
+int64_t TPCCTables::orderSize(int64_t num_warehouses, int64_t num_transactions) {
+    int64_t ret = 0;
+    int64_t krange = Order::INITIAL_ORDERS_PER_DISTRICT + num_transactions;
     for (int32_t i = 1; i <= num_warehouses; ++i) {
         for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
             for (int32_t k = 1;
@@ -1429,9 +1429,9 @@ int32_t TPCCTables::orderSize(int64_t num_warehouses, int64_t num_transactions) 
     return ret;
 }
 
-int32_t TPCCTables::orderlineSize(int64_t num_warehouses, int64_t num_transactions) {
-    int32_t ret = 0;
-    int32_t krange = Order::INITIAL_ORDERS_PER_DISTRICT + num_transactions;
+int64_t TPCCTables::orderlineSize(int64_t num_warehouses, int64_t num_transactions) {
+    int64_t ret = 0;
+    int64_t krange = Order::INITIAL_ORDERS_PER_DISTRICT + num_transactions;
     for (int32_t i = 1; i <= num_warehouses; ++i) {
         for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
             for (int32_t k = 1; k <= krange; ++k) {
@@ -1446,9 +1446,9 @@ int32_t TPCCTables::orderlineSize(int64_t num_warehouses, int64_t num_transactio
     return ret;
 }
 
-int32_t TPCCTables::orderlineBlitzSize(int64_t num_warehouses, int64_t num_transactions) {
-    int32_t ret = 0;
-    int32_t krange = Order::INITIAL_ORDERS_PER_DISTRICT + num_transactions;
+int64_t TPCCTables::orderlineBlitzSize(int64_t num_warehouses, int64_t num_transactions) {
+    int64_t ret = 0;
+    int64_t krange = Order::INITIAL_ORDERS_PER_DISTRICT + num_transactions;
     for (int32_t i = 1; i <= num_warehouses; ++i) {
         for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
             for (int32_t k = 1; k <= krange; ++k) {
@@ -1465,14 +1465,14 @@ int32_t TPCCTables::orderlineBlitzSize(int64_t num_warehouses, int64_t num_trans
 }
 
 
-int32_t TPCCTables::newOrderSize() {
-    int32_t ret = 0;
+int64_t TPCCTables::newOrderSize() {
+    int64_t ret = 0;
     for (auto &no: neworders_) ret += no.second->size();
     return ret;
 }
 
-int32_t TPCCTables::historySize() {
-    int32_t ret = 0;
+int64_t TPCCTables::historySize() {
+    int64_t ret = 0;
     for (auto &h: history_) ret += h->size();
     return ret;
 }
