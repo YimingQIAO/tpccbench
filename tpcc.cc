@@ -122,15 +122,15 @@ void welcome(int argc, const char *const *argv) {
 }
 
 void tableSize(TPCCTables *tables) {
-    int ini_warehouses = tables->warehouseSize(num_warehouses);
-    int ini_districts = tables->districtSize(num_warehouses);
-    int ini_customers = tables->customerSize(num_warehouses);
-    int ini_orders = tables->orderSize(num_warehouses, 0);
-    int ini_orderline = tables->orderlineSize(num_warehouses, 0);
-    int ini_neworders = tables->newOrderSize();
-    int ini_items = tables->itemSize();
-    int ini_stocks = tables->stockSize(num_warehouses);
-    int ini_history = tables->historySize();
+    int64_t ini_warehouses = tables->warehouseSize(num_warehouses);
+    int64_t ini_districts = tables->districtSize(num_warehouses);
+    int64_t ini_customers = tables->customerSize(num_warehouses);
+    int64_t ini_orders = tables->orderSize(num_warehouses, 0);
+    int64_t ini_orderline = tables->orderlineSize(num_warehouses, 0);
+    int64_t ini_neworders = tables->newOrderSize();
+    int64_t ini_items = tables->itemSize();
+    int64_t ini_stocks = tables->stockSize(num_warehouses);
+    int64_t ini_history = tables->historySize();
 
     std::cout << "------------ Uncompressed Size ------------ \n";
     std::cout << "Warehouse: " << ini_warehouses << " byte" << std::endl;
@@ -142,7 +142,7 @@ void tableSize(TPCCTables *tables) {
     std::cout << "Item: " << ini_items << " byte" << std::endl;
     std::cout << "Stock: " << ini_stocks << " byte" << std::endl;
     std::cout << "History: " << ini_history << " byte" << std::endl;
-    int32_t total =
+    int64_t total =
             ini_warehouses + ini_districts + ini_customers + ini_orders + ini_orderline +
             ini_neworders + ini_items + ini_stocks + ini_history;
     std::cout << "Total: " << total << " byte" << std::endl;

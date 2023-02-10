@@ -1,0 +1,240 @@
+Loading 5 warehouses... 1460 ms
+------------ Uncompressed Size ------------ 
+Warehouse: 417 byte
+District: 4522 byte
+Customer: 36038994 byte
+Order: 4796349 byte
+Orderline: 91316804 byte
+NewOrder: 274500 byte
+Item: 7168930 byte
+Stock: 141466880 byte
+History: 8782012 byte
+Total: 289849408 byte
+Running... 200000 transactions in 1408 ms = 142028.608823 txns/s
+------------ Uncompressed Size ------------ 
+Warehouse: 427 byte
+District: 4622 byte
+Customer: 36280728 byte
+Order: 4800829 byte
+Orderline: 99850578 byte
+NewOrder: 340160 byte
+Item: 7168930 byte
+Stock: 141571740 byte
+History: 13718725 byte
+Total: 303736739 byte
+Loading 10 warehouses... 2930 ms
+------------ Uncompressed Size ------------ 
+Warehouse: 870 byte
+District: 8992 byte
+Customer: 72073827 byte
+Order: 9623522 byte
+Orderline: 183434661 byte
+NewOrder: 558000 byte
+Item: 7166222 byte
+Stock: 283030183 byte
+History: 17623635 byte
+Total: 573519912 byte
+Running... 200000 transactions in 1724 ms = 116025.500084 txns/s
+------------ Uncompressed Size ------------ 
+Warehouse: 890 byte
+District: 9192 byte
+Customer: 72368599 byte
+Order: 9631862 byte
+Orderline: 198860419 byte
+NewOrder: 613294 byte
+Item: 7166222 byte
+Stock: 283152972 byte
+History: 22628418 byte
+Total: 594431868 byte
+Loading 20 warehouses... 5901 ms
+------------ Uncompressed Size ------------ 
+Warehouse: 1736 byte
+District: 18079 byte
+Customer: 144458528 byte
+Order: 19516405 byte
+Orderline: 372168989 byte
+NewOrder: 1197000 byte
+Item: 7169102 byte
+Stock: 566962087 byte
+History: 35784016 byte
+Total: 1147275942 byte
+Running... 200000 transactions in 2112 ms = 94676.528174 txns/s
+------------ Uncompressed Size ------------ 
+Warehouse: 1776 byte
+District: 18472 byte
+Customer: 144773073 byte
+Order: 19524385 byte
+Orderline: 387597198 byte
+NewOrder: 1256730 byte
+Item: 7169102 byte
+Stock: 567101755 byte
+History: 40800588 byte
+Total: 1168243079 byte
+Loading 30 warehouses... 8932 ms
+------------ Uncompressed Size ------------ 
+Warehouse: 2601 byte
+District: 27393 byte
+Customer: 216910534 byte
+Order: 29408316 byte
+Orderline: 560444646 byte
+NewOrder: 1836000 byte
+Item: 7167862 byte
+Stock: 850891820 byte
+History: 53945950 byte
+Total: 1720635122 byte
+Running... 200000 transactions in 2320 ms = 86212.730775 txns/s
+------------ Uncompressed Size ------------ 
+Warehouse: 2631 byte
+District: 27693 byte
+Customer: 217243040 byte
+Order: 29416366 byte
+Orderline: 575763111 byte
+NewOrder: 1898629 byte
+Item: 7167862 byte
+Stock: 851039164 byte
+History: 58999091 byte
+Total: 1741557587 byte
+Loading 40 warehouses... 12645 ms
+------------ Uncompressed Size ------------ 
+Warehouse: 3493 byte
+District: 36311 byte
+Customer: 289144450 byte
+Order: 39303581 byte
+Orderline: 749608546 byte
+NewOrder: 2475000 byte
+Item: 7167202 byte
+Stock: 1134833413 byte
+History: 72111377 byte
+Total: 2294683373 byte
+Running... 200000 transactions in 2902 ms = 68912.312184 txns/s
+------------ Uncompressed Size ------------ 
+Warehouse: 3533 byte
+District: 36711 byte
+Customer: 289479158 byte
+Order: 39311961 byte
+Orderline: 764926650 byte
+NewOrder: 2541772 byte
+Item: 7167202 byte
+Stock: 1134985091 byte
+History: 77129515 byte
+Total: 2315581593 byte
+Loading 50 warehouses... 15218 ms
+------------ Uncompressed Size ------------ 
+Warehouse: 4349 byte
+District: 45438 byte
+Customer: 361563936 byte
+Order: 49194996 byte
+Orderline: 937568735 byte
+NewOrder: 3114000 byte
+Item: 7169778 byte
+Stock: 1418740168 byte
+History: 90271744 byte
+Total: 2867673144 byte
+Running... 200000 transactions in 3369 ms = 59359.810381 txns/s
+------------ Uncompressed Size ------------ 
+Warehouse: 4399 byte
+District: 45938 byte
+Customer: 361900582 byte
+Order: 49203056 byte
+Orderline: 952750438 byte
+NewOrder: 3187338 byte
+Item: 7169778 byte
+Stock: 1418895344 byte
+History: 95330099 byte
+Total: 2888486972 byte
+Loading 60 warehouses... 18467 ms
+------------ Uncompressed Size ------------ 
+Warehouse: 5245 byte
+District: 54591 byte
+Customer: 433915614 byte
+Order: 59089674 byte
+Orderline: 1126884212 byte
+NewOrder: 3753000 byte
+Item: 7165885 byte
+Stock: 1702670989 byte
+History: 108435912 byte
+Total: 3441975122 byte
+Running... 200000 transactions in 3725 ms = 53698.454183 txns/s
+------------ Uncompressed Size ------------ 
+Warehouse: 5305 byte
+District: 55191 byte
+Customer: 434252500 byte
+Order: 59096994 byte
+Orderline: 1142068518 byte
+NewOrder: 3823697 byte
+Item: 7165885 byte
+Stock: 1702827471 byte
+History: 113536594 byte
+Total: 3462832155 byte
+Loading 70 warehouses... 21526 ms
+------------ Uncompressed Size ------------ 
+Warehouse: 6053 byte
+District: 63510 byte
+Customer: 506365421 byte
+Order: 68981703 byte
+Orderline: 1315183492 byte
+NewOrder: 4392000 byte
+Item: 7170483 byte
+Stock: 1986608101 byte
+History: 126599252 byte
+Total: 4015370015 byte
+Running... 200000 transactions in 3970 ms = 50377.516514 txns/s
+------------ Uncompressed Size ------------ 
+Warehouse: 6123 byte
+District: 64210 byte
+Customer: 506708646 byte
+Order: 68989583 byte
+Orderline: 1330545581 byte
+NewOrder: 4456854 byte
+Item: 7170483 byte
+Stock: 1986767650 byte
+History: 131644777 byte
+Total: 4036353907 byte
+Loading 80 warehouses... 25071 ms
+------------ Uncompressed Size ------------ 
+Warehouse: 6959 byte
+District: 72779 byte
+Customer: 578951082 byte
+Order: 78875160 byte
+Orderline: 1503657711 byte
+NewOrder: 5031000 byte
+Item: 7170922 byte
+Stock: 2270518817 byte
+History: 144757769 byte
+Total: 4589042199 byte
+Running... 200000 transactions in 4286 ms = 46660.801404 txns/s
+------------ Uncompressed Size ------------ 
+Warehouse: 7039 byte
+District: 73579 byte
+Customer: 579292412 byte
+Order: 78883030 byte
+Orderline: 1518868693 byte
+NewOrder: 5098467 byte
+Item: 7170922 byte
+Stock: 2270678691 byte
+History: 149870585 byte
+Total: 4609943418 byte
+Loading 90 warehouses... 28515 ms
+------------ Uncompressed Size ------------ 
+Warehouse: 7774 byte
+District: 82004 byte
+Customer: 651140866 byte
+Order: 88768648 byte
+Orderline: 1692596099 byte
+NewOrder: 5670000 byte
+Item: 7165777 byte
+Stock: 2554433993 byte
+History: 162923272 byte
+Total: 5162788433 byte
+Running... 200000 transactions in 4431 ms = 45135.580514 txns/s
+------------ Uncompressed Size ------------ 
+Warehouse: 7864 byte
+District: 82904 byte
+Customer: 651488531 byte
+Order: 88776788 byte
+Orderline: 1707766839 byte
+NewOrder: 5740681 byte
+Item: 7165777 byte
+Stock: 2554594887 byte
+History: 168003692 byte
+Total: 5183627963 byte
