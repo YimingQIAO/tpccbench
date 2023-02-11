@@ -209,6 +209,8 @@ private:
     typedef std::map<int64_t, NewOrder *> NewOrderMap;
     NewOrderMap neworders_;
     std::vector<const History *> history_;
+
+
 };
 
 #endif
