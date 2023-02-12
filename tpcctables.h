@@ -7,10 +7,13 @@
 
 #include "btree.h"
 #include "tpccdb.h"
+#include "disk_storage.h"
 
 class CustomerByNameOrdering {
 public:
     bool operator()(const Customer *a, const Customer *b) const;
+
+    bool operator()(const Tuple<Customer> *ta, const Tuple<Customer> *tb) const;
 };
 
 // Stores all the tables in TPC-C
@@ -93,7 +96,7 @@ public:
 
     District *findDistrict(int32_t w_id, int32_t d_id);
 
-    void insertCustomer(const Customer &customer);
+    void insertCustomer(Customer &customer);
 
     Customer *findCustomer(int32_t w_id, int32_t d_id, int32_t c_id);
 
@@ -130,6 +133,8 @@ public:
 
     int64_t stockSize(int64_t num_warehouses);
 
+    [[nodiscard]] static int64_t diskTableSize(const std::string &file_name);
+
     int64_t customerSize(int64_t num_warehouses);
 
     int64_t orderSize(int64_t num_warehouses, int64_t num_transactions);
@@ -148,6 +153,8 @@ public:
 
     void HistoryToCSV(int64_t num_warehouses);
 
+    void DeleteDiskData();
+
     static const int KEYS_PER_INTERNAL = 8;
     static const int KEYS_PER_LEAF = 8;
 
@@ -165,24 +172,6 @@ private:
     void internalPaymentRemote(int32_t warehouse_id, int32_t district_id, Customer *c,
                                float h_amount, PaymentOutput *output, TPCCUndo **undo);
 
-    // Erases order from the database. NOTE: This is only for undoing transactions.
-    void eraseOrder(const Order *order);
-
-    // Erases order_line from the database. NOTE: This is only for undoing transactions.
-    void eraseOrderLine(const OrderLine *order_line);
-
-    // Erases new_order from the database. NOTE: This is only for undoing transactions.
-    void eraseNewOrder(const NewOrder *new_order);
-
-    // Erases history from the database. NOTE: This is only for undoing transactions.
-    void eraseHistory(const History *history);
-
-    // Erases history from the database. NOTE: This is only for undoing transactions.
-    void eraseStock(const Stock *stock);
-
-    // Erases history from the database. NOTE: This is only for undoing transactions.
-    void eraseCustomer(Customer *customer);
-
     // Allocates an undo buffer if needed, storing the pointer in *undo.
     void allocateUndo(TPCCUndo **undo) {
         if (undo != NULL && *undo == NULL) {
@@ -196,21 +185,28 @@ private:
     std::vector<Item> items_;
 
     BPlusTree<int32_t, Warehouse *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> warehouses_;
-    BPlusTree<int32_t, Stock *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> stock_;
+    BPlusTree<int32_t, Tuple<Stock> *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> stock_;
     BPlusTree<int32_t, District *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> districts_;
-    BPlusTree<int32_t, Customer *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> customers_;
-    typedef std::set<Customer *, CustomerByNameOrdering> CustomerByNameSet;
+    BPlusTree<int32_t, Tuple<Customer> *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> customers_;
+    typedef std::set<Tuple<Customer> *, CustomerByNameOrdering> CustomerByNameSet;
     CustomerByNameSet customers_by_name_;
     BPlusTree<int32_t, Order *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> orders_;
     // TODO: Tune the size of this tree for the bigger keys?
     BPlusTree<int64_t, Order *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> orders_by_customer_;
-    BPlusTree<int32_t, OrderLine *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> orderlines_;
+    BPlusTree<int32_t, Tuple<OrderLine> *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> orderlines_;
     // TODO: Implement btree lower_bound?
     typedef std::map<int64_t, NewOrder *> NewOrderMap;
     NewOrderMap neworders_;
     std::vector<const History *> history_;
 
+    uint32_t num_mem_stock = 0;
+    uint32_t num_disk_stock = 0;
 
+    uint32_t num_mem_orderline = 0;
+    uint32_t num_disk_orderline = 0;
+
+    uint32_t num_mem_customer = 0;
+    uint32_t num_disk_customer = 0;
 };
 
 #endif

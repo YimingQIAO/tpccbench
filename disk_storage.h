@@ -6,28 +6,59 @@
 #include <fcntl.h>
 #include <libc.h>
 
+__attribute__((__used__))
+static inline int DirectIOFile(const std::string &table_name) {
+#if __APPLE__
+    int fd = open(table_name.c_str(), O_RDWR | O_CREAT, 0666);
+    fcntl(fd, F_NOCACHE, 1);
+#elif __linux__
+    int fd = open(table_name.c_str(), O_RDWR | O_CREAT | O_DIRECT, 0666);
+#endif
+    if (fd < 0) throw std::runtime_error("open file error in DirectIOFile");
+    return fd;
+}
 
-class DiskTable {
-public:
-    std::string table_name_;
-    int file_;
+template<typename T>
+static inline void DiskTupleWrite(int fd, T *data, int64_t pos) {
+    int ret = pwrite(fd, data, sizeof(T), pos * sizeof(T));
+    if (ret < 0) throw std::runtime_error("write error in DiskTupleWrite");
+}
 
-    explicit DiskTable(std::string table_name) : table_name_(std::move(table_name)) {
-        file_ = open(table_name_.c_str(), O_RDWR | O_CREAT);
+template<typename T>
+static inline void DiskTupleRead(int fd, T *data, int64_t pos) {
+    int ret = pread(fd, data, sizeof(T), pos * sizeof(T));
+    if (ret < 0) throw std::runtime_error("read error in DiskTupleRead");
+}
+
+template<typename T>
+static inline int64_t DiskTableSize(int fd) {
+    // get #tuple
+    struct stat st_buf;
+    fstat(fd, &st_buf);
+    int32_t tuple_size = st_buf.st_size / sizeof(T);
+
+    // get size of each tuple
+    int64_t ret = 0;
+    T tuple;
+    for (int i = 0; i < tuple_size; ++i) {
+        DiskTupleRead(fd, &tuple, i);
+        ret += tuple.size();
     }
 
-    ~DiskTable() {
-        close(file_);
-    }
+    return ret;
+}
 
-    void TupleWrite(const char *data, size_t size) const;
+template<typename T>
+static inline int64_t DiskTableSize(const std::string &file_name) {
+    int fd = DirectIOFile(file_name);
+    return DiskTableSize<T>(fd);
+}
 
-    void TupleRead(char *data, size_t size) const;
-
-    void seek(int offset) const;
-
-private:
+template<class T>
+struct Tuple {
+    bool in_memory_;
+    T *data_;           // in memory
+    int64_t pos_;       // on disk
 };
-
 
 #endif //TPCC_DISK_STORAGE_H

@@ -11,6 +11,12 @@
 
 using std::vector;
 
+namespace {
+    int stock_fd = DirectIOFile(Stock::TABLE_NAME);
+    int orderline_fd = DirectIOFile(OrderLine::TABLE_NAME);
+    int customer_fd = DirectIOFile(Customer::TABLE_NAME);
+}
+
 bool CustomerByNameOrdering::operator()(const Customer *a, const Customer *b) const {
     if (a->c_w_id < b->c_w_id) return true;
     if (a->c_w_id > b->c_w_id) return false;
@@ -27,6 +33,27 @@ bool CustomerByNameOrdering::operator()(const Customer *a, const Customer *b) co
 
     // Finally delegate to c_first
     return strcmp(a->c_first, b->c_first) < 0;
+}
+
+bool
+CustomerByNameOrdering::operator()(const Tuple<Customer> *ta, const Tuple<Customer> *tb) const {
+    Customer *a;
+    Customer *b;
+    if (ta->in_memory_) {
+        a = ta->data_;
+    } else {
+        a = new Customer();
+        DiskTupleRead(customer_fd, a, ta->pos_);
+    }
+
+    if (tb->in_memory_) {
+        b = tb->data_;
+    } else {
+        b = new Customer();
+        DiskTupleRead(customer_fd, b, tb->pos_);
+    }
+
+    return (*this)(a, b);
 }
 
 template<typename KeyType, typename ValueType>
@@ -51,6 +78,8 @@ TPCCTables::~TPCCTables() {
     STLDeleteValues(&neworders_);
     STLDeleteElements(&customers_by_name_);
     STLDeleteElements(&history_);
+
+    DeleteDiskData();
 }
 
 int32_t TPCCTables::stockLevel(int32_t warehouse_id, int32_t district_id, int32_t threshold) {
@@ -618,10 +647,10 @@ void TPCCTables::applyUndo(TPCCUndo *undo) {
     restoreFromMap(undo->modified_orders());
     restoreFromMap(undo->modified_order_lines());
 
-    eraseTuple(undo->inserted_orders(), this, &TPCCTables::eraseOrder);
-    eraseTuple(undo->inserted_order_lines(), this, &TPCCTables::eraseOrderLine);
-    eraseTuple(undo->inserted_new_orders(), this, &TPCCTables::eraseNewOrder);
-    eraseTuple(undo->inserted_history(), this, &TPCCTables::eraseHistory);
+//    eraseTuple(undo->inserted_orders(), this, &TPCCTables::eraseOrder);
+//    eraseTuple(undo->inserted_order_lines(), this, &TPCCTables::eraseOrderLine);
+//    eraseTuple(undo->inserted_new_orders(), this, &TPCCTables::eraseNewOrder);
+//    eraseTuple(undo->inserted_history(), this, &TPCCTables::eraseHistory);
 
     // Transfer deleted new orders back to the database
     for (TPCCUndo::NewOrderDeletedSet::const_iterator i = undo->deleted_new_orders().begin();
@@ -697,17 +726,28 @@ static int32_t makeStockKey(int32_t w_id, int32_t s_id) {
 }
 
 void TPCCTables::insertStock(const Stock &stock) {
-    insert(&stock_, makeStockKey(stock.s_w_id, stock.s_i_id), stock);
+    Tuple<Stock> tuple;
+    tuple.in_memory_ = num_mem_stock < Stock::MEMORY_THRESHOLD;
+    if (tuple.in_memory_) {
+        tuple.data_ = new Stock(stock);
+        num_mem_stock++;
+    } else {
+        tuple.pos_ = num_disk_stock;
+        DiskTupleWrite(stock_fd, &stock, num_disk_stock);
+        num_disk_stock++;
+    }
+    insert(&stock_, makeStockKey(stock.s_w_id, stock.s_i_id), tuple);
 }
 
 Stock *TPCCTables::findStock(int32_t w_id, int32_t s_id) {
-    return find(stock_, makeStockKey(w_id, s_id));
-}
-
-void TPCCTables::eraseStock(const Stock *stock) {
-    int32_t key = makeStockKey(stock->s_w_id, stock->s_i_id);
-    erase(&stock_, key, stock);
-    delete stock;
+    int32_t key = makeStockKey(w_id, s_id);
+    Tuple<Stock> *tuple = find(stock_, key);
+    if (tuple == nullptr) return nullptr;
+    else if (!tuple->in_memory_) {
+        if (tuple->data_ == nullptr) tuple->data_ = new Stock();
+        DiskTupleRead(stock_fd, tuple->data_, tuple->pos_);
+    }
+    return tuple->data_;
 }
 
 static int32_t makeDistrictKey(int32_t w_id, int32_t d_id) {
@@ -736,28 +776,45 @@ static int32_t makeCustomerKey(int32_t w_id, int32_t d_id, int32_t c_id) {
     return id;
 }
 
-void TPCCTables::insertCustomer(const Customer &customer) {
-    Customer *c = insert(&customers_,
-                         makeCustomerKey(customer.c_w_id, customer.c_d_id, customer.c_id),
-                         customer);
-    // assert(customers_by_name_.find(c) == customers_by_name_.end());
-    customers_by_name_.insert(c);
+void TPCCTables::insertCustomer(Customer &customer) {
+    Tuple<Customer> tuple;
+    tuple.in_memory_ = num_mem_customer < Customer::MEMORY_THRESHOLD;
+    if (tuple.in_memory_) {
+        tuple.data_ = new Customer(customer);
+        num_mem_customer++;
+    } else {
+        tuple.pos_ = num_disk_customer;
+        DiskTupleWrite(customer_fd, &customer, num_disk_customer);
+        num_disk_customer++;
+    }
+    auto *t = insert(&customers_, makeCustomerKey(customer.c_w_id, customer.c_d_id, customer.c_id),
+                     tuple);
+    customers_by_name_.insert(t);
 }
 
 Customer *TPCCTables::findCustomer(int32_t w_id, int32_t d_id, int32_t c_id) {
-    return find(customers_, makeCustomerKey(w_id, d_id, c_id));
+    int32_t key = makeCustomerKey(w_id, d_id, c_id);
+    Tuple<Customer> *tuple = find(customers_, key);
+    if (tuple == nullptr) return nullptr;
+    else if (!tuple->in_memory_) {
+        if (tuple->data_ == nullptr) tuple->data_ = new Customer();
+        DiskTupleRead(customer_fd, tuple->data_, tuple->pos_);
+    }
+    return tuple->data_;
 }
 
 Customer *TPCCTables::findCustomerByName(int32_t w_id, int32_t d_id, const char *c_last) {
     // select (w_id, d_id, *, c_last) order by c_first
+    Tuple<Customer> tuple;
+    tuple.in_memory_ = true;
     Customer c;
     c.c_w_id = w_id;
     c.c_d_id = d_id;
     strcpy(c.c_last, c_last);
     c.c_first[0] = '\0';
-    CustomerByNameSet::const_iterator it = customers_by_name_.lower_bound(&c);
+    tuple.data_ = &c;
+    auto it = customers_by_name_.lower_bound(&tuple);
     assert(it != customers_by_name_.end());
-    assert((*it)->c_w_id == w_id && (*it)->c_d_id == d_id && strcmp((*it)->c_last, c_last) == 0);
 
     // go to the "next" c_last
     // TODO: This is a GROSS hack. Can we do better?
@@ -768,12 +825,12 @@ Customer *TPCCTables::findCustomerByName(int32_t w_id, int32_t d_id, const char 
         c.c_last[length] = 'A';
         c.c_last[length + 1] = '\0';
     }
-    CustomerByNameSet::const_iterator stop = customers_by_name_.lower_bound(&c);
+    auto stop = customers_by_name_.lower_bound(&tuple);
 
-    Customer *customer = NULL;
+    Tuple<Customer> *t_customer = nullptr;
     // Choose position n/2 rounded up (1 based addressing) = floor((n-1)/2)
     if (it != stop) {
-        CustomerByNameSet::const_iterator middle = it;
+        auto middle = it;
         ++it;
         int i = 0;
         while (it != stop) {
@@ -781,24 +838,13 @@ Customer *TPCCTables::findCustomerByName(int32_t w_id, int32_t d_id, const char 
             if (i % 2 == 1) {
                 ++middle;
             }
-            assert(strcmp((*it)->c_last, c_last) == 0);
             ++it;
             ++i;
         }
         // There were i+1 matching last names
-        customer = *middle;
+        t_customer = *middle;
     }
-
-    assert(customer->c_w_id == w_id && customer->c_d_id == d_id &&
-           strcmp(customer->c_last, c_last) == 0);
-    return customer;
-}
-
-void TPCCTables::eraseCustomer(Customer *customer) {
-    int32_t key = makeCustomerKey(customer->c_w_id, customer->c_d_id, customer->c_id);
-    erase(&customers_, key, customer);
-    customers_by_name_.erase(customer);
-    delete customer;
+    return t_customer->data_;
 }
 
 static int32_t makeOrderKey(int32_t w_id, int32_t d_id, int32_t o_id) {
@@ -854,17 +900,6 @@ TPCCTables::findLastOrderByCustomer(const int32_t w_id, const int32_t d_id, cons
     return order;
 }
 
-void TPCCTables::eraseOrder(const Order *order) {
-    int32_t primary = makeOrderKey(order->o_w_id, order->o_d_id, order->o_id);
-    erase(&orders_, primary, order);
-
-    // Secondary index based on customer id
-    int64_t secondary =
-            makeOrderByCustomerKey(order->o_w_id, order->o_d_id, order->o_c_id, order->o_id);
-    erase(&orders_by_customer_, secondary, order);
-    delete order;
-}
-
 static int32_t makeOrderLineKey(int32_t w_id, int32_t d_id, int32_t o_id, int32_t number) {
     assert(1 <= w_id && w_id <= Warehouse::MAX_WAREHOUSE_ID);
     assert(1 <= d_id && d_id <= District::NUM_PER_WAREHOUSE);
@@ -880,22 +915,31 @@ static int32_t makeOrderLineKey(int32_t w_id, int32_t d_id, int32_t o_id, int32_
 }
 
 OrderLine *TPCCTables::insertOrderLine(const OrderLine &orderline) {
-    int32_t key = makeOrderLineKey(
-            orderline.ol_w_id, orderline.ol_d_id, orderline.ol_o_id, orderline.ol_number);
-    return insert(&orderlines_, key, orderline);
+    Tuple<OrderLine> tuple;
+    tuple.in_memory_ = num_mem_orderline < OrderLine::MEMORY_THRESHOLD;
+    if (tuple.in_memory_) {
+        tuple.data_ = new OrderLine(orderline);
+        num_mem_orderline++;
+    } else {
+        tuple.pos_ = num_disk_orderline;
+        DiskTupleWrite(orderline_fd, &orderline, num_disk_orderline);
+        num_disk_orderline++;
+    }
+    insert(&orderlines_, makeOrderLineKey(orderline.ol_w_id, orderline.ol_d_id,
+                                          orderline.ol_o_id,
+                                          orderline.ol_number), tuple);
+    return nullptr;
 }
 
 OrderLine *TPCCTables::findOrderLine(int32_t w_id, int32_t d_id, int32_t o_id, int32_t number) {
     int32_t key = makeOrderLineKey(w_id, d_id, o_id, number);
-    if (key < 0) return nullptr;
-    return find(orderlines_, key);
-}
-
-void TPCCTables::eraseOrderLine(const OrderLine *order_line) {
-    int32_t key = makeOrderLineKey(
-            order_line->ol_w_id, order_line->ol_d_id, order_line->ol_o_id, order_line->ol_number);
-    erase(&orderlines_, key, order_line);
-    delete order_line;
+    Tuple<OrderLine> *tuple = find(orderlines_, key);
+    if (tuple == nullptr) return nullptr;
+    else if (!tuple->in_memory_) {
+        if (tuple->data_ == nullptr) tuple->data_ = new OrderLine();
+        DiskTupleRead(orderline_fd, tuple->data_, tuple->pos_);
+    }
+    return tuple->data_;
 }
 
 static int64_t makeNewOrderKey(int32_t w_id, int32_t d_id, int32_t o_id) {
@@ -925,38 +969,10 @@ NewOrder *TPCCTables::findNewOrder(int32_t w_id, int32_t d_id, int32_t o_id) {
     return it->second;
 }
 
-void TPCCTables::eraseNewOrder(const NewOrder *new_order) {
-    NewOrderMap::iterator it = neworders_.find(
-            makeNewOrderKey(new_order->no_w_id, new_order->no_d_id, new_order->no_o_id));
-    assert(it != neworders_.end());
-    assert(it->second == new_order);
-    neworders_.erase(it);
-    delete new_order;
-}
-
 History *TPCCTables::insertHistory(const History &history) {
     History *h = new History(history);
     history_.push_back(h);
     return h;
-}
-
-void TPCCTables::eraseHistory(const History *history) {
-    // Search backwards to find the history: it likely was inserted recently (or last)
-//    bool found = false;
-//    for (int i = static_cast<int>(history_.size()) - 1; i >= 0; --i) {
-//        if (history == history_[i]) {
-//            if (i != history_.size() - 1) {
-//                // erase not at end: move the last element here
-//                history_[i] = history_[history_.size() - 1];
-//            }
-//            found = true;
-//            break;
-//        }
-//    }
-//    assert(found);
-    // Remove the last element
-    history_.pop_back();
-    delete history;
 }
 
 void TPCCTables::OrderlineToCSV(int64_t num_warehouses) {
@@ -1059,6 +1075,15 @@ void TPCCTables::HistoryToCSV(int64_t num_warehouses) {
     his_f.close();
 }
 
+void TPCCTables::DeleteDiskData() {
+    close(stock_fd);
+    close(orderline_fd);
+    close(customer_fd);
+    remove(Stock::TABLE_NAME);
+    remove(OrderLine::TABLE_NAME);
+    remove(Customer::TABLE_NAME);
+}
+
 int64_t TPCCTables::itemSize() {
     int32_t ret = 0;
     for (Item &item: items_) ret += item.Size();
@@ -1091,12 +1116,20 @@ int64_t TPCCTables::stockSize(int64_t num_warehouses) {
     int64_t ret = 0;
     for (int32_t i = 1; i <= num_warehouses; ++i) {
         for (int32_t j = 1; j <= Stock::NUM_STOCK_PER_WAREHOUSE; ++j) {
-            Stock *s = findStock(i, j);
-            assert(s != nullptr);
-            ret += s->size();
+            Tuple<Stock> *t = find(stock_, makeStockKey(i, j));
+            if (t != nullptr && t->in_memory_) ret += t->data_->size();
         }
     }
     return ret;
+}
+
+int64_t TPCCTables::diskTableSize(const std::string &file_name) {
+    if (file_name == "stock") return DiskTableSize<Stock>(stock_fd);
+    else if (file_name == "orderline") return DiskTableSize<OrderLine>(orderline_fd);
+    else if (file_name == "customer") return DiskTableSize<Customer>(customer_fd);
+    else {
+        throw std::runtime_error("Unknown file name");
+    }
 }
 
 int64_t TPCCTables::customerSize(int64_t num_warehouses) {

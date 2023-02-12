@@ -122,6 +122,7 @@ void welcome(int argc, const char *const *argv) {
 }
 
 void tableSize(TPCCTables *tables) {
+    // memory size
     int64_t ini_warehouses = tables->warehouseSize(num_warehouses);
     int64_t ini_districts = tables->districtSize(num_warehouses);
     int64_t ini_customers = tables->customerSize(num_warehouses);
@@ -132,15 +133,21 @@ void tableSize(TPCCTables *tables) {
     int64_t ini_stocks = tables->stockSize(num_warehouses);
     int64_t ini_history = tables->historySize();
 
+    // disk size
+    int64_t disk_stock = tables->diskTableSize("stock");
+    int64_t disk_ol = tables->diskTableSize("orderline");
+    int64_t disk_c = tables->diskTableSize("customer");
+
     std::cout << "------------ Uncompressed Size ------------ \n";
+    std::cout << "[Table Name]: " << "[Memory Size] + [Disk Size]" << std::endl;
     std::cout << "Warehouse: " << ini_warehouses << " byte" << std::endl;
     std::cout << "District: " << ini_districts << " byte" << std::endl;
-    std::cout << "Customer: " << ini_customers << " byte" << std::endl;
+    std::cout << "Customer: " << ini_customers << " + " << disk_c << " byte" << std::endl;
     std::cout << "Order: " << ini_orders << " byte" << std::endl;
-    std::cout << "Orderline: " << ini_orderline << " byte" << std::endl;
+    std::cout << "Orderline: " << ini_orderline << " + " << disk_ol << " byte" << std::endl;
     std::cout << "NewOrder: " << ini_neworders << " byte" << std::endl;
     std::cout << "Item: " << ini_items << " byte" << std::endl;
-    std::cout << "Stock: " << ini_stocks << " byte" << std::endl;
+    std::cout << "Stock: " << ini_stocks << " + " << disk_stock << " byte" << std::endl;
     std::cout << "History: " << ini_history << " byte" << std::endl;
     int64_t total =
             ini_warehouses + ini_districts + ini_customers + ini_orders + ini_orderline +
