@@ -38,7 +38,7 @@ bool CustomerByNameOrdering::operator()(const Customer *a,
 template<typename KeyType, typename ValueType>
 static void
 deleteBTreeValues(BPlusTree<KeyType, ValueType *, TPCCTables::KEYS_PER_INTERNAL,
-        TPCCTables::KEYS_PER_LEAF> *btree) {
+                            TPCCTables::KEYS_PER_LEAF> *btree) {
     KeyType key = std::numeric_limits<KeyType>::max();
     ValueType *value = NULL;
     while (btree->findLastLessThan(key, &value, &key)) {
@@ -50,10 +50,10 @@ deleteBTreeValues(BPlusTree<KeyType, ValueType *, TPCCTables::KEYS_PER_INTERNAL,
 TPCCTables::~TPCCTables() {
     // Clean up the b-trees with this gross hack
     deleteBTreeValues(&warehouses_);
-    deleteBTreeValues(&stock_);
+    // deleteBTreeValues(&stock_);
     deleteBTreeValues(&districts_);
     deleteBTreeValues(&orders_);
-    deleteBTreeValues(&orderlines_);
+    // deleteBTreeValues(&orderlines_);
 
     STLDeleteValues(&neworders_);
     STLDeleteElements(&customers_by_name_);
@@ -750,7 +750,7 @@ void TPCCTables::applyUndo(TPCCUndo *undo) {
 
     // Transfer deleted new orders back to the database
     for (TPCCUndo::NewOrderDeletedSet::const_iterator i =
-            undo->deleted_new_orders().begin();
+                 undo->deleted_new_orders().begin();
          i != undo->deleted_new_orders().end(); ++i) {
         NewOrder *neworder = *i;
         insertNewOrderObject(&neworders_, neworder);
@@ -762,7 +762,7 @@ void TPCCTables::applyUndo(TPCCUndo *undo) {
 
 template<typename T>
 static T *insert(BPlusTree<int32_t, T *, TPCCTables::KEYS_PER_INTERNAL,
-        TPCCTables::KEYS_PER_LEAF> *tree,
+                           TPCCTables::KEYS_PER_LEAF> *tree,
                  int32_t key, const T &item) {
     assert(!tree->find(key));
     T *copy = new T(item);
@@ -772,7 +772,7 @@ static T *insert(BPlusTree<int32_t, T *, TPCCTables::KEYS_PER_INTERNAL,
 
 template<typename T>
 static T *find(const BPlusTree<int32_t, T *, TPCCTables::KEYS_PER_INTERNAL,
-        TPCCTables::KEYS_PER_LEAF> &tree,
+                               TPCCTables::KEYS_PER_LEAF> &tree,
                int32_t key) {
     T *output = NULL;
     if (tree.find(key, &output)) {
@@ -783,7 +783,7 @@ static T *find(const BPlusTree<int32_t, T *, TPCCTables::KEYS_PER_INTERNAL,
 
 template<typename T, typename KeyType>
 static void erase(BPlusTree<KeyType, T *, TPCCTables::KEYS_PER_INTERNAL,
-        TPCCTables::KEYS_PER_LEAF> *tree,
+                            TPCCTables::KEYS_PER_LEAF> *tree,
                   KeyType key, const T *value) {
     T *out = NULL;
     ASSERT(tree->find(key, &out));
@@ -968,7 +968,7 @@ static int32_t makeOrderKey(int32_t w_id, int32_t d_id, int32_t o_id) {
     // TODO: This is bad for locality since o_id is in the most significant
     // position. Larger keys?
     int32_t id = (o_id * District::NUM_PER_WAREHOUSE + d_id) *
-                 Warehouse::MAX_WAREHOUSE_ID +
+                         Warehouse::MAX_WAREHOUSE_ID +
                  w_id;
     assert(id >= 0);
     return id;
@@ -1044,9 +1044,9 @@ static int32_t makeOrderLineKey(int32_t w_id, int32_t d_id, int32_t o_id,
     // tuple, so it may be fine, but stock level fetches order lines for a range
     // of (w_id, d_id, o_id) values
     int32_t id = ((o_id * District::NUM_PER_WAREHOUSE + d_id) *
-                  Warehouse::MAX_WAREHOUSE_ID +
+                          Warehouse::MAX_WAREHOUSE_ID +
                   w_id) *
-                 Order::MAX_OL_CNT +
+                         Order::MAX_OL_CNT +
                  number;
     // assert(id >= 0);
     return id;
@@ -1162,15 +1162,14 @@ void TPCCTables::eraseHistory(const History *history) {
     delete history;
 }
 
-void TPCCTables::OrderLineToBlitz(OrderLineBlitz &table,
-                                  int64_t num_warehouses) {
+void TPCCTables::OrderLineToBlitz(OrderLineBlitz &table, int64_t num_warehouses) {
+    int32_t jump = std::max(int(num_warehouses / 10), 1);
     for (int32_t i = 1; i <= num_warehouses; ++i) {
         for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
-            for (int32_t k = 1; k <= Order::INITIAL_ORDERS_PER_DISTRICT; ++k) {
+            for (int32_t k = i; k <= Order::INITIAL_ORDERS_PER_DISTRICT; k += jump) {
                 for (int32_t l = 1; l <= Order::MAX_OL_CNT; ++l) {
                     OrderLine *ol = findOrderLine(i, j, k, l);
-                    if (ol == nullptr)
-                        continue;
+                    if (ol == nullptr) continue;
                     table.pushTuple(ol);
                 }
             }
@@ -1179,8 +1178,9 @@ void TPCCTables::OrderLineToBlitz(OrderLineBlitz &table,
 }
 
 void TPCCTables::StockToBlitz(StockBlitz &table, int64_t num_warehouses) {
+    int32_t jump = std::max(int(num_warehouses / 10), 1);
     for (int32_t i = 1; i <= num_warehouses; ++i) {
-        for (int32_t j = 1; j <= Stock::NUM_STOCK_PER_WAREHOUSE; ++j) {
+        for (int32_t j = i; j <= Stock::NUM_STOCK_PER_WAREHOUSE; j += jump) {
             Stock *s = findStock(i, j);
             assert(s != nullptr);
             table.pushTuple(s);
@@ -1189,9 +1189,10 @@ void TPCCTables::StockToBlitz(StockBlitz &table, int64_t num_warehouses) {
 }
 
 void TPCCTables::CustomerToBlitz(CustomerBlitz &table, int64_t num_warehouses) {
+    int32_t jump = std::max(int(num_warehouses / 10), 1);
     for (int32_t i = 1; i <= num_warehouses; ++i) {
         for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
-            for (int32_t k = 1; k <= Customer::NUM_PER_DISTRICT; ++k) {
+            for (int32_t k = i; k <= Customer::NUM_PER_DISTRICT; k += jump) {
                 Customer *c = findCustomer(i, j, k);
                 assert(c != nullptr);
                 table.pushTuple(c);
@@ -1222,6 +1223,7 @@ void TPCCTables::MountCompressor(
                 }
             }
         }
+        deleteBTreeValues(&orderlines_);
     } else if (table_name == "stock") {
         stock_compressor_ = &compressor;
         stock_decompressor_ = &decompressor;
@@ -1236,6 +1238,7 @@ void TPCCTables::MountCompressor(
                 }
             }
         }
+        deleteBTreeValues(&stock_);
     } else if (table_name == "customer") {
         customer_compressor_ = &compressor;
         customer_decompressor_ = &decompressor;

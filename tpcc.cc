@@ -51,7 +51,7 @@ int main(int argc, const char *argv[]) {
     for (int i = 0; i < num_warehouses; ++i) generator.makeWarehouse(tables, i + 1);
     int64_t end = clock->getMicroseconds();
     printf("%" PRId64 " ms\n", (end - begin + 500) / 1000);
-    tableSize(tables, true, false);
+    // tableSize(tables, true, false);
 
     switch (mode) {
         case GenerateCSV: {
@@ -63,51 +63,58 @@ int main(int argc, const char *argv[]) {
             break;
         }
         case Benchmark: {
-            printf("Learning %ld warehouses...\n", num_warehouses);
-            // Transform tables into blitz format and train compression model
-            OrderLineBlitz order_line_blitz;
-            tables->OrderLineToBlitz(order_line_blitz, num_warehouses);
-            static db_compress::RelationCompressor ol_compressor("ol_model.blitz",
-                                                                 order_line_blitz.schema(),
-                                                                 order_line_blitz.compressionConfig(),
-                                                                 kBlockSize);
-            BlitzLearning(order_line_blitz, ol_compressor);
-            db_compress::RelationDecompressor ol_decompressor("ol_model.blitz",
-                                                              order_line_blitz.schema(),
-                                                              kBlockSize);
-            ol_decompressor.InitWithoutIndex();
-            tables->MountCompressor(ol_compressor, ol_decompressor, num_warehouses, "orderline");
-            db_compress::NextTableAttrInterpreter();
-
+            printf("Transforming %ld warehouses... ", num_warehouses);
+            begin = clock->getMicroseconds();
+            // orderline
+            {
+                OrderLineBlitz order_line_blitz;
+                tables->OrderLineToBlitz(order_line_blitz, num_warehouses);
+                static db_compress::RelationCompressor ol_compressor("ol_model.blitz",
+                                                                     order_line_blitz.schema(),
+                                                                     order_line_blitz.compressionConfig(),
+                                                                     kBlockSize);
+                BlitzLearning(order_line_blitz, ol_compressor);
+                static db_compress::RelationDecompressor ol_decompressor("ol_model.blitz",
+                                                                         order_line_blitz.schema(),
+                                                                         kBlockSize);
+                ol_decompressor.InitWithoutIndex();
+                tables->MountCompressor(ol_compressor, ol_decompressor, num_warehouses, "orderline");
+                db_compress::NextTableAttrInterpreter();
+            }
             // stock
-            StockBlitz stock_blitz;
-            tables->StockToBlitz(stock_blitz, num_warehouses);
-            db_compress::RelationCompressor stock_compressor("stock_model.blitz",
-                                                             stock_blitz.schema(),
-                                                             stock_blitz.compressionConfig(),
-                                                             kBlockSize);
-            BlitzLearning(stock_blitz, stock_compressor);
-            db_compress::RelationDecompressor stock_decompressor("stock_model.blitz",
-                                                                 stock_blitz.schema(), kBlockSize);
-            stock_decompressor.InitWithoutIndex();
-            tables->MountCompressor(stock_compressor, stock_decompressor, num_warehouses, "stock");
-            db_compress::NextTableAttrInterpreter();
-
+            {
+                StockBlitz stock_blitz;
+                tables->StockToBlitz(stock_blitz, num_warehouses);
+                static db_compress::RelationCompressor stock_compressor("stock_model.blitz",
+                                                                        stock_blitz.schema(),
+                                                                        stock_blitz.compressionConfig(),
+                                                                        kBlockSize);
+                BlitzLearning(stock_blitz, stock_compressor);
+                static db_compress::RelationDecompressor stock_decompressor("stock_model.blitz",
+                                                                            stock_blitz.schema(), kBlockSize);
+                stock_decompressor.InitWithoutIndex();
+                tables->MountCompressor(stock_compressor, stock_decompressor, num_warehouses, "stock");
+                db_compress::NextTableAttrInterpreter();
+            }
             // customer
-            CustomerBlitz cust_blitz;
-            tables->CustomerToBlitz(cust_blitz, num_warehouses);
-            db_compress::RelationCompressor cust_compressor("cust_model.blitz", cust_blitz.schema(),
-                                                            cust_blitz.compressionConfig(),
-                                                            kBlockSize);
-            BlitzLearning(cust_blitz, cust_compressor);
-            db_compress::RelationDecompressor cust_decompressor("cust_model.blitz",
-                                                                cust_blitz.schema(),
-                                                                kBlockSize);
-            cust_decompressor.InitWithoutIndex();
-            tables->MountCompressor(cust_compressor, cust_decompressor, num_warehouses, "customer");
-            db_compress::NextTableAttrInterpreter();
-
-            tableSize(tables, true, true);
+            {
+                CustomerBlitz cust_blitz;
+                tables->CustomerToBlitz(cust_blitz, num_warehouses);
+                static db_compress::RelationCompressor cust_compressor("cust_model.blitz",
+                                                                       cust_blitz.schema(),
+                                                                       cust_blitz.compressionConfig(),
+                                                                       kBlockSize);
+                BlitzLearning(cust_blitz, cust_compressor);
+                static db_compress::RelationDecompressor cust_decompressor("cust_model.blitz",
+                                                                           cust_blitz.schema(),
+                                                                           kBlockSize);
+                cust_decompressor.InitWithoutIndex();
+                tables->MountCompressor(cust_compressor, cust_decompressor, num_warehouses, "customer");
+                db_compress::NextTableAttrInterpreter();
+            }
+            end = clock->getMicroseconds();
+            printf("%" PRId64 " ms\n", (end - begin + 500) / 1000);
+            // tableSize(tables, true, true);
 
             // Change the constants for run
             random = new tpcc::RealRandomGenerator();
@@ -128,7 +135,7 @@ int main(int argc, const char *argv[]) {
             printf("%d transactions in %" PRId64 " ms = %f txns/s\n", NUM_TRANSACTIONS,
                    (microseconds + 500) / 1000,
                    NUM_TRANSACTIONS / (double) microseconds * 1000000.0);
-            tableSize(tables, false, true);
+            // tableSize(tables, false, true);
             break;
         }
         default:
@@ -144,7 +151,8 @@ void welcome(int argc, const char *const *argv) {
         num_warehouses = strtol(argv[1], NULL, 10);
         bool is_download = std::stoi(argv[2]);
         if (is_download) mode = GenerateCSV;
-        else mode = Benchmark;
+        else
+            mode = Benchmark;
     } else {
         fprintf(stderr,
                 "tpcc [num warehouses] [mode]\n Option: mode = 0 (default) for running test, mode = 1 for generating data\n");
@@ -201,14 +209,17 @@ void tableSize(TPCCTables *tables, bool is_initial, bool is_compressed) {
         std::cout << "------------ Initial but compressed Size ------------ \n";
         std::cout << "Warehouse: " << ini_warehouses << " byte" << std::endl;
         std::cout << "District: " << ini_districts << " byte" << std::endl;
-        std::cout << "Customer: " << ini_customers << " byte" << " --> " << com_customers << " byte"
+        std::cout << "Customer: " << ini_customers << " byte"
+                  << " --> " << com_customers << " byte"
                   << std::endl;
         std::cout << "Order: " << ini_orders << " byte" << std::endl;
-        std::cout << "Orderline: " << ini_orderline << " byte" << " --> " << com_orderline
+        std::cout << "Orderline: " << ini_orderline << " byte"
+                  << " --> " << com_orderline
                   << " byte" << std::endl;
         std::cout << "NewOrder: " << ini_neworders << " byte" << std::endl;
         std::cout << "Item: " << ini_items << " byte" << std::endl;
-        std::cout << "Stock: " << ini_stocks << " byte" << " --> " << com_stock << " byte"
+        std::cout << "Stock: " << ini_stocks << " byte"
+                  << " --> " << com_stock << " byte"
                   << std::endl;
         std::cout << "History: " << ini_history << " byte" << std::endl;
     } else if (!is_initial && is_compressed) {
