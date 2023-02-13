@@ -37,23 +37,21 @@ bool CustomerByNameOrdering::operator()(const Customer *a, const Customer *b) co
 
 bool
 CustomerByNameOrdering::operator()(const Tuple<Customer> *ta, const Tuple<Customer> *tb) const {
-    Customer *a;
-    Customer *b;
-    if (ta->in_memory_) {
-        a = ta->data_;
+    if (ta->in_memory_ && tb->in_memory_) return (*this)(&ta->data_, &tb->data_);
+    else if (ta->in_memory_) {
+        Customer b;
+        DiskTupleRead(customer_fd, &b, tb->pos_);
+        return (*this)(&ta->data_, &b);
+    } else if (tb->in_memory_) {
+        Customer a;
+        DiskTupleRead(customer_fd, &a, ta->pos_);
+        return (*this)(&a, &tb->data_);
     } else {
-        a = new Customer();
-        DiskTupleRead(customer_fd, a, ta->pos_);
+        Customer a, b;
+        DiskTupleRead(customer_fd, &a, ta->pos_);
+        DiskTupleRead(customer_fd, &b, tb->pos_);
+        return (*this)(&a, &b);
     }
-
-    if (tb->in_memory_) {
-        b = tb->data_;
-    } else {
-        b = new Customer();
-        DiskTupleRead(customer_fd, b, tb->pos_);
-    }
-
-    return (*this)(a, b);
 }
 
 template<typename KeyType, typename ValueType>
@@ -729,11 +727,11 @@ void TPCCTables::insertStock(const Stock &stock) {
     Tuple<Stock> tuple;
     tuple.in_memory_ = num_mem_stock < Stock::MEMORY_THRESHOLD;
     if (tuple.in_memory_) {
-        tuple.data_ = new Stock(stock);
+        tuple.data_ = stock;
         num_mem_stock++;
     } else {
         tuple.pos_ = num_disk_stock;
-        DiskTupleWrite(stock_fd, &stock, num_disk_stock);
+        DiskTupleWrite(stock_fd, &stock);
         num_disk_stock++;
     }
     insert(&stock_, makeStockKey(stock.s_w_id, stock.s_i_id), tuple);
@@ -742,12 +740,11 @@ void TPCCTables::insertStock(const Stock &stock) {
 Stock *TPCCTables::findStock(int32_t w_id, int32_t s_id) {
     int32_t key = makeStockKey(w_id, s_id);
     Tuple<Stock> *tuple = find(stock_, key);
-    if (tuple == nullptr) return nullptr;
-    else if (!tuple->in_memory_) {
-        if (tuple->data_ == nullptr) tuple->data_ = new Stock();
-        DiskTupleRead(stock_fd, tuple->data_, tuple->pos_);
+    if (tuple) {
+        if (!tuple->in_memory_) DiskTupleRead(stock_fd, &tuple->data_, tuple->pos_);
+        return &tuple->data_;
     }
-    return tuple->data_;
+    return nullptr;
 }
 
 static int32_t makeDistrictKey(int32_t w_id, int32_t d_id) {
@@ -776,43 +773,41 @@ static int32_t makeCustomerKey(int32_t w_id, int32_t d_id, int32_t c_id) {
     return id;
 }
 
-void TPCCTables::insertCustomer(Customer &customer) {
+void TPCCTables::insertCustomer(const Customer &customer) {
     Tuple<Customer> tuple;
     tuple.in_memory_ = num_mem_customer < Customer::MEMORY_THRESHOLD;
     if (tuple.in_memory_) {
-        tuple.data_ = new Customer(customer);
+        tuple.data_ = customer;
         num_mem_customer++;
     } else {
         tuple.pos_ = num_disk_customer;
-        DiskTupleWrite(customer_fd, &customer, num_disk_customer);
+        DiskTupleWrite(customer_fd, &customer);
         num_disk_customer++;
     }
-    auto *t = insert(&customers_, makeCustomerKey(customer.c_w_id, customer.c_d_id, customer.c_id),
-                     tuple);
+    int32_t key = makeCustomerKey(customer.c_w_id, customer.c_d_id, customer.c_id);
+    Tuple<Customer> *t = insert(&customers_, key, tuple);
     customers_by_name_.insert(t);
 }
 
 Customer *TPCCTables::findCustomer(int32_t w_id, int32_t d_id, int32_t c_id) {
     int32_t key = makeCustomerKey(w_id, d_id, c_id);
     Tuple<Customer> *tuple = find(customers_, key);
-    if (tuple == nullptr) return nullptr;
-    else if (!tuple->in_memory_) {
-        if (tuple->data_ == nullptr) tuple->data_ = new Customer();
-        DiskTupleRead(customer_fd, tuple->data_, tuple->pos_);
+    if (tuple) {
+        if (!tuple->in_memory_) DiskTupleRead(customer_fd, &tuple->data_, tuple->pos_);
+        return &tuple->data_;
     }
-    return tuple->data_;
+    return nullptr;
 }
 
 Customer *TPCCTables::findCustomerByName(int32_t w_id, int32_t d_id, const char *c_last) {
-    // select (w_id, d_id, *, c_last) order by c_first
     Tuple<Customer> tuple;
     tuple.in_memory_ = true;
-    Customer c;
+    Customer &c = tuple.data_;
     c.c_w_id = w_id;
     c.c_d_id = d_id;
     strcpy(c.c_last, c_last);
     c.c_first[0] = '\0';
-    tuple.data_ = &c;
+
     auto it = customers_by_name_.lower_bound(&tuple);
     assert(it != customers_by_name_.end());
 
@@ -844,7 +839,7 @@ Customer *TPCCTables::findCustomerByName(int32_t w_id, int32_t d_id, const char 
         // There were i+1 matching last names
         t_customer = *middle;
     }
-    return t_customer->data_;
+    return &t_customer->data_;
 }
 
 static int32_t makeOrderKey(int32_t w_id, int32_t d_id, int32_t o_id) {
@@ -915,31 +910,29 @@ static int32_t makeOrderLineKey(int32_t w_id, int32_t d_id, int32_t o_id, int32_
 }
 
 OrderLine *TPCCTables::insertOrderLine(const OrderLine &orderline) {
-    Tuple<OrderLine> tuple;
-    tuple.in_memory_ = num_mem_orderline < OrderLine::MEMORY_THRESHOLD;
-    if (tuple.in_memory_) {
-        tuple.data_ = new OrderLine(orderline);
+    ol_tuple_buf_.in_memory_ = num_mem_orderline < OrderLine::MEMORY_THRESHOLD;
+    if (ol_tuple_buf_.in_memory_) {
+        ol_tuple_buf_.data_ = orderline;
         num_mem_orderline++;
     } else {
-        tuple.pos_ = num_disk_orderline;
+        ol_tuple_buf_.pos_ = num_disk_orderline;
         DiskTupleWrite(orderline_fd, &orderline, num_disk_orderline);
         num_disk_orderline++;
     }
-    insert(&orderlines_, makeOrderLineKey(orderline.ol_w_id, orderline.ol_d_id,
-                                          orderline.ol_o_id,
-                                          orderline.ol_number), tuple);
+    int32_t key = makeOrderLineKey(orderline.ol_w_id, orderline.ol_d_id, orderline.ol_o_id,
+                                   orderline.ol_number);
+    insert(&orderlines_, key, ol_tuple_buf_);
     return nullptr;
 }
 
 OrderLine *TPCCTables::findOrderLine(int32_t w_id, int32_t d_id, int32_t o_id, int32_t number) {
     int32_t key = makeOrderLineKey(w_id, d_id, o_id, number);
     Tuple<OrderLine> *tuple = find(orderlines_, key);
-    if (tuple == nullptr) return nullptr;
-    else if (!tuple->in_memory_) {
-        if (tuple->data_ == nullptr) tuple->data_ = new OrderLine();
-        DiskTupleRead(orderline_fd, tuple->data_, tuple->pos_);
+    if (tuple) {
+        if (!tuple->in_memory_) DiskTupleRead(orderline_fd, &tuple->data_, tuple->pos_);
+        return &tuple->data_;
     }
-    return tuple->data_;
+    return nullptr;
 }
 
 static int64_t makeNewOrderKey(int32_t w_id, int32_t d_id, int32_t o_id) {
@@ -1117,7 +1110,10 @@ int64_t TPCCTables::stockSize(int64_t num_warehouses) {
     for (int32_t i = 1; i <= num_warehouses; ++i) {
         for (int32_t j = 1; j <= Stock::NUM_STOCK_PER_WAREHOUSE; ++j) {
             Tuple<Stock> *t = find(stock_, makeStockKey(i, j));
-            if (t != nullptr && t->in_memory_) ret += t->data_->size();
+            if (t != nullptr && t->in_memory_) {
+                // ret += t->data_->size();
+                ret += t->data_.size();
+            }
         }
     }
     return ret;

@@ -68,7 +68,6 @@ uint64_t TPCCClient::doOrderStatus() {
     } else {
         // 40%: order status by id
         ASSERT(y > 60);
-
         int32_t c_id = generateCID();
         auto beg = std::chrono::high_resolution_clock::now();
         db_->orderStatus(w_id, d_id, c_id, &output);

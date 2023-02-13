@@ -25,9 +25,16 @@ static inline void DiskTupleWrite(int fd, T *data, int64_t pos) {
 }
 
 template<typename T>
-static inline void DiskTupleRead(int fd, T *data, int64_t pos) {
+static inline void DiskTupleWrite(int fd, T *data) {
+    int ret = write(fd, data, sizeof(T));
+    if (ret < 0) throw std::runtime_error("write error in DiskTupleWrite");
+}
+
+template<typename T>
+static inline int DiskTupleRead(int fd, T *data, int64_t pos) {
     int ret = pread(fd, data, sizeof(T), pos * sizeof(T));
     if (ret < 0) throw std::runtime_error("read error in DiskTupleRead");
+    return ret;
 }
 
 template<typename T>
@@ -41,7 +48,8 @@ static inline int64_t DiskTableSize(int fd) {
     int64_t ret = 0;
     T tuple;
     for (int i = 0; i < tuple_size; ++i) {
-        DiskTupleRead(fd, &tuple, i);
+        int s = DiskTupleRead(fd, &tuple, i);
+        if (s != sizeof(T)) throw std::runtime_error("read error in DiskTableSize");
         ret += tuple.size();
     }
 
@@ -57,8 +65,10 @@ static inline int64_t DiskTableSize(const std::string &file_name) {
 template<class T>
 struct Tuple {
     bool in_memory_;
-    T *data_;           // in memory
+    T data_;            // in memory
     int64_t pos_;       // on disk
+
+    Tuple() : in_memory_(false), data_(), pos_(-1) {}
 };
 
 #endif //TPCC_DISK_STORAGE_H

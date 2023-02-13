@@ -96,7 +96,7 @@ public:
 
     District *findDistrict(int32_t w_id, int32_t d_id);
 
-    void insertCustomer(Customer &customer);
+    void insertCustomer(const Customer &customer);
 
     Customer *findCustomer(int32_t w_id, int32_t d_id, int32_t c_id);
 
@@ -153,7 +153,7 @@ public:
 
     void HistoryToCSV(int64_t num_warehouses);
 
-    void DeleteDiskData();
+    static void DeleteDiskData();
 
     static const int KEYS_PER_INTERNAL = 8;
     static const int KEYS_PER_LEAF = 8;
@@ -204,6 +204,7 @@ private:
 
     uint32_t num_mem_orderline = 0;
     uint32_t num_disk_orderline = 0;
+    Tuple<OrderLine> ol_tuple_buf_;
 
     uint32_t num_mem_customer = 0;
     uint32_t num_disk_customer = 0;

@@ -51,7 +51,6 @@ int main(int argc, const char *argv[]) {
     for (int i = 0; i < num_warehouses; ++i) generator.makeWarehouse(tables, i + 1);
     int64_t end = clock->getMicroseconds();
     printf("%" PRId64 " ms\n", (end - begin + 500) / 1000);
-    tableSize(tables);
 
     switch (mode) {
         case GenerateCSV: {

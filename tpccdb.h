@@ -8,6 +8,10 @@
 #include <unordered_set>
 #include <vector>
 #include <string>
+#include <libc.h>
+
+#define kNumWarehouse 150
+#define kNumTransactions 200000
 
 namespace tpcc {
 // was used to select between various non-standard implementations: now use std
@@ -148,7 +152,7 @@ struct Stock {
     static const int NUM_STOCK_PER_WAREHOUSE = 100000;
 
     constexpr static char TABLE_NAME[15] = "stock_disk.bin";
-    static const uint32_t MEMORY_THRESHOLD = 100000 * 10;
+    static const uint32_t MEMORY_THRESHOLD = 100000 * kNumWarehouse;
 
     int32_t s_i_id;
     int32_t s_w_id;
@@ -198,8 +202,8 @@ struct Customer {
     static const char GOOD_CREDIT[];
     static const char BAD_CREDIT[];
 
-    constexpr static char TABLE_NAME[15] = "stock_disk.bin";
-    static const uint32_t MEMORY_THRESHOLD = 30000 * 10;
+    constexpr static char TABLE_NAME[18] = "customer_disk.bin";
+    static const uint32_t MEMORY_THRESHOLD = kNumWarehouse * 10 * 3000;
 
     int32_t c_id;
     int32_t c_d_id;
@@ -223,31 +227,7 @@ struct Customer {
     char c_credit[CREDIT + 1];
     char c_data[MAX_DATA + 1];
 
-    uint32_t size() {
-        uint32_t ret = 0;
-        ret += std::to_string(c_id).size();
-        ret += std::to_string(c_d_id).size();
-        ret += std::to_string(c_w_id).size();
-        ret += std::to_string(c_credit_lim).size();
-        ret += std::to_string(c_discount).size();
-        ret += std::to_string(c_balance).size();
-        ret += std::to_string(c_ytd_payment).size();
-        ret += std::to_string(c_payment_cnt).size();
-        ret += std::to_string(c_delivery_cnt).size();
-        ret += stringSize(c_first, Customer::MAX_FIRST + 1);
-        ret += stringSize(c_middle, Customer::MIDDLE + 1);
-        ret += stringSize(c_last, Customer::MAX_LAST + 1);
-        ret += stringSize(c_street_1, Address::MAX_STREET + 1);
-        ret += stringSize(c_street_2, Address::MAX_STREET + 1);
-        ret += stringSize(c_city, Address::MAX_CITY + 1);
-        ret += stringSize(c_state, Address::STATE + 1);
-        ret += stringSize(c_zip, Address::ZIP + 1);
-        ret += stringSize(c_phone, Customer::PHONE + 1);
-        ret += stringSize(c_since, DATETIME_SIZE + 1);
-        ret += stringSize(c_credit, Customer::CREDIT + 1);
-        ret += stringSize(c_data, Customer::MAX_DATA + 1);
-        return ret;
-    }
+    uint32_t size();
 };
 
 struct Order {
@@ -296,8 +276,9 @@ struct OrderLine {
     // new order has 10/1000 probability of selecting a remote warehouse for ol_supply_w_id
     static const int REMOTE_PROBABILITY_MILLIS = 10;
 
-    constexpr static char TABLE_NAME[15] = "stock_disk.bin";
-    static const uint32_t MEMORY_THRESHOLD = 3000 * 10 * 10 * 10;
+    constexpr static char TABLE_NAME[19] = "orderline_disk.bin";
+    static const uint32_t MEMORY_THRESHOLD = kNumWarehouse * 10 * 3000 * 10
+                                             + kNumTransactions * 0.5 * 10;
 
     int32_t ol_o_id;
     int32_t ol_d_id;
@@ -311,18 +292,10 @@ struct OrderLine {
     char ol_dist_info[Stock::DIST + 1];
 
     uint32_t size() {
-        uint32_t ret = 0;
-        ret += std::to_string(ol_o_id).size();
-        ret += std::to_string(ol_d_id).size();
-        ret += std::to_string(ol_w_id).size();
-        ret += std::to_string(ol_number).size();
-        ret += std::to_string(ol_i_id).size();
-        ret += std::to_string(ol_supply_w_id).size();
-        ret += std::to_string(ol_quantity).size();
-        ret += std::to_string(ol_amount).size();
-        ret += stringSize(ol_delivery_d, DATETIME_SIZE + 1);
-        ret += stringSize(ol_dist_info, Stock::DIST + 1);
-        return ret;
+        if (ol_delivery_d[0] == '\0')
+            return 32 + 25;
+        else
+            return 32 + 20 + 25;
     }
 };
 
