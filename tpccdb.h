@@ -164,12 +164,7 @@ struct Stock {
 
     uint32_t size() {
         uint32_t ret = 0;
-        ret += std::to_string(s_i_id).size();
-        ret += std::to_string(s_w_id).size();
-        ret += std::to_string(s_quantity).size();
-        ret += std::to_string(s_ytd).size();
-        ret += std::to_string(s_order_cnt).size();
-        ret += std::to_string(s_remote_cnt).size();
+        ret += 6 * 4;
         for (int32_t i = 0; i < District::NUM_PER_WAREHOUSE; i++)
             ret += stringSize(s_dist[i], DIST + 1);
         ret += stringSize(s_data, MAX_DATA + 1);
@@ -295,9 +290,9 @@ struct OrderLine {
 
     uint32_t size() {
         if (ol_delivery_d[0] == '\0')
-            return 32 + 25;
+            return 8 * 4 + 25;
         else
-            return 32 + 20 + 25;
+            return 8 * 4 + 20 + 25;
     }
 };
 

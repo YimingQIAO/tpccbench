@@ -21,15 +21,7 @@ const char Customer::BAD_CREDIT[] = "BC";
 
 uint32_t Customer::size() {
     uint32_t ret = 0;
-    ret += std::to_string(c_id).size();
-    ret += std::to_string(c_d_id).size();
-    ret += std::to_string(c_w_id).size();
-    ret += std::to_string(c_credit_lim).size();
-    ret += std::to_string(c_discount).size();
-    ret += std::to_string(c_balance).size();
-    ret += std::to_string(c_ytd_payment).size();
-    ret += std::to_string(c_payment_cnt).size();
-    ret += std::to_string(c_delivery_cnt).size();
+    ret += 9 * 4;
     ret += stringSize(c_first, Customer::MAX_FIRST + 1);
     ret += stringSize(c_middle, Customer::MIDDLE + 1);
     ret += stringSize(c_last, Customer::MAX_LAST + 1);
