@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <limits>
 #include <vector>
+#include <cstdint>
 
 #include "assert.h"
 #include "stlutil.h"
@@ -38,7 +39,7 @@ bool CustomerByNameOrdering::operator()(const Customer *a,
 template<typename KeyType, typename ValueType>
 static void
 deleteBTreeValues(BPlusTree<KeyType, ValueType *, TPCCTables::KEYS_PER_INTERNAL,
-                            TPCCTables::KEYS_PER_LEAF> *btree) {
+        TPCCTables::KEYS_PER_LEAF> *btree) {
     KeyType key = std::numeric_limits<KeyType>::max();
     ValueType *value = NULL;
     while (btree->findLastLessThan(key, &value, &key)) {
@@ -750,7 +751,7 @@ void TPCCTables::applyUndo(TPCCUndo *undo) {
 
     // Transfer deleted new orders back to the database
     for (TPCCUndo::NewOrderDeletedSet::const_iterator i =
-                 undo->deleted_new_orders().begin();
+            undo->deleted_new_orders().begin();
          i != undo->deleted_new_orders().end(); ++i) {
         NewOrder *neworder = *i;
         insertNewOrderObject(&neworders_, neworder);
@@ -762,8 +763,16 @@ void TPCCTables::applyUndo(TPCCUndo *undo) {
 
 template<typename T>
 static T *insert(BPlusTree<int32_t, T *, TPCCTables::KEYS_PER_INTERNAL,
-                           TPCCTables::KEYS_PER_LEAF> *tree,
-                 int32_t key, const T &item) {
+        TPCCTables::KEYS_PER_LEAF> *tree, int32_t key, const T &item) {
+    assert(!tree->find(key));
+    T *copy = new T(item);
+    tree->insert(key, copy);
+    return copy;
+}
+
+template<typename T>
+static T *insert(BPlusTree<int64_t, T *, TPCCTables::KEYS_PER_INTERNAL,
+        TPCCTables::KEYS_PER_LEAF> *tree, int64_t key, const T &item) {
     assert(!tree->find(key));
     T *copy = new T(item);
     tree->insert(key, copy);
@@ -772,8 +781,18 @@ static T *insert(BPlusTree<int32_t, T *, TPCCTables::KEYS_PER_INTERNAL,
 
 template<typename T>
 static T *find(const BPlusTree<int32_t, T *, TPCCTables::KEYS_PER_INTERNAL,
-                               TPCCTables::KEYS_PER_LEAF> &tree,
+        TPCCTables::KEYS_PER_LEAF> &tree,
                int32_t key) {
+    T *output = NULL;
+    if (tree.find(key, &output)) {
+        return output;
+    }
+    return NULL;
+}
+
+template<typename T>
+static T *find(const BPlusTree<int64_t, T *, TPCCTables::KEYS_PER_INTERNAL,
+        TPCCTables::KEYS_PER_LEAF> &tree, int64_t key) {
     T *output = NULL;
     if (tree.find(key, &output)) {
         return output;
@@ -783,7 +802,7 @@ static T *find(const BPlusTree<int32_t, T *, TPCCTables::KEYS_PER_INTERNAL,
 
 template<typename T, typename KeyType>
 static void erase(BPlusTree<KeyType, T *, TPCCTables::KEYS_PER_INTERNAL,
-                            TPCCTables::KEYS_PER_LEAF> *tree,
+        TPCCTables::KEYS_PER_LEAF> *tree,
                   KeyType key, const T *value) {
     T *out = NULL;
     ASSERT(tree->find(key, &out));
@@ -968,7 +987,7 @@ static int32_t makeOrderKey(int32_t w_id, int32_t d_id, int32_t o_id) {
     // TODO: This is bad for locality since o_id is in the most significant
     // position. Larger keys?
     int32_t id = (o_id * District::NUM_PER_WAREHOUSE + d_id) *
-                         Warehouse::MAX_WAREHOUSE_ID +
+                 Warehouse::MAX_WAREHOUSE_ID +
                  w_id;
     assert(id >= 0);
     return id;
@@ -1033,7 +1052,7 @@ void TPCCTables::eraseOrder(const Order *order) {
     delete order;
 }
 
-static int32_t makeOrderLineKey(int32_t w_id, int32_t d_id, int32_t o_id,
+static int64_t makeOrderLineKey(int32_t w_id, int32_t d_id, int32_t o_id,
                                 int32_t number) {
     assert(1 <= w_id && w_id <= Warehouse::MAX_WAREHOUSE_ID);
     assert(1 <= d_id && d_id <= District::NUM_PER_WAREHOUSE);
@@ -1043,17 +1062,15 @@ static int32_t makeOrderLineKey(int32_t w_id, int32_t d_id, int32_t o_id,
     // position. However, Order status fetches all rows for one (w_id, d_id, o_id)
     // tuple, so it may be fine, but stock level fetches order lines for a range
     // of (w_id, d_id, o_id) values
-    int32_t id = ((o_id * District::NUM_PER_WAREHOUSE + d_id) *
-                          Warehouse::MAX_WAREHOUSE_ID +
-                  w_id) *
-                         Order::MAX_OL_CNT +
-                 number;
-    // assert(id >= 0);
+    int64_t id =
+            ((o_id * District::NUM_PER_WAREHOUSE + d_id) * Warehouse::MAX_WAREHOUSE_ID + w_id) * Order::MAX_OL_CNT +
+            number;
+    if (id < 0) throw std::runtime_error("Order line key overflow.");
     return id;
 }
 
 OrderLine *TPCCTables::insertOrderLine(const OrderLine &orderline) {
-    int32_t key = makeOrderLineKey(orderline.ol_w_id, orderline.ol_d_id,
+    int64_t key = makeOrderLineKey(orderline.ol_w_id, orderline.ol_d_id,
                                    orderline.ol_o_id, orderline.ol_number);
     return insert(&orderlines_, key, orderline);
 }
@@ -1063,7 +1080,7 @@ void TPCCTables::insertOrderLineBlitz(db_compress::AttrVector &orderline, int32_
                                                                                   stop_idx);
     // sub-tuple should not be written to B+-tree
     if (stop_idx == OrderLineBlitz::kNumAttrs) {
-        int32_t key = makeOrderLineKey(orderline.attr_[9].Int(), orderline.attr_[8].Int(),
+        int64_t key = makeOrderLineKey(orderline.attr_[9].Int(), orderline.attr_[8].Int(),
                                        orderline.attr_[7].Int(), orderline.attr_[2].Int());
         insert(&orderlines_blitz_, key, compressed);
     }
@@ -1071,15 +1088,14 @@ void TPCCTables::insertOrderLineBlitz(db_compress::AttrVector &orderline, int32_
 
 OrderLine *TPCCTables::findOrderLine(int32_t w_id, int32_t d_id, int32_t o_id,
                                      int32_t number) {
-    int32_t key = makeOrderLineKey(w_id, d_id, o_id, number);
-    if (key < 0) return nullptr;
+    int64_t key = makeOrderLineKey(w_id, d_id, o_id, number);
     return find(orderlines_, key);
 }
 
 db_compress::AttrVector *
 TPCCTables::findOrderLineBlitz(int32_t w_id, int32_t d_id, int32_t o_id,
                                int32_t number, int32_t stop_idx) {
-    int32_t key = makeOrderLineKey(w_id, d_id, o_id, number);
+    int64_t key = makeOrderLineKey(w_id, d_id, o_id, number);
     std::vector<uint8_t> *compressed = find(orderlines_blitz_, key);
     if (compressed == nullptr)
         return nullptr;
@@ -1089,7 +1105,7 @@ TPCCTables::findOrderLineBlitz(int32_t w_id, int32_t d_id, int32_t o_id,
 }
 
 void TPCCTables::eraseOrderLine(const OrderLine *order_line) {
-    int32_t key = makeOrderLineKey(order_line->ol_w_id, order_line->ol_d_id,
+    int64_t key = makeOrderLineKey(order_line->ol_w_id, order_line->ol_d_id,
                                    order_line->ol_o_id, order_line->ol_number);
     erase(&orderlines_, key, order_line);
     delete order_line;
@@ -1169,7 +1185,7 @@ void TPCCTables::OrderLineToBlitz(OrderLineBlitz &table, int64_t num_warehouses)
             for (int32_t k = i; k <= Order::INITIAL_ORDERS_PER_DISTRICT; k += jump) {
                 for (int32_t l = 1; l <= Order::MAX_OL_CNT; ++l) {
                     OrderLine *ol = findOrderLine(i, j, k, l);
-                    if (ol == nullptr) continue;
+                    if (ol == nullptr) break;
                     table.pushTuple(ol);
                 }
             }
@@ -1266,13 +1282,41 @@ void TPCCTables::OrderlineToCSV(int64_t num_warehouses) {
             for (int32_t k = 1; k <= Order::INITIAL_ORDERS_PER_DISTRICT; ++k) {
                 for (int32_t l = 1; l <= Order::MAX_OL_CNT; ++l) {
                     OrderLine *ol = findOrderLine(i, j, k, l);
-                    if (ol == nullptr)
-                        continue;
-                    ol_f << ol->ol_i_id << "," << ol->ol_amount << "," << ol->ol_number
-                         << "," << ol->ol_supply_w_id << "," << ol->ol_quantity << ","
-                         << ol->ol_delivery_d << "," << ol->ol_dist_info << ","
-                         << ol->ol_o_id << "," << ol->ol_d_id << "," << ol->ol_w_id
-                         << "\n";
+                    if (ol == nullptr) break;
+                    ol_f << ol->ol_i_id << ","
+                         << ol->ol_amount << ","
+                         << ol->ol_number << ","
+                         << ol->ol_supply_w_id << ","
+                         << ol->ol_quantity << ","
+                         << ol->ol_delivery_d << ","
+                         << ol->ol_dist_info << ","
+                         << ol->ol_o_id << ","
+                         << ol->ol_d_id << ","
+                         << ol->ol_w_id << "\n";
+                }
+            }
+        }
+    }
+    ol_f.close();
+
+    ol_f.open("orderline_learned.csv", std::ofstream::trunc);
+    int32_t jump = std::max(int(num_warehouses / 10), 1);
+    for (int32_t i = 1; i <= num_warehouses; ++i) {
+        for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
+            for (int32_t k = i; k <= Order::INITIAL_ORDERS_PER_DISTRICT; k += jump) {
+                for (int32_t l = 1; l <= Order::MAX_OL_CNT; ++l) {
+                    OrderLine *ol = findOrderLine(i, j, k, l);
+                    if (ol == nullptr) break;
+                    ol_f << ol->ol_i_id << ","
+                         << ol->ol_amount << ","
+                         << ol->ol_number << ","
+                         << ol->ol_supply_w_id << ","
+                         << ol->ol_quantity << ","
+                         << ol->ol_delivery_d << ","
+                         << ol->ol_dist_info << ","
+                         << ol->ol_o_id << ","
+                         << ol->ol_d_id << ","
+                         << ol->ol_w_id << "\n";
                 }
             }
         }
@@ -1418,14 +1462,12 @@ int64_t TPCCTables::customerBlitzSize(int64_t num_warehouses) {
 
 int64_t TPCCTables::orderSize(int64_t num_warehouses, int64_t num_transactions) {
     int64_t ret = 0;
-    int64_t krange = Order::INITIAL_ORDERS_PER_DISTRICT + num_transactions;
+    int64_t krange = Order::INITIAL_ORDERS_PER_DISTRICT + num_transactions / 2;
     for (int32_t i = 1; i <= num_warehouses; ++i) {
         for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
-            for (int32_t k = 1;
-                 k <= krange; ++k) {
+            for (int32_t k = 1; k <= krange; ++k) {
                 Order *o = findOrder(i, j, k);
-                if (o != nullptr)
-                    ret += o->size();
+                if (o != nullptr) ret += o->size();
             }
         }
     }
@@ -1434,14 +1476,13 @@ int64_t TPCCTables::orderSize(int64_t num_warehouses, int64_t num_transactions) 
 
 int64_t TPCCTables::orderlineSize(int64_t num_warehouses, int64_t num_transactions) {
     int64_t ret = 0;
-    int64_t krange = Order::INITIAL_ORDERS_PER_DISTRICT + num_transactions;
+    int64_t krange = Order::INITIAL_ORDERS_PER_DISTRICT + num_transactions / 2;
     for (int32_t i = 1; i <= num_warehouses; ++i) {
         for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
             for (int32_t k = 1; k <= krange; ++k) {
                 for (int32_t l = 1; l <= Order::MAX_OL_CNT; ++l) {
                     OrderLine *ol = findOrderLine(i, j, k, l);
-                    if (ol != nullptr)
-                        ret += ol->size();
+                    if (ol != nullptr) ret += ol->size();
                 }
             }
         }
@@ -1451,13 +1492,12 @@ int64_t TPCCTables::orderlineSize(int64_t num_warehouses, int64_t num_transactio
 
 int64_t TPCCTables::orderlineBlitzSize(int64_t num_warehouses, int64_t num_transactions) {
     int64_t ret = 0;
-    int64_t krange = Order::INITIAL_ORDERS_PER_DISTRICT + num_transactions;
+    int64_t krange = Order::INITIAL_ORDERS_PER_DISTRICT + num_transactions / 2;
     for (int32_t i = 1; i <= num_warehouses; ++i) {
         for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
             for (int32_t k = 1; k <= krange; ++k) {
                 for (int32_t l = 1; l <= Order::MAX_OL_CNT; ++l) {
-                    int32_t key = makeOrderLineKey(i, j, k, l);
-                    if (key < 0) continue;
+                    int64_t key = makeOrderLineKey(i, j, k, l);
                     std::vector<uint8_t> *compressed = find(orderlines_blitz_, key);
                     if (compressed != nullptr) ret += compressed->size();
                 }

@@ -20,25 +20,22 @@ db_compress::Schema BlitzTable::schema() {
 
 bool OrderLineBlitz::pushTuple(OrderLine *order_line) {
     if (order_line == nullptr) return false;
-    db_compress::AttrVector tuple(10);
-    orderlineToAttrVector(*order_line, tuple);
-    table_.push_back(tuple);
+    orderlineToAttrVector(*order_line, buffer_);
+    table_.push_back(buffer_);
     return true;
 }
 
 bool StockBlitz::pushTuple(Stock *stock) {
     if (stock == nullptr) return false;
-    db_compress::AttrVector tuple(6 + District::NUM_PER_WAREHOUSE + 1);
-    stockToAttrVector(*stock, tuple);
-    table_.push_back(tuple);
+    stockToAttrVector(*stock, buffer_);
+    table_.push_back(buffer_);
     return true;
 }
 
 bool CustomerBlitz::pushTuple(Customer *customer) {
     if (customer == nullptr) return false;
-    db_compress::AttrVector tuple(21);
-    customerToAttrVector(*customer, tuple);
-    table_.push_back(tuple);
+    customerToAttrVector(*customer, buffer_);
+    table_.push_back(buffer_);
     return true;
 }
 

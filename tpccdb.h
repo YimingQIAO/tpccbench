@@ -146,7 +146,7 @@ struct Stock {
     static const int MIN_DATA = 26;
     static const int MAX_DATA = 50;
     static const int NUM_STOCK_PER_WAREHOUSE = 100000;
-    
+
     int32_t s_quantity;
     int32_t s_ytd;
     int32_t s_order_cnt;

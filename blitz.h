@@ -64,6 +64,7 @@ protected:
     std::vector<db_compress::AttrVector> table_;
     std::vector<AttrConfig> config_;
 
+
     void RegisterAttrInterpreter() {
         for (int i = 0; i < config_.size(); ++i) {
             AttrConfig &ac = config_[i];
@@ -85,8 +86,9 @@ protected:
 class OrderLineBlitz : public BlitzTable {
 public:
     static const int kNumAttrs = 10;
+    db_compress::AttrVector buffer_;
 
-    OrderLineBlitz() {
+    OrderLineBlitz() : buffer_(kNumAttrs) {
         config_ = {
                 {kInteger, 0,   0.5},
                 {kDouble,  0,   0.0025},
@@ -108,8 +110,9 @@ public:
 class StockBlitz : public BlitzTable {
 public:
     static const int kNumAttrs = 17;
+    db_compress::AttrVector buffer_;
 
-    StockBlitz() {
+    StockBlitz() : buffer_(kNumAttrs) {
         config_ = {
                 {kEnum,    100,  0},
                 {kInteger, 0,    0.5},
@@ -145,8 +148,9 @@ public:
 class CustomerBlitz : public BlitzTable {
 public:
     static const int kNumAttrs = 21;
+    db_compress::AttrVector buffer_;
 
-    CustomerBlitz() {
+    CustomerBlitz() : buffer_(kNumAttrs) {
         config_ = {
                 {kEnum,   Customer::NUM_PER_DISTRICT,  0},
                 {kEnum,   District::NUM_PER_WAREHOUSE, 0},

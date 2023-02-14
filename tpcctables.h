@@ -262,8 +262,8 @@ private:
     BPlusTree<int32_t, Order *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> orders_;
     // TODO: Tune the size of this tree for the bigger keys?
     BPlusTree<int64_t, Order *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> orders_by_customer_;
-    BPlusTree<int32_t, OrderLine *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> orderlines_;
-    BPlusTree<int32_t, std::vector<uint8_t> *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> orderlines_blitz_;
+    BPlusTree<int64_t, OrderLine *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> orderlines_;
+    BPlusTree<int64_t, std::vector<uint8_t> *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> orderlines_blitz_;
     // TODO: Implement btree lower_bound?
     typedef std::map<int64_t, NewOrder *> NewOrderMap;
     NewOrderMap neworders_;
