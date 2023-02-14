@@ -916,7 +916,7 @@ OrderLine *TPCCTables::insertOrderLine(const OrderLine &orderline) {
         num_mem_orderline++;
     } else {
         ol_tuple_buf_.pos_ = num_disk_orderline;
-        DiskTupleWrite(orderline_fd, &orderline, num_disk_orderline, 0);
+        DiskTupleWrite(orderline_fd, &orderline, num_disk_orderline);
         num_disk_orderline++;
     }
     int32_t key = makeOrderLineKey(orderline.ol_w_id, orderline.ol_d_id, orderline.ol_o_id,
