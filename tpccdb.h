@@ -2,14 +2,13 @@
 #define TPCCDB_H__
 
 #include <stdint.h>
-
 #include <cstring>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
-const uint64_t kMemorySize = uint64_t(1024) * 1024 * 1024 * 0.4; // 0.5 GB
+const uint64_t kMemorySize = uint64_t(1024) * 1024 * 1024 * 8;
 
 namespace tpcc {
 // was used to select between various non-standard implementations: now use std
@@ -164,7 +163,17 @@ struct Stock {
     char s_data[MAX_DATA + 1];
 
     uint32_t size() {
-        return sizeof(Stock);
+        uint32_t ret = 0;
+        ret += std::to_string(s_i_id).size();
+        ret += std::to_string(s_w_id).size();
+        ret += std::to_string(s_quantity).size();
+        ret += std::to_string(s_ytd).size();
+        ret += std::to_string(s_order_cnt).size();
+        ret += std::to_string(s_remote_cnt).size();
+        for (int32_t i = 0; i < District::NUM_PER_WAREHOUSE; i++)
+            ret += stringSize(s_dist[i], DIST + 1);
+        ret += stringSize(s_data, MAX_DATA + 1);
+        return ret;
     }
 };
 
@@ -285,7 +294,10 @@ struct OrderLine {
     char ol_dist_info[Stock::DIST + 1];
 
     uint32_t size() {
-        return sizeof(OrderLine);
+        if (ol_delivery_d[0] == '\0')
+            return 32 + 25;
+        else
+            return 32 + 20 + 25;
     }
 };
 
