@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <chrono>
+#include <string.h>
 
 #include "disk_storage.h"
 
@@ -42,6 +43,6 @@ int main(int argc, const char *argv[]) {
     printf("%d ms\n", int(duration / 1e3));
 
     fd = DirectIOFile("test.txt");
-    printf("Size: %lld byte\n", DiskTableSize<Person>(fd));
+    printf("Size: %ld byte\n", DiskTableSize<Person>(fd));
     return 0;
 }
