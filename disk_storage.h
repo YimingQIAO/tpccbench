@@ -12,9 +12,10 @@
 #if __linux__
 
 #define BLOCKSIZE 4096
+#define DIRECT_IO_BUFFER_SIZE 4096
 
 namespace {
-    void *direct_io_buffer = aligned_alloc(BLOCKSIZE, 4096);
+    void *direct_io_buffer = aligned_alloc(BLOCKSIZE, BLOCKSIZE);
 }
 #endif
 

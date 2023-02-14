@@ -9,7 +9,7 @@
 #include <unordered_set>
 #include <vector>
 
-#define kNumWarehouse 1000
+#define kNumWarehouse 99
 #define kNumTransactions 200000
 
 namespace tpcc {

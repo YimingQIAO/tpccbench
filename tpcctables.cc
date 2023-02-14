@@ -839,6 +839,7 @@ Customer *TPCCTables::findCustomerByName(int32_t w_id, int32_t d_id, const char 
         // There were i+1 matching last names
         t_customer = *middle;
     }
+    if (!t_customer->in_memory_) DiskTupleRead(customer_fd, &t_customer->data_, t_customer->pos_);
     return &t_customer->data_;
 }
 
