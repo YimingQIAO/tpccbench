@@ -158,12 +158,7 @@ struct Stock {
 
     uint32_t size() {
         uint32_t ret = 0;
-        ret += std::to_string(s_i_id).size();
-        ret += std::to_string(s_w_id).size();
-        ret += std::to_string(s_quantity).size();
-        ret += std::to_string(s_ytd).size();
-        ret += std::to_string(s_order_cnt).size();
-        ret += std::to_string(s_remote_cnt).size();
+        ret += 6 * 4;
         for (int32_t i = 0; i < District::NUM_PER_WAREHOUSE; i++)
             ret += stringSize(s_dist[i], DIST + 1);
         ret += stringSize(s_data, MAX_DATA + 1);
@@ -219,15 +214,7 @@ struct Customer {
 
     uint32_t size() {
         uint32_t ret = 0;
-        ret += std::to_string(c_id).size();
-        ret += std::to_string(c_d_id).size();
-        ret += std::to_string(c_w_id).size();
-        ret += std::to_string(c_credit_lim).size();
-        ret += std::to_string(c_discount).size();
-        ret += std::to_string(c_balance).size();
-        ret += std::to_string(c_ytd_payment).size();
-        ret += std::to_string(c_payment_cnt).size();
-        ret += std::to_string(c_delivery_cnt).size();
+        ret += 9 * 4;
         ret += stringSize(c_first, Customer::MAX_FIRST + 1);
         ret += stringSize(c_middle, Customer::MIDDLE + 1);
         ret += stringSize(c_last, Customer::MAX_LAST + 1);
@@ -302,18 +289,8 @@ struct OrderLine {
     int32_t ol_w_id;
 
     uint32_t size() {
-        uint32_t ret = 0;
-        ret += std::to_string(ol_o_id).size();
-        ret += std::to_string(ol_d_id).size();
-        ret += std::to_string(ol_w_id).size();
-        ret += std::to_string(ol_number).size();
-        ret += std::to_string(ol_i_id).size();
-        ret += std::to_string(ol_supply_w_id).size();
-        ret += std::to_string(ol_quantity).size();
-        ret += std::to_string(ol_amount).size();
-        ret += stringSize(ol_delivery_d, DATETIME_SIZE + 1);
-        ret += stringSize(ol_dist_info, Stock::DIST + 1);
-        return ret;
+        if (ol_delivery_d[0] == '0') return 8 * 4 + 20 + 25;
+        else return 8 * 4 + 25;
     }
 };
 

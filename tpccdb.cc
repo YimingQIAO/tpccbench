@@ -159,13 +159,10 @@ void TPCCDB::paymentCombine(const PaymentOutput &remote, PaymentOutput *home) {
 #undef COPY_ADDRESS
 
 uint32_t stringSize(const char *data, uint32_t max_size) {
-    uint32_t ret = 0;
-    int32_t i;
-    for (i = 0; i < max_size; ++i) {
-        if (data[i] == '\0') break;
-        ret++;
+    uint32_t ret;
+    for (ret = 0; ret < max_size; ++ret) {
+        if (data[ret] == '\0') break;
     }
-    assert(data[i] == '\0');
+    assert(data[ret] == '\0');
     return ret;
-    // return max_size;
 }

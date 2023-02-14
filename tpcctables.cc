@@ -51,10 +51,10 @@ deleteBTreeValues(BPlusTree<KeyType, ValueType *, TPCCTables::KEYS_PER_INTERNAL,
 TPCCTables::~TPCCTables() {
     // Clean up the b-trees with this gross hack
     deleteBTreeValues(&warehouses_);
-    // deleteBTreeValues(&stock_);
+    deleteBTreeValues(&stock_);
     deleteBTreeValues(&districts_);
     deleteBTreeValues(&orders_);
-    // deleteBTreeValues(&orderlines_);
+    deleteBTreeValues(&orderlines_);
 
     STLDeleteValues(&neworders_);
     STLDeleteElements(&customers_by_name_);
@@ -1063,8 +1063,8 @@ static int64_t makeOrderLineKey(int32_t w_id, int32_t d_id, int32_t o_id,
     // tuple, so it may be fine, but stock level fetches order lines for a range
     // of (w_id, d_id, o_id) values
     int64_t id =
-            ((o_id * District::NUM_PER_WAREHOUSE + d_id) * Warehouse::MAX_WAREHOUSE_ID + w_id) * Order::MAX_OL_CNT +
-            number;
+            ((int64_t(o_id) * District::NUM_PER_WAREHOUSE + d_id) * Warehouse::MAX_WAREHOUSE_ID + w_id) *
+            Order::MAX_OL_CNT + number;
     if (id < 0) throw std::runtime_error("Order line key overflow.");
     return id;
 }
@@ -1217,10 +1217,9 @@ void TPCCTables::CustomerToBlitz(CustomerBlitz &table, int64_t num_warehouses) {
     }
 }
 
-void TPCCTables::MountCompressor(
-        db_compress::RelationCompressor &compressor,
-        db_compress::RelationDecompressor &decompressor, int64_t num_warehouses,
-        const std::string &table_name) {
+void TPCCTables::MountCompressor(db_compress::RelationCompressor &compressor,
+                                 db_compress::RelationDecompressor &decompressor, int64_t num_warehouses,
+                                 const std::string &table_name) {
     if (table_name == "orderline") {
         orderline_compressor_ = &compressor;
         orderline_decompressor_ = &decompressor;
@@ -1239,7 +1238,6 @@ void TPCCTables::MountCompressor(
                 }
             }
         }
-        deleteBTreeValues(&orderlines_);
     } else if (table_name == "stock") {
         stock_compressor_ = &compressor;
         stock_decompressor_ = &decompressor;
@@ -1254,7 +1252,6 @@ void TPCCTables::MountCompressor(
                 }
             }
         }
-        deleteBTreeValues(&stock_);
     } else if (table_name == "customer") {
         customer_compressor_ = &compressor;
         customer_decompressor_ = &decompressor;
