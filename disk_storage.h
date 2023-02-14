@@ -24,7 +24,7 @@ __attribute__((__used__)) static inline int DirectIOFile(const std::string &tabl
     int fd = open(table_name.c_str(), O_RDWR | O_CREAT, 0666);
     fcntl(fd, F_NOCACHE, 1);
 #elif __linux__
-    int flag = O_RDWR | O_CREAT | O_DIRECT | O_SYNC;
+    int flag = O_RDWR | O_CREAT | O_DIRECT;
     int fd = open(table_name.c_str(), flag, 0666);
 #endif
     if (fd < 0)
@@ -91,21 +91,24 @@ static inline int64_t DiskTableSize(int fd) {
             case EBADF:
                 throw std::runtime_error("fd is not a valid file descriptor");
             case EFAULT:
-                throw std::runtime_error(
-                        "std buffer is outside of your accessible address space");
+                throw std::runtime_error("std buffer is outside of your accessible address space");
             default:
                 throw std::runtime_error("fstat error in DiskTableSize");
         }
     } else {
+#if __APPLE__
         int32_t tuple_size = st_buf.st_size / sizeof(T);
+#elif __linux__
+        int num_page = sizeof(T) / BLOCKSIZE + 1;
+        int32_t tuple_size = st_buf.st_size / (num_page * BLOCKSIZE);
+#endif
 
         // get size of each tuple
         int64_t disk_size = 0;
         T tuple;
         for (int i = 0; i < tuple_size; ++i) {
             int s = DiskTupleRead(fd, &tuple, i);
-            if (s != sizeof(T))
-                throw std::runtime_error("read error in DiskTableSize");
+            if (s != sizeof(T)) throw std::runtime_error("read error in DiskTableSize");
             disk_size += tuple.size();
         }
 
