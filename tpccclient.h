@@ -3,12 +3,14 @@
 
 #include <stdint.h>
 #include "clock.h"
+#include "tpccdb.h"
 
 namespace tpcc {
-class RandomGenerator;
+    class RandomGenerator;
 }
 
 class Clock;
+
 class TPCCDB;
 
 // Generates transactions according to the TPC-C specification. This ignores the fact that
@@ -17,14 +19,19 @@ class TPCCDB;
 class TPCCClient {
 public:
     // Owns clock, generator and db.
-    TPCCClient(Clock* clock, tpcc::RandomGenerator* generator, TPCCDB* db, int num_items,
-            int num_warehouses, int districts_per_warehouse, int customers_per_district);
+    TPCCClient(Clock *clock, tpcc::RandomGenerator *generator, TPCCDB *db, int num_items, int num_warehouses,
+               int districts_per_warehouse, int customers_per_district, const char *now);
+
     ~TPCCClient();
 
     uint64_t doStockLevel();
+
     uint64_t doOrderStatus();
+
     uint64_t doDelivery();
+
     uint64_t doPayment();
+
     uint64_t doNewOrder();
 
     uint64_t doOne();
@@ -45,17 +52,21 @@ public:
     // Bind this client to a specific warehouse and district. 0 means any, a value means fixed.
     void bindWarehouseDistrict(int warehouse, int district);
 
-    TPCCDB* db() { return db_; }
+    TPCCDB *db() { return db_; }
 
 private:
     int32_t generateWarehouse();
+
     int32_t generateDistrict();
+
     int32_t generateCID();
+
     int32_t generateItemID();
 
-    Clock* clock_;
-    tpcc::RandomGenerator* generator_;
-    TPCCDB* db_;
+    char now_[DATETIME_SIZE + 1];
+    Clock *clock_;
+    tpcc::RandomGenerator *generator_;
+    TPCCDB *db_;
     int num_items_;
     int num_warehouses_;
     int districts_per_warehouse_;
@@ -63,8 +74,8 @@ private:
 
     int remote_item_milli_p_;
 
-    int bound_warehouse_; 
-    int bound_district_; 
+    int bound_warehouse_;
+    int bound_district_;
 };
 
 #endif

@@ -123,7 +123,7 @@ int main(int argc, const char *argv[]) {
             // Client owns all the parameters
             TPCCClient client(clock, random, tables, Item::NUM_ITEMS,
                               static_cast<int>(num_warehouses),
-                              District::NUM_PER_WAREHOUSE, Customer::NUM_PER_DISTRICT);
+                              District::NUM_PER_WAREHOUSE, Customer::NUM_PER_DISTRICT, now);
             printf("Running... ");
             fflush(stdout);
 

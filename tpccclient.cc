@@ -11,8 +11,8 @@
 
 using std::vector;
 
-TPCCClient::TPCCClient(Clock *clock, tpcc::RandomGenerator *generator, TPCCDB *db, int num_items,
-                       int num_warehouses, int districts_per_warehouse, int customers_per_district)
+TPCCClient::TPCCClient(Clock *clock, tpcc::RandomGenerator *generator, TPCCDB *db, int num_items, int num_warehouses,
+                       int districts_per_warehouse, int customers_per_district, const char *now)
         : clock_(clock),
           generator_(generator),
           db_(db),
@@ -31,6 +31,7 @@ TPCCClient::TPCCClient(Clock *clock, tpcc::RandomGenerator *generator, TPCCDB *d
     ASSERT(1 <= districts_per_warehouse_ &&
            districts_per_warehouse_ <= District::NUM_PER_WAREHOUSE);
     ASSERT(1 <= customers_per_district_ && customers_per_district_ <= Customer::NUM_PER_DISTRICT);
+    strcpy(now_, now);
 }
 
 TPCCClient::~TPCCClient() {
@@ -79,7 +80,8 @@ uint64_t TPCCClient::doOrderStatus() {
 uint64_t TPCCClient::doDelivery() {
     int carrier = generator_->number(Order::MIN_CARRIER_ID, Order::MAX_CARRIER_ID);
     char now[Clock::DATETIME_SIZE + 1];
-    clock_->getDateTimestamp(now);
+    // clock_->getDateTimestamp(now);
+    strcpy(now, now_);
 
     int32_t w_id = generateWarehouse();
     auto beg = std::chrono::high_resolution_clock::now();
@@ -116,7 +118,8 @@ uint64_t TPCCClient::doPayment() {
     float h_amount = generator_->fixedPoint(2, MIN_PAYMENT_AMOUNT, MAX_PAYMENT_AMOUNT);
 
     char now[Clock::DATETIME_SIZE + 1];
-    clock_->getDateTimestamp(now);
+    strcpy(now, now_);
+    // clock_->getDateTimestamp(now);
     if (y <= 60) {
         // 60%: payment by last name
         char c_last[Customer::MAX_LAST + 1];
@@ -164,7 +167,8 @@ uint64_t TPCCClient::doNewOrder() {
     }
 
     char now[Clock::DATETIME_SIZE + 1];
-    clock_->getDateTimestamp(now);
+    strcpy(now, now_);
+    // clock_->getDateTimestamp(now);
     NewOrderOutput output;
     int32_t dist = generateDistrict();
     int32_t cid = generateCID();
