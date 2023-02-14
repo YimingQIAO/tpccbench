@@ -24,7 +24,7 @@ int main(int argc, const char *argv[]) {
     for (int i = 0; i < num; ++i) {
         p.a = i;
         p.b = i * 3;
-        DiskTupleWrite(fd, &p, i);
+        DiskTupleWrite(fd, &p);
     }
     close(fd);
     auto end = std::chrono::high_resolution_clock::now();

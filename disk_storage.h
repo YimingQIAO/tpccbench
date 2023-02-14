@@ -8,20 +8,23 @@
 #include <utility>
 #include <stdexcept>
 
+
+#if __linux__
+
 #define BLOCKSIZE 4096
-#define DIRECT_IO_BUFFER_SIZE 4096
 
 namespace {
-    void *direct_io_buffer = aligned_alloc(BLOCKSIZE, DIRECT_IO_BUFFER_SIZE);
+    void *direct_io_buffer = aligned_alloc(BLOCKSIZE, 4096);
 }
+#endif
 
-__attribute__((__used__)) static inline int
-DirectIOFile(const std::string &table_name) {
+__attribute__((__used__)) static inline int DirectIOFile(const std::string &table_name) {
 #if __APPLE__
     int fd = open(table_name.c_str(), O_RDWR | O_CREAT, 0666);
     fcntl(fd, F_NOCACHE, 1);
 #elif __linux__
-    int fd = open(table_name.c_str(), O_RDWR | O_CREAT | O_DIRECT, 0666);
+    int flag = O_RDWR | O_CREAT | O_DIRECT | O_SYNC;
+    int fd = open(table_name.c_str(), flag, 0666);
 #endif
     if (fd < 0)
         throw std::runtime_error("open file error in DirectIOFile");
@@ -30,17 +33,26 @@ DirectIOFile(const std::string &table_name) {
 
 template<typename T>
 static inline void DiskTupleWrite(int fd, T *data, int64_t pos) {
+#if __APPLE__
+    int64_t ret = pwrite(fd, data, sizeof(T), pos * sizeof(T));
+    if (ret < 0) throw std::runtime_error("write error in DiskTupleWrite");
+#elif __linux__
     if (sizeof(T) > DIRECT_IO_BUFFER_SIZE)
         throw std::runtime_error("direct io buffer size is less than sizeof(T) in DiskTupleWrite");
 
     memcpy(direct_io_buffer, data, sizeof(T));
     int32_t num_page = sizeof(T) / BLOCKSIZE + 1;
-    int ret = pwrite(fd, direct_io_buffer, num_page * BLOCKSIZE, pos * num_page * BLOCKSIZE);
+    int64_t ret = pwrite(fd, direct_io_buffer, 512, pos * num_page * BLOCKSIZE);
     if (ret < 0) throw std::runtime_error("write error in DiskTupleWrite");
+#endif
 }
 
 template<typename T>
 static inline void DiskTupleWrite(int fd, T *data) {
+#if __APPLE__
+    int64_t ret = pwrite(fd, data, sizeof(T));
+    if (ret < 0) throw std::runtime_error("write error in DiskTupleWrite");
+#elif __linux__
     if (sizeof(T) > DIRECT_IO_BUFFER_SIZE)
         throw std::runtime_error("direct io buffer size is less than sizeof(T) in DiskTupleWrite");
 
@@ -48,10 +60,16 @@ static inline void DiskTupleWrite(int fd, T *data) {
     int32_t num_page = sizeof(T) / BLOCKSIZE + 1;
     int64_t ret = write(fd, direct_io_buffer, num_page * BLOCKSIZE);
     if (ret < 0) throw std::runtime_error("write error in DiskTupleWrite");
+#endif
 }
 
 template<typename T>
 static inline int64_t DiskTupleRead(int fd, T *data, int64_t pos) {
+#if __APPLE__
+    int64_t ret = pread(fd, data, sizeof(T), pos * sizeof(T));
+    if (ret < 0) throw std::runtime_error("read error in DiskTupleRead");
+    else return ret;
+#elif __linux__
     int32_t num_page = sizeof(T) / BLOCKSIZE + 1;
     int64_t ret = pread(fd, direct_io_buffer, num_page * BLOCKSIZE, pos * num_page * BLOCKSIZE);
     if (ret < 0)
@@ -60,6 +78,7 @@ static inline int64_t DiskTupleRead(int fd, T *data, int64_t pos) {
         memcpy(data, direct_io_buffer, sizeof(T));
         return sizeof(T);
     }
+#endif
 }
 
 template<typename T>
