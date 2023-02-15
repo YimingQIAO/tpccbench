@@ -83,7 +83,7 @@ static inline void SeqDiskTupleWrite(int fd, T *data) {
     if (ret < 0) throw std::runtime_error("write error in SeqDiskTupleWrite");
 #elif __linux__
     // get write buffer of fd.
-    if (write_buffers.size() < fd) write_buffers.resize(fd - 2);
+    if (write_buffers.size() < fd - 2) write_buffers.resize(fd - 2);
     SeqWriteBuffer &write_buffer = write_buffers[fd - 3];
 
     // write buffer is full
