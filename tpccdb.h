@@ -8,7 +8,7 @@
 #include <unordered_set>
 #include <vector>
 
-// size of one warehouse 79 MB.
+// one warehouse ~= 79 MB.
 const uint64_t kMemorySize = uint64_t(1024) * 1024 * 1024 * 0.079;
 
 namespace tpcc {
