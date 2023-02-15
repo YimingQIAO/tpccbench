@@ -966,7 +966,7 @@ OrderLine *TPCCTables::insertOrderLine(const OrderLine &orderline) {
 }
 
 OrderLine *TPCCTables::findOrderLine(int32_t w_id, int32_t d_id, int32_t o_id, int32_t number) {
-    int32_t key = makeOrderLineKey(w_id, d_id, o_id, number);
+    int64_t key = makeOrderLineKey(w_id, d_id, o_id, number);
     Tuple<OrderLine> *tuple = find(orderlines_, key);
     if (tuple) {
         if (!tuple->in_memory_) DiskTupleRead(orderline_fd, &tuple->data_, tuple->id_pos_);
