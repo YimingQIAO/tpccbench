@@ -190,10 +190,10 @@ private:
     BPlusTree<int32_t, Tuple<Customer> *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> customers_;
     typedef std::set<Tuple<Customer> *, CustomerByNameOrdering> CustomerByNameSet;
     CustomerByNameSet customers_by_name_;
-    BPlusTree<int32_t, Order *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> orders_;
+    BPlusTree<int64_t, Order *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> orders_;
     // TODO: Tune the size of this tree for the bigger keys?
     BPlusTree<int64_t, Order *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> orders_by_customer_;
-    BPlusTree<int32_t, Tuple<OrderLine> *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> orderlines_;
+    BPlusTree<int64_t, Tuple<OrderLine> *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> orderlines_;
     // TODO: Implement btree lower_bound?
     typedef std::map<int64_t, NewOrder *> NewOrderMap;
     NewOrderMap neworders_;

@@ -8,7 +8,7 @@
 #include <unordered_set>
 #include <vector>
 
-const uint64_t kMemorySize = uint64_t(1024) * 1024 * 1024 * 8;
+const uint64_t kMemorySize = uint64_t(1024) * 1024 * 1024 * 0.5;
 
 namespace tpcc {
 // was used to select between various non-standard implementations: now use std
@@ -275,7 +275,7 @@ struct OrderLine {
 
     constexpr static char TABLE_NAME[19] = "orderline_disk.bin";
     // static const uint32_t MEMORY_THRESHOLD = (kNumWarehouse * 10 * 3000 * 10 + kNumTransactions * 0.45 * 10);
-    static const uint64_t MEMORY_THRESHOLD = kMemorySize / 50 * 0.95 * 0.35;
+    static const uint64_t MEMORY_THRESHOLD = kMemorySize / 50 * 0.95 * 0.2;
 
     int32_t ol_o_id;
     int32_t ol_d_id;
