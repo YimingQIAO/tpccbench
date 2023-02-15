@@ -230,6 +230,9 @@ void tableSize(TPCCTables *tables, bool is_initial, bool is_compressed) {
                 ini_neworders + ini_items + ini_stocks + ini_history;
         std::cout << "Orig Total: " << total << " byte" << std::endl;
     } else if (!is_initial && is_compressed) {
+        ini_history = ini_history * 17 / 96;
+        ini_orders = ini_orders * 12 / 61;
+
         std::cout << "----------- After transactions Size ------------ \n";
         std::cout << "Warehouse: " << ini_warehouses << " byte" << std::endl;
         std::cout << "District: " << ini_districts << " byte" << std::endl;
