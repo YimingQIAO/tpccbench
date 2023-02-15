@@ -48,6 +48,20 @@ deleteBTreeValues(BPlusTree<KeyType, ValueType *, TPCCTables::KEYS_PER_INTERNAL,
     }
 }
 
+template<typename KeyType, typename ValueType>
+static int64_t
+BTreeSize(BPlusTree<KeyType, ValueType *, TPCCTables::KEYS_PER_INTERNAL,
+        TPCCTables::KEYS_PER_LEAF> *btree) {
+    int64_t ret = 0;
+    KeyType key = std::numeric_limits<KeyType>::max();
+    ValueType *value = NULL;
+    while (btree->findLastLessThan(key, &value, &key)) {
+        assert(value != NULL);
+        ret += value->size();
+    }
+    return ret;
+}
+
 TPCCTables::~TPCCTables() {
     // Clean up the b-trees with this gross hack
     deleteBTreeValues(&warehouses_);
@@ -1385,125 +1399,28 @@ int64_t TPCCTables::itemSize() {
 }
 
 int64_t TPCCTables::warehouseSize(int64_t num_warehouses) {
-    int64_t ret = 0;
-    for (int32_t i = 1; i <= num_warehouses; ++i) {
-        Warehouse *w = findWarehouse(i);
-        assert(w != nullptr);
-        ret += w->size();
-    }
-    return ret;
+    return BTreeSize(&warehouses_);
 }
 
 int64_t TPCCTables::districtSize(int64_t num_warehouses) {
-    int64_t ret = 0;
-    for (int32_t i = 1; i <= num_warehouses; ++i) {
-        for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
-            District *d = findDistrict(i, j);
-            assert(d != nullptr);
-            ret += d->size();
-        }
-    }
-    return ret;
+    return BTreeSize(&districts_);
 }
 
 int64_t TPCCTables::stockSize(int64_t num_warehouses) {
-    int64_t ret = 0;
-    for (int32_t i = 1; i <= num_warehouses; ++i) {
-        for (int32_t j = 1; j <= Stock::NUM_STOCK_PER_WAREHOUSE; ++j) {
-            Stock *s = findStock(i, j);
-            assert(s != nullptr);
-            ret += s->size();
-        }
-    }
-    return ret;
+    return BTreeSize(&stock_);
 }
 
 int64_t TPCCTables::stockBlitzSize(int64_t num_warehouses) {
-    int64_t ret = 0;
-    for (int32_t i = 1; i <= num_warehouses; ++i) {
-        for (int32_t j = 1; j <= Stock::NUM_STOCK_PER_WAREHOUSE; ++j) {
-            std::vector<uint8_t> *s = find(stock_blitz_, makeStockKey(i, j));
-            if (s != nullptr)
-                ret += s->size();
-        }
-    }
-    return ret;
-}
-
-int64_t TPCCTables::customerSize(int64_t num_warehouses) {
-    int64_t ret = 0;
-    for (int32_t i = 1; i <= num_warehouses; ++i) {
-        for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
-            for (int32_t k = 1; k <= Customer::NUM_PER_DISTRICT; ++k) {
-                Customer *c = findCustomer(i, j, k);
-                assert(c != nullptr);
-                ret += c->size();
-            }
-        }
-    }
-    return ret;
-}
-
-int64_t TPCCTables::customerBlitzSize(int64_t num_warehouses) {
-    int64_t ret = 0;
-    for (int32_t i = 1; i <= num_warehouses; ++i) {
-        for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
-            for (int32_t k = 1; k <= Customer::NUM_PER_DISTRICT; ++k) {
-                std::vector<uint8_t> *c = find(customers_blitz_, makeCustomerKey(i, j, k));
-                if (c != nullptr) ret += c->size();
-            }
-        }
-    }
-    return ret;
-}
-
-int64_t TPCCTables::orderSize(int64_t num_warehouses, int64_t num_transactions) {
-    int64_t ret = 0;
-    int64_t krange = Order::INITIAL_ORDERS_PER_DISTRICT + num_transactions / 2;
-    for (int32_t i = 1; i <= num_warehouses; ++i) {
-        for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
-            for (int32_t k = 1; k <= krange; ++k) {
-                Order *o = findOrder(i, j, k);
-                if (o != nullptr) ret += o->size();
-            }
-        }
-    }
-    return ret;
-}
-
-int64_t TPCCTables::orderlineSize(int64_t num_warehouses, int64_t num_transactions) {
-    int64_t ret = 0;
-    int64_t krange = Order::INITIAL_ORDERS_PER_DISTRICT + num_transactions / 2;
-    for (int32_t i = 1; i <= num_warehouses; ++i) {
-        for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
-            for (int32_t k = 1; k <= krange; ++k) {
-                for (int32_t l = 1; l <= Order::MAX_OL_CNT; ++l) {
-                    OrderLine *ol = findOrderLine(i, j, k, l);
-                    if (ol != nullptr) ret += ol->size();
-                }
-            }
-        }
-    }
-    return ret;
+    return BTreeSize(&stock_blitz_);
 }
 
 int64_t TPCCTables::orderlineBlitzSize(int64_t num_warehouses, int64_t num_transactions) {
-    int64_t ret = 0;
-    int64_t krange = Order::INITIAL_ORDERS_PER_DISTRICT + num_transactions / 2;
-    for (int32_t i = 1; i <= num_warehouses; ++i) {
-        for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
-            for (int32_t k = 1; k <= krange; ++k) {
-                for (int32_t l = 1; l <= Order::MAX_OL_CNT; ++l) {
-                    int64_t key = makeOrderLineKey(i, j, k, l);
-                    std::vector<uint8_t> *compressed = find(orderlines_blitz_, key);
-                    if (compressed != nullptr) ret += compressed->size();
-                }
-            }
-        }
-    }
-    return ret;
+    return BTreeSize(&orderlines_blitz_);
 }
 
+int64_t TPCCTables::orderSize(int64_t num_warehouses, int64_t num_transactions) {
+    return BTreeSize(&orders_);
+}
 
 int64_t TPCCTables::newOrderSize() {
     int64_t ret = 0;
@@ -1516,3 +1433,16 @@ int64_t TPCCTables::historySize() {
     for (auto &h: history_) ret += h->size();
     return ret;
 }
+
+int64_t TPCCTables::customerSize(int64_t num_warehouses) {
+    return BTreeSize(&customers_);
+}
+
+int64_t TPCCTables::orderlineSize(int64_t num_warehouses, int64_t num_transactions) {
+    return BTreeSize(&orderlines_);
+}
+
+int64_t TPCCTables::customerBlitzSize(int64_t num_warehouses) {
+    return BTreeSize(&customers_blitz_);
+}
+
