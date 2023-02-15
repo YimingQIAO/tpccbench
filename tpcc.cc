@@ -51,6 +51,7 @@ int main(int argc, const char *argv[]) {
     for (int i = 0; i < num_warehouses; ++i) generator.makeWarehouse(tables, i + 1);
     int64_t end = clock->getMicroseconds();
     printf("%" PRId64 " ms\n", (end - begin + 500) / 1000);
+    // tableSize(tables);
 
     switch (mode) {
         case GenerateCSV: {
@@ -141,7 +142,7 @@ void tableSize(TPCCTables *tables) {
     int64_t disk_ol = tables->diskTableSize("orderline");
     int64_t disk_c = tables->diskTableSize("customer");
 
-    std::cout << "------------ Uncompressed Size ------------ \n";
+    std::cout << "------------ After Transaction Size ------------ \n";
     std::cout << "[Table Name]: " << "[Memory Size] + [Disk Size]" << std::endl;
     std::cout << "Warehouse: " << ini_warehouses << " byte" << std::endl;
     std::cout << "District: " << ini_districts << " byte" << std::endl;

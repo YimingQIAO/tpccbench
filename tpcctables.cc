@@ -65,6 +65,19 @@ static void deleteBTreeValues(
     }
 }
 
+template<typename KeyType, typename ValueType>
+static int64_t
+BTreeSize(BPlusTree<KeyType, ValueType *, TPCCTables::KEYS_PER_INTERNAL, TPCCTables::KEYS_PER_LEAF> *btree) {
+    int64_t ret = 0;
+    KeyType key = std::numeric_limits<KeyType>::max();
+    ValueType *value = NULL;
+    while (btree->findLastLessThan(key, &value, &key)) {
+        assert(value != NULL);
+        ret += value->size();
+    }
+    return ret;
+}
+
 TPCCTables::~TPCCTables() {
     // Clean up the b-trees with this gross hack
     deleteBTreeValues(&warehouses_);
@@ -78,6 +91,11 @@ TPCCTables::~TPCCTables() {
     STLDeleteElements(&history_);
 
     DeleteDiskData();
+
+    std::cout << "# of customer: " << num_mem_customer << " - " << num_disk_customer << std::endl;
+    std::cout << "# of stock: " << num_mem_stock << " - " << num_disk_stock << std::endl;
+    std::cout << "# of orderline: " << num_mem_orderline << " - " << num_disk_orderline << std::endl;
+
 }
 
 int32_t TPCCTables::stockLevel(int32_t warehouse_id, int32_t district_id, int32_t threshold) {
@@ -675,7 +693,7 @@ insert(BPlusTree<int32_t, T *, TPCCTables::KEYS_PER_INTERNAL, TPCCTables::KEYS_P
 template<typename T>
 static T *
 insert(BPlusTree<int64_t, T *, TPCCTables::KEYS_PER_INTERNAL, TPCCTables::KEYS_PER_LEAF> *tree,
-       int32_t key, const T &item) {
+       int64_t key, const T &item) {
     assert(!tree->find(key));
     T *copy = new T(item);
     tree->insert(key, copy);
@@ -696,7 +714,7 @@ find(const BPlusTree<int32_t, T *, TPCCTables::KEYS_PER_INTERNAL, TPCCTables::KE
 template<typename T>
 static T *
 find(const BPlusTree<int64_t, T *, TPCCTables::KEYS_PER_INTERNAL, TPCCTables::KEYS_PER_LEAF> &tree,
-     int32_t key) {
+     int64_t key) {
     T *output = NULL;
     if (tree.find(key, &output)) {
         return output;
@@ -941,7 +959,7 @@ OrderLine *TPCCTables::insertOrderLine(const OrderLine &orderline) {
         SeqDiskTupleWrite(orderline_fd, &orderline);
         num_disk_orderline++;
     }
-    int32_t key = makeOrderLineKey(orderline.ol_w_id, orderline.ol_d_id, orderline.ol_o_id,
+    int64_t key = makeOrderLineKey(orderline.ol_w_id, orderline.ol_d_id, orderline.ol_o_id,
                                    orderline.ol_number);
     insert(&orderlines_, key, ol_tuple_buf_);
     return nullptr;
@@ -1106,35 +1124,20 @@ int64_t TPCCTables::itemSize() {
 }
 
 int64_t TPCCTables::warehouseSize(int64_t num_warehouses) {
-    int32_t ret = 0;
-    for (int32_t i = 1; i <= num_warehouses; ++i) {
-        Warehouse *w = findWarehouse(i);
-        assert(w != nullptr);
-        ret += w->size();
-    }
-    return ret;
+    return BTreeSize(&warehouses_);
 }
 
 int64_t TPCCTables::districtSize(int64_t num_warehouses) {
-    int64_t ret = 0;
-    for (int32_t i = 1; i <= num_warehouses; ++i) {
-        for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
-            District *d = findDistrict(i, j);
-            assert(d != nullptr);
-            ret += d->size();
-        }
-    }
-    return ret;
+    return BTreeSize(&districts_);
 }
 
 int64_t TPCCTables::stockSize(int64_t num_warehouses) {
     int64_t ret = 0;
-    for (int32_t i = 1; i <= num_warehouses; ++i) {
-        for (int32_t j = 1; j <= Stock::NUM_STOCK_PER_WAREHOUSE; ++j) {
-            Tuple<Stock> *t = find(stock_, makeStockKey(i, j));
-            if (t != nullptr && t->in_memory_) ret += t->data_.size();
-
-        }
+    int32_t key = std::numeric_limits<int32_t>::max();
+    Tuple<Stock> *value;
+    while (stock_.findLastLessThan(key, &value, &key)) {
+        if (value == nullptr) throw std::runtime_error("null value in stockSize");
+        if (value->in_memory_) ret += value->data_.size();
     }
     return ret;
 }
@@ -1150,45 +1153,26 @@ int64_t TPCCTables::diskTableSize(const std::string &file_name) {
 
 int64_t TPCCTables::customerSize(int64_t num_warehouses) {
     int64_t ret = 0;
-    for (int32_t i = 1; i <= num_warehouses; ++i) {
-        for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
-            for (int32_t k = 1; k <= Customer::NUM_PER_DISTRICT; ++k) {
-                Tuple<Customer> *t = find(customers_, makeCustomerKey(i, j, k));
-                if (t != nullptr && t->in_memory_) ret += t->data_.size();
-            }
-        }
+    int32_t key = std::numeric_limits<int32_t>::max();
+    Tuple<Customer> *value;
+    while (customers_.findLastLessThan(key, &value, &key)) {
+        if (value == nullptr) throw std::runtime_error("null value in customerSize");
+        if (value->in_memory_) ret += value->data_.size();
     }
     return ret;
 }
 
 int64_t TPCCTables::orderSize(int64_t num_warehouses, int64_t num_transactions) {
-    int64_t ret = 0;
-    int32_t krange = Order::INITIAL_ORDERS_PER_DISTRICT + num_transactions;
-    for (int32_t i = 1; i <= num_warehouses; ++i) {
-        for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
-            for (int32_t k = 1;
-                 k <= krange; ++k) {
-                Order *o = findOrder(i, j, k);
-                if (o != nullptr)
-                    ret += o->size();
-            }
-        }
-    }
-    return ret;
+    return BTreeSize(&orders_);
 }
 
 int64_t TPCCTables::orderlineSize(int64_t num_warehouses, int64_t num_transactions) {
     int64_t ret = 0;
-    int32_t krange = Order::INITIAL_ORDERS_PER_DISTRICT + num_transactions / 2;
-    for (int32_t i = 1; i <= num_warehouses; ++i) {
-        for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
-            for (int32_t k = 1; k <= krange; ++k) {
-                for (int32_t l = 1; l <= Order::MAX_OL_CNT; ++l) {
-                    Tuple<OrderLine> *t = find(orderlines_, makeOrderLineKey(i, j, k, l));
-                    if (t != nullptr && t->in_memory_) ret += t->data_.size();
-                }
-            }
-        }
+    int64_t key = std::numeric_limits<int64_t>::max();
+    Tuple<OrderLine> *value;
+    while (orderlines_.findLastLessThan(key, &value, &key)) {
+        if (value == nullptr) throw std::runtime_error("null value in orderlineSize");
+        if (value->in_memory_) ret += value->data_.size();
     }
     return ret;
 }
