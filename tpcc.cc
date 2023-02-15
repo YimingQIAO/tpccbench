@@ -172,6 +172,10 @@ void welcome(int argc, const char *const *argv) {
                 Warehouse::MAX_WAREHOUSE_ID, num_warehouses);
         exit(1);
     }
+
+    remove(Stock::TABLE_NAME);
+    remove(Customer::TABLE_NAME);
+    remove(OrderLine::TABLE_NAME);
 }
 
 void tableSize(TPCCTables *tables, bool is_initial, bool is_compressed) {
