@@ -1123,15 +1123,15 @@ int64_t TPCCTables::itemSize() {
     return ret;
 }
 
-int64_t TPCCTables::warehouseSize(int64_t num_warehouses) {
+int64_t TPCCTables::warehouseSize() {
     return BTreeSize(&warehouses_);
 }
 
-int64_t TPCCTables::districtSize(int64_t num_warehouses) {
+int64_t TPCCTables::districtSize() {
     return BTreeSize(&districts_);
 }
 
-int64_t TPCCTables::stockSize(int64_t num_warehouses) {
+int64_t TPCCTables::stockSize() {
     int64_t ret = 0;
     int32_t key = std::numeric_limits<int32_t>::max();
     Tuple<Stock> *value;
@@ -1151,7 +1151,7 @@ int64_t TPCCTables::diskTableSize(const std::string &file_name) {
     }
 }
 
-int64_t TPCCTables::customerSize(int64_t num_warehouses) {
+int64_t TPCCTables::customerSize() {
     int64_t ret = 0;
     int32_t key = std::numeric_limits<int32_t>::max();
     Tuple<Customer> *value;
@@ -1162,11 +1162,11 @@ int64_t TPCCTables::customerSize(int64_t num_warehouses) {
     return ret;
 }
 
-int64_t TPCCTables::orderSize(int64_t num_warehouses, int64_t num_transactions) {
+int64_t TPCCTables::orderSize() {
     return BTreeSize(&orders_);
 }
 
-int64_t TPCCTables::orderlineSize(int64_t num_warehouses, int64_t num_transactions) {
+int64_t TPCCTables::orderlineSize() {
     int64_t ret = 0;
     int64_t key = std::numeric_limits<int64_t>::max();
     Tuple<OrderLine> *value;
@@ -1175,6 +1175,7 @@ int64_t TPCCTables::orderlineSize(int64_t num_warehouses, int64_t num_transactio
         if (value->in_memory_) ret += value->data_.size();
     }
     return ret;
+
 }
 
 int64_t TPCCTables::newOrderSize() {

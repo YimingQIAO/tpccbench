@@ -127,14 +127,14 @@ void welcome(int argc, const char *const *argv) {
 
 void tableSize(TPCCTables *tables) {
     // memory size
-    int64_t ini_warehouses = tables->warehouseSize(num_warehouses);
-    int64_t ini_districts = tables->districtSize(num_warehouses);
-    int64_t ini_customers = tables->customerSize(num_warehouses);
-    int64_t ini_orders = tables->orderSize(num_warehouses, 0);
-    int64_t ini_orderline = tables->orderlineSize(num_warehouses, 0);
+    int64_t ini_warehouses = tables->warehouseSize();
+    int64_t ini_districts = tables->districtSize();
+    int64_t ini_customers = tables->customerSize();
+    int64_t ini_orders = tables->orderSize();
+    int64_t ini_orderline = tables->orderlineSize();
     int64_t ini_neworders = tables->newOrderSize();
     int64_t ini_items = tables->itemSize();
-    int64_t ini_stocks = tables->stockSize(num_warehouses);
+    int64_t ini_stocks = tables->stockSize();
     int64_t ini_history = tables->historySize();
 
     // disk size
