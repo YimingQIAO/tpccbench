@@ -8,12 +8,11 @@
 #include "blitz.h"
 #include "btree.h"
 #include "tpccdb.h"
+#include "disk_storage.h"
 
 class CustomerByNameOrdering {
 public:
     bool operator()(const Customer *a, const Customer *b) const;
-
-    bool operator()(const Tuple<Customer> *ta, const Tuple<Customer> *tb) const;
 };
 
 // Stores all the tables in TPC-C
@@ -264,10 +263,10 @@ private:
 
     uint32_t num_mem_orderline = 0;
     uint32_t num_disk_orderline = 0;
-    Tuple<OrderLine> ol_tuple_buf_;
 
     uint32_t num_mem_customer = 0;
     uint32_t num_disk_customer = 0;
+    Tuple<std::vector<uint8_t>> disk_tuple_buf_;
 };
 
 #endif
