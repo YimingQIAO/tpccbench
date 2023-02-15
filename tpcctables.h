@@ -12,8 +12,6 @@
 class CustomerByNameOrdering {
 public:
     bool operator()(const Customer *a, const Customer *b) const;
-
-    bool operator()(const Tuple<Customer> *ta, const Tuple<Customer> *tb) const;
 };
 
 // Stores all the tables in TPC-C
@@ -156,7 +154,7 @@ public:
     // Stores order in the database. Returns a pointer to the database's tuple.
     History *insertHistory(const History &history);
 
-    int64_t TableSize(const std::string &name);
+    int64_t TableSize(const std::string& name);
 
     void OrderLineToBlitz(OrderLineBlitz &table, int64_t num_warehouses);
 
@@ -233,17 +231,17 @@ private:
 
     BPlusTree<int32_t, Warehouse *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> warehouses_;
     BPlusTree<int32_t, Stock *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> stock_;
-    BPlusTree<int32_t, Tuple<std::vector<uint8_t>> *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> stock_blitz_;
+    BPlusTree<int32_t, std::vector<uint8_t> *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> stock_blitz_;
     BPlusTree<int32_t, District *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> districts_;
     BPlusTree<int32_t, Customer *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> customers_;
-    BPlusTree<int32_t, Tuple<std::vector<uint8_t>> *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> customers_blitz_;
+    BPlusTree<int32_t, std::vector<uint8_t> *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> customers_blitz_;
     typedef std::set<Customer *, CustomerByNameOrdering> CustomerByNameSet;
     CustomerByNameSet customers_by_name_;
     BPlusTree<int32_t, Order *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> orders_;
     // TODO: Tune the size of this tree for the bigger keys?
     BPlusTree<int64_t, Order *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> orders_by_customer_;
     BPlusTree<int64_t, OrderLine *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> orderlines_;
-    BPlusTree<int64_t, Tuple<std::vector<uint8_t>> *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> orderlines_blitz_;
+    BPlusTree<int64_t, std::vector<uint8_t> *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> orderlines_blitz_;
     // TODO: Implement btree lower_bound?
     typedef std::map<int64_t, NewOrder *> NewOrderMap;
     NewOrderMap neworders_;
@@ -258,16 +256,6 @@ private:
     db_compress::RelationCompressor *customer_compressor_;
     db_compress::RelationDecompressor *customer_decompressor_;
     db_compress::AttrVector customer_buffer_;
-
-    uint32_t num_mem_stock = 0;
-    uint32_t num_disk_stock = 0;
-
-    uint32_t num_mem_orderline = 0;
-    uint32_t num_disk_orderline = 0;
-    Tuple<OrderLine> ol_tuple_buf_;
-
-    uint32_t num_mem_customer = 0;
-    uint32_t num_disk_customer = 0;
 };
 
 #endif

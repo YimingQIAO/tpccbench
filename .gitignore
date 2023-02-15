@@ -4,4 +4,3 @@ cmake-build-release
 workspace/*.csv
 workspace/*.blitz
 workspace/temp.index
-build

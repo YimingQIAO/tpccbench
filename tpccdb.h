@@ -4,20 +4,17 @@
 #include <cstdint>
 
 #include <cstring>
-#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-
-// one warehouse ~= 79 MB.
-const uint64_t kMemorySize = uint64_t(1024) * 1024 * 1024 * 0.079;
+#include <string>
 
 namespace tpcc {
-    // was used to select between various non-standard implementations: now use std
+// was used to select between various non-standard implementations: now use std
     template<typename T>
     class Set : public std::unordered_set<T> {
     };
-}// namespace tpcc
+}
 
 // get used size of char[]
 uint32_t stringSize(const char data[], uint32_t max_size);
@@ -107,8 +104,8 @@ struct Warehouse {
 struct District {
     static constexpr float MIN_TAX = 0;
     static constexpr float MAX_TAX = 0.2000f;
-    static constexpr float INITIAL_YTD = 30000.00;// different from Warehouse
-    static const int INITIAL_NEXT_O_ID = 3001;    // Order::INITIAL_ORDERS_PER_DISTRICT + 1;
+    static constexpr float INITIAL_YTD = 30000.00;  // different from Warehouse
+    static const int INITIAL_NEXT_O_ID = 3001; // Order::INITIAL_ORDERS_PER_DISTRICT + 1;
     static const int MIN_NAME = 6;
     static const int MAX_NAME = 10;
     static const int NUM_PER_WAREHOUSE = 10;
@@ -149,9 +146,6 @@ struct Stock {
     static const int MIN_DATA = 26;
     static const int MAX_DATA = 50;
     static const int NUM_STOCK_PER_WAREHOUSE = 100000;
-
-    constexpr static char TABLE_NAME[15] = "stock_disk.bin";
-    static const uint64_t MEMORY_THRESHOLD = kMemorySize / 328 * 0.95 * 0.411 * 5;
 
     int32_t s_quantity;
     int32_t s_ytd;
@@ -195,9 +189,6 @@ struct Customer {
     static const int NUM_PER_DISTRICT = 3000;
     static const char GOOD_CREDIT[];
     static const char BAD_CREDIT[];
-
-    constexpr static char TABLE_NAME[18] = "customer_disk.bin";
-    static const uint64_t MEMORY_THRESHOLD = kMemorySize * 0.95 * 0.258 / 688 * 5;
 
     int32_t c_id;
     int32_t c_d_id;
@@ -286,9 +277,6 @@ struct OrderLine {
     // new order has 10/1000 probability of selecting a remote warehouse for ol_supply_w_id
     static const int REMOTE_PROBABILITY_MILLIS = 10;
 
-    constexpr static char TABLE_NAME[19] = "orderline_disk.bin";
-    static const uint64_t MEMORY_THRESHOLD = kMemorySize / 88 * 0.95 * 0.331 * 5 + 200000 * 0.45 * 10;
-
     int32_t ol_i_id;
     float ol_amount;
     int32_t ol_number;
@@ -302,8 +290,7 @@ struct OrderLine {
 
     uint32_t size() {
         if (ol_delivery_d[0] == '0') return 8 * 4 + 20 + 25;
-        else
-            return 8 * 4 + 25;
+        else return 8 * 4 + 25;
     }
 };
 
@@ -354,7 +341,7 @@ struct History {
 // Data returned by the "order status" transaction.
 struct OrderStatusOutput {
     // From customer
-    int32_t c_id;// unclear if this needs to be returned
+    int32_t c_id;  // unclear if this needs to be returned
     float c_balance;
 
     // From order
