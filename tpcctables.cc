@@ -79,6 +79,10 @@ TPCCTables::~TPCCTables() {
     STLDeleteValues(&neworders_);
     STLDeleteElements(&customers_by_name_);
     STLDeleteElements(&history_);
+
+    std::cout << "# of stock tuples: " << num_mem_stock << " - " << num_disk_stock << "\n";
+    std::cout << "# of customer tuples: " << num_mem_customer << " - " << num_disk_stock << "\n";
+    std::cout << "# of orderline tuples: " << num_mem_orderline << " - " << num_disk_orderline << "\n";
 }
 
 int32_t TPCCTables::stockLevel(int32_t warehouse_id, int32_t district_id,
@@ -1450,6 +1454,15 @@ void TPCCTables::HistoryToCSV(int64_t num_warehouses) {
               << h->h_data << "\n";
     }
     his_f.close();
+}
+
+int64_t TPCCTables::diskTableSize(const std::string &file_name) {
+    if (file_name == "stock") return DiskTableSize<Stock>(stock_fd);
+    else if (file_name == "orderline") return DiskTableSize<OrderLine>(orderline_fd);
+    else if (file_name == "customer") return DiskTableSize<Customer>(customer_fd);
+    else {
+        throw std::runtime_error("Unknown file name");
+    }
 }
 
 int64_t TPCCTables::TableSize(const std::string &name) {

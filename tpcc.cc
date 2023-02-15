@@ -189,10 +189,6 @@ void tableSize(TPCCTables *tables, bool is_initial, bool is_compressed) {
     int64_t ini_stocks = tables->TableSize("stock");
     int64_t ini_history = tables->TableSize("history");
 
-    int64_t com_customers = tables->TableSize("customer blitz");
-    int64_t com_stock = tables->TableSize("stock blitz");
-    int64_t com_orderline = tables->TableSize("orderline blitz");
-
     if (is_initial && !is_compressed) {
         std::cout << "------------ Initial and uncompressed Size ------------ \n";
         std::cout << "Warehouse: " << ini_warehouses << " byte" << std::endl;
@@ -209,6 +205,10 @@ void tableSize(TPCCTables *tables, bool is_initial, bool is_compressed) {
                 ini_neworders + ini_items + ini_stocks + ini_history;
         std::cout << "Total: " << total << " byte" << std::endl;
     } else if (is_initial && is_compressed) {
+        int64_t com_customers = tables->TableSize("customer blitz");
+        int64_t com_stocks = tables->TableSize("stock blitz");
+        int64_t com_orderline = tables->TableSize("orderline blitz");
+
         std::cout << "------------ Initial but compressed Size ------------ \n";
         std::cout << "Warehouse: " << ini_warehouses << " byte" << std::endl;
         std::cout << "District: " << ini_districts << " byte" << std::endl;
@@ -222,7 +222,7 @@ void tableSize(TPCCTables *tables, bool is_initial, bool is_compressed) {
         std::cout << "NewOrder: " << ini_neworders << " byte" << std::endl;
         std::cout << "Item: " << ini_items << " byte" << std::endl;
         std::cout << "Stock: " << ini_stocks << " byte"
-                  << " --> " << com_stock << " byte"
+                  << " --> " << com_stocks << " byte"
                   << std::endl;
         std::cout << "History: " << ini_history << " byte" << std::endl;
         int64_t total =
@@ -233,19 +233,29 @@ void tableSize(TPCCTables *tables, bool is_initial, bool is_compressed) {
         ini_history = ini_history * 17 / 96;
         ini_orders = ini_orders * 12 / 61;
 
-        std::cout << "----------- After transactions Size ------------ \n";
+        int64_t com_customers = tables->TableSize("customer blitz");
+        int64_t com_stocks = tables->TableSize("stock blitz");
+        int64_t com_orderline = tables->TableSize("orderline blitz");
+
+        // disk size
+        int64_t disk_stock = tables->diskTableSize("stock");
+        int64_t disk_ol = tables->diskTableSize("orderline");
+        int64_t disk_c = tables->diskTableSize("customer");
+
+        std::cout << "------------ After Transaction Size ------------ \n";
+        std::cout << "[Table Name]: " << "[Memory Size] + [Disk Size]" << std::endl;
         std::cout << "Warehouse: " << ini_warehouses << " byte" << std::endl;
         std::cout << "District: " << ini_districts << " byte" << std::endl;
-        std::cout << "Customer: " << com_customers << " byte" << std::endl;
+        std::cout << "Customer: " << com_customers << " + " << disk_c << " byte" << std::endl;
         std::cout << "Order: " << ini_orders << " byte" << std::endl;
-        std::cout << "Orderline: " << com_orderline << " byte" << std::endl;
+        std::cout << "Orderline: " << com_orderline << " + " << disk_ol << " byte" << std::endl;
         std::cout << "NewOrder: " << ini_neworders << " byte" << std::endl;
         std::cout << "Item: " << ini_items << " byte" << std::endl;
-        std::cout << "Stock: " << com_stock << " byte" << std::endl;
+        std::cout << "Stock: " << com_stocks << " + " << disk_stock << " byte" << std::endl;
         std::cout << "History: " << ini_history << " byte" << std::endl;
         int64_t total =
                 ini_warehouses + ini_districts + com_customers + ini_orders + com_orderline +
-                ini_neworders + ini_items + com_stock + ini_history;
+                ini_neworders + ini_items + com_stocks + ini_history;
         std::cout << "Total: " << total << " byte" << std::endl;
     } else {
         std::cout << "Meaningless" << std::endl;

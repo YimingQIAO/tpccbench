@@ -175,6 +175,8 @@ public:
 
     void HistoryToCSV(int64_t num_warehouses);
 
+    int64_t diskTableSize(const std::string &file_name);
+
     static const int KEYS_PER_INTERNAL = 8;
     static const int KEYS_PER_LEAF = 8;
 
