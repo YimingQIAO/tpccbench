@@ -1392,57 +1392,38 @@ void TPCCTables::HistoryToCSV(int64_t num_warehouses) {
     his_f.close();
 }
 
-int64_t TPCCTables::itemSize() {
-    int64_t ret = 0;
-    for (Item &item: items_) ret += item.Size();
-    return ret;
+int64_t TPCCTables::TableSize(const std::string &name) {
+    if (name == "item") {
+        int64_t ret = 0;
+        for (Item &item: items_) ret += item.Size();
+        return ret;
+    } else if (name == "warehouse") {
+        return BTreeSize(&warehouses_);
+    } else if (name == "district") {
+        return BTreeSize(&districts_);
+    } else if (name == "stock") {
+        return BTreeSize(&stock_);
+    } else if (name == "stock blitz") {
+        return BTreeSize(&stock_blitz_);
+    } else if (name == "customer") {
+        return BTreeSize(&customers_);
+    } else if (name == "customer blitz") {
+        return BTreeSize(&customers_blitz_);
+    } else if (name == "order") {
+        return BTreeSize(&orders_);
+    } else if (name == "orderline") {
+        return BTreeSize(&orderlines_);
+    } else if (name == "orderline blitz") {
+        return BTreeSize(&orderlines_blitz_);
+    } else if (name == "newOrder") {
+        int64_t ret = 0;
+        for (auto &no: neworders_) ret += no.second->size();
+        return ret;
+    } else if (name == "history") {
+        int64_t ret = 0;
+        for (auto &h: history_) ret += h->size();
+        return ret;
+    } else {
+        throw std::runtime_error("Unknown table name: " + name);
+    }
 }
-
-int64_t TPCCTables::warehouseSize(int64_t num_warehouses) {
-    return BTreeSize(&warehouses_);
-}
-
-int64_t TPCCTables::districtSize(int64_t num_warehouses) {
-    return BTreeSize(&districts_);
-}
-
-int64_t TPCCTables::stockSize(int64_t num_warehouses) {
-    return BTreeSize(&stock_);
-}
-
-int64_t TPCCTables::stockBlitzSize(int64_t num_warehouses) {
-    return BTreeSize(&stock_blitz_);
-}
-
-int64_t TPCCTables::orderlineBlitzSize(int64_t num_warehouses, int64_t num_transactions) {
-    return BTreeSize(&orderlines_blitz_);
-}
-
-int64_t TPCCTables::orderSize(int64_t num_warehouses, int64_t num_transactions) {
-    return BTreeSize(&orders_);
-}
-
-int64_t TPCCTables::newOrderSize() {
-    int64_t ret = 0;
-    for (auto &no: neworders_) ret += no.second->size();
-    return ret;
-}
-
-int64_t TPCCTables::historySize() {
-    int64_t ret = 0;
-    for (auto &h: history_) ret += h->size();
-    return ret;
-}
-
-int64_t TPCCTables::customerSize(int64_t num_warehouses) {
-    return BTreeSize(&customers_);
-}
-
-int64_t TPCCTables::orderlineSize(int64_t num_warehouses, int64_t num_transactions) {
-    return BTreeSize(&orderlines_);
-}
-
-int64_t TPCCTables::customerBlitzSize(int64_t num_warehouses) {
-    return BTreeSize(&customers_blitz_);
-}
-

@@ -175,19 +175,19 @@ void welcome(int argc, const char *const *argv) {
 }
 
 void tableSize(TPCCTables *tables, bool is_initial, bool is_compressed) {
-    int64_t ini_warehouses = tables->warehouseSize(num_warehouses);
-    int64_t ini_districts = tables->districtSize(num_warehouses);
-    int64_t ini_customers = tables->customerSize(num_warehouses);
-    int64_t ini_orders = tables->orderSize(num_warehouses, 0);
-    int64_t ini_orderline = tables->orderlineSize(num_warehouses, 0);
-    int64_t ini_neworders = tables->newOrderSize();
-    int64_t ini_items = tables->itemSize();
-    int64_t ini_stocks = tables->stockSize(num_warehouses);
-    int64_t ini_history = tables->historySize();
+    int64_t ini_warehouses = tables->TableSize("warehouse");
+    int64_t ini_districts = tables->TableSize("district");
+    int64_t ini_customers = tables->TableSize("customer");
+    int64_t ini_orders = tables->TableSize("order");
+    int64_t ini_orderline = tables->TableSize("orderline");
+    int64_t ini_neworders = tables->TableSize("newOrder");
+    int64_t ini_items = tables->TableSize("item");
+    int64_t ini_stocks = tables->TableSize("stock");
+    int64_t ini_history = tables->TableSize("history");
 
-    int64_t com_customers = tables->customerBlitzSize(num_warehouses);
-    int64_t com_stock = tables->stockBlitzSize(num_warehouses);
-    int64_t com_orderline = tables->orderlineBlitzSize(num_warehouses, NUM_TRANSACTIONS);
+    int64_t com_customers = tables->TableSize("customer blitz");
+    int64_t com_stock = tables->TableSize("stock blitz");
+    int64_t com_orderline = tables->TableSize("orderline blitz");
 
     if (is_initial && !is_compressed) {
         std::cout << "------------ Initial and uncompressed Size ------------ \n";
