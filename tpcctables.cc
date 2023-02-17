@@ -1239,48 +1239,36 @@ void TPCCTables::MountCompressor(db_compress::RelationCompressor &compressor,
         orderline_decompressor_ = &decompressor;
 
         db_compress::AttrVector orderline(10);
-        for (int32_t i = 1; i <= num_warehouses; ++i) {
-            for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
-                for (int32_t k = 1; k <= Order::INITIAL_ORDERS_PER_DISTRICT; ++k) {
-                    for (int32_t l = 1; l <= Order::MAX_OL_CNT; ++l) {
-                        OrderLine *ol = findOrderLine(i, j, k, l);
-                        if (ol != nullptr) {
-                            orderlineToAttrVector(*ol, orderline);
-                            insertOrderLineBlitz(orderline, OrderLineBlitz::kNumAttrs);
-                        }
-                    }
-                }
-            }
+        int64_t key = std::numeric_limits<int64_t>::max();
+        OrderLine *value;
+        while (orderlines_.findLastLessThan(key, &value, &key)) {
+            if (value == nullptr) throw std::runtime_error("value is null in mount compressor");
+            orderlineToAttrVector(*value, orderline);
+            insertOrderLineBlitz(orderline, OrderLineBlitz::kNumAttrs);
         }
     } else if (table_name == "stock") {
         stock_compressor_ = &compressor;
         stock_decompressor_ = &decompressor;
 
         db_compress::AttrVector stock(7 + District::NUM_PER_WAREHOUSE);
-        for (int32_t i = 1; i <= num_warehouses; ++i) {
-            for (int32_t j = 1; j <= Stock::NUM_STOCK_PER_WAREHOUSE; ++j) {
-                Stock *s = findStock(i, j);
-                if (s != nullptr) {
-                    stockToAttrVector(*s, stock);
-                    insertStockBlitz(stock, StockBlitz::kNumAttrs);
-                }
-            }
+        int32_t key = std::numeric_limits<int32_t>::max();
+        Stock *value;
+        while (stock_.findLastLessThan(key, &value, &key)) {
+            if (value == nullptr) throw std::runtime_error("null value in mount compressor");
+            stockToAttrVector(*value, stock);
+            insertStockBlitz(stock, StockBlitz::kNumAttrs);
         }
     } else if (table_name == "customer") {
         customer_compressor_ = &compressor;
         customer_decompressor_ = &decompressor;
 
         db_compress::AttrVector customer(21);
-        for (int32_t i = 1; i <= num_warehouses; ++i) {
-            for (int32_t j = 1; j <= District::NUM_PER_WAREHOUSE; ++j) {
-                for (int32_t k = 1; k <= Customer::NUM_PER_DISTRICT; ++k) {
-                    Customer *c = findCustomer(i, j, k);
-                    if (c != nullptr) {
-                        customerToAttrVector(*c, customer);
-                        insertCustomerBlitz(customer, CustomerBlitz::kNumAttrs, false);
-                    }
-                }
-            }
+        int32_t key = std::numeric_limits<int32_t>::max();
+        Customer *value;
+        while (customers_.findLastLessThan(key, &value, &key)) {
+            if (value == nullptr) throw std::runtime_error("null value in mount compressor");
+            customerToAttrVector(*value, customer);
+            insertCustomerBlitz(customer, CustomerBlitz::kNumAttrs, false);
         }
     }
 }

@@ -63,7 +63,7 @@ namespace db_compress {
                                        const std::vector<size_t> &predictor_list, size_t target_var)
             : SquIDModel(predictor_list, target_var),
               predictor_interpreter_(predictor_list.size()),
-              target_range_(0),
+              target_range_(GetAttrInterpreter(target_var)->EnumCap()),
               model_cost_(0),
               dynamic_list_(GetPredictorCap(predictor_list)),
               dynamic_list_index_(predictor_list.size()) {
