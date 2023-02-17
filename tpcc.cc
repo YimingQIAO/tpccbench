@@ -64,6 +64,7 @@ int main(int argc, const char *argv[]) {
         }
         case Benchmark: {
             printf("Transforming %ld warehouses... ", num_warehouses);
+            fflush(stdout);
             begin = clock->getMicroseconds();
             // orderline
             {
@@ -114,6 +115,7 @@ int main(int argc, const char *argv[]) {
             }
             end = clock->getMicroseconds();
             printf("%" PRId64 " ms\n", (end - begin + 500) / 1000);
+            fflush(stdout);
             tableSize(tables, true, true);
 
             // Change the constants for run

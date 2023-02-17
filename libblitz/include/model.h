@@ -259,7 +259,7 @@ void RegisterAttrInterpreter(int attr_index, AttrInterpreter *interpreter);
  * @param attr_type attribute index
  * @return attribute interpreter
  */
-const AttrInterpreter *GetAttrInterpreter(int attr_type);
+const AttrInterpreter *GetAttrInterpreter(int attr_idx);
 
 /**
  * Given an attribute, capacity means the number of possible values. This
