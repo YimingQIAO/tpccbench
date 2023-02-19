@@ -164,6 +164,7 @@ public:
             for (int32_t s_id = 1; s_id <= Stock::NUM_STOCK_PER_WAREHOUSE; s_id++) {
                 Stock *stock = findStock(w_id, s_id, true);
                 if (stock == nullptr) throw std::runtime_error("Stock not found in StockToZstd");
+                if (samples.size() > 50 * Stock::NUM_STOCK_PER_WAREHOUSE) return;
                 samples.push_back(*stock);
                 sample_sizes.push_back(sizeof(Stock));
             }
@@ -176,8 +177,8 @@ public:
             for (int32_t d_id = 1; d_id <= District::NUM_PER_WAREHOUSE; d_id++) {
                 for (int32_t c_id = 1; c_id <= Customer::NUM_PER_DISTRICT; c_id++) {
                     Customer *customer = findCustomer(w_id, d_id, c_id, true);
-                    if (customer == nullptr)
-                        throw std::runtime_error("Customer not found in CustomerToZstd");
+                    if (customer == nullptr) throw std::runtime_error("Customer not found in CustomerToZstd");
+                    if (samples.size() > 50 * District::NUM_PER_WAREHOUSE * Customer::NUM_PER_DISTRICT) return;
                     samples.push_back(*customer);
                     sample_sizes.push_back(sizeof(Customer));
                 }
@@ -191,8 +192,8 @@ public:
             for (int32_t d_id = 1; d_id <= District::NUM_PER_WAREHOUSE; d_id++) {
                 for (int32_t o_id = 1; o_id <= Order::INITIAL_ORDERS_PER_DISTRICT; o_id++) {
                     Order *order = findOrder(w_id, d_id, o_id, true);
-                    if (order == nullptr)
-                        throw std::runtime_error("Order not found in OrderToZstd");
+                    if (order == nullptr) throw std::runtime_error("Order not found in OrderToZstd");
+                    if (samples.size() > 50 * District::NUM_PER_WAREHOUSE * Order::INITIAL_ORDERS_PER_DISTRICT) return;
                     samples.push_back(*order);
                     sample_sizes.push_back(sizeof(Order));
                 }
@@ -208,6 +209,9 @@ public:
                     for (int32_t ol_number = 1; ol_number <= Order::MAX_OL_CNT; ol_number++) {
                         OrderLine *orderline = findOrderLine(w_id, d_id, o_id, ol_number, true);
                         if (orderline == nullptr) break;
+                        if (samples.size() >
+                            50 * District::NUM_PER_WAREHOUSE * Order::INITIAL_ORDERS_PER_DISTRICT * Order::MAX_OL_CNT)
+                            return;
                         samples.push_back(*orderline);
                         sample_sizes.push_back(sizeof(OrderLine));
                     }
