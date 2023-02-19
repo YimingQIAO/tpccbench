@@ -20,6 +20,10 @@ add_executable(randomgenerator_test randomgenerator.cc stupidunit.cc)
 add_executable(tpccclient_test tpccclient.cc randomgenerator.cc stupidunit.cc)
 add_executable(tpcctables_test tpcctables.cc tpccdb.cc randomgenerator.cc stupidunit.cc)
 add_executable(tpccgenerator_test tpccgenerator.cc tpcctables.cc tpccdb.cc randomgenerator.cc stupidunit.cc)
-add_executable(tpcc tpcc.cc tpccclient.cc tpccgenerator.cc tpcctables.cc tpccdb.cc clock.cc randomgenerator.cc stupidunit.cc disk_storage.h)
+add_executable(tpcc tpcc.cc tpccclient.cc tpccgenerator.cc tpcctables.cc tpccdb.cc clock.cc randomgenerator.cc stupidunit.cc disk_storage.h tpcc_zstd.h)
 add_executable(disk_storage_test disk_storage.h disk_storage_test.cc)
 
+# add zstd
+include_directories(libzstd)
+find_library(ZSTD_LIB zstd libzstd)
+target_link_libraries(tpcc LINK_PUBLIC ${ZSTD_LIB})

@@ -16,6 +16,9 @@
 #include "tpcctables.h"
 
 static const int NUM_TRANSACTIONS = 200000;
+static const int kDictCapacity = 5 * 110 * 1024;
+static const int kCompressLevel = 3;
+
 enum Mode {
     GenerateCSV,
     Benchmark
@@ -63,6 +66,100 @@ int main(int argc, const char *argv[]) {
             break;
         }
         case Benchmark: {
+            printf("Load Compressor...");
+            fflush(stdout);
+            // stock
+            {
+                std::vector<Stock> samples;
+                std::vector<size_t> sample_sizes;
+                tables->StockToZstd(num_warehouses, samples, sample_sizes);
+                void *dict_buffer = malloc_orDie(kDictCapacity);
+                size_t dict_size = ZDICT_trainFromBuffer(dict_buffer, kDictCapacity,
+                                                         samples.data(), sample_sizes.data(),
+                                                         samples.size());
+                if (ZDICT_isError(dict_size)) {
+                    std::cout << "Error: " << ZDICT_getErrorName(dict_size) << std::endl;
+                    exit(1);
+                }
+                ZSTD_CDict_s *stock_cdict = ZSTD_createCDict(dict_buffer, dict_size,
+                                                             kCompressLevel);
+                ZSTD_DDict_s *stock_ddict = ZSTD_createDDict(dict_buffer, dict_size);
+                tables->MountCompression(stock_cdict, stock_ddict, "stock");
+            }
+            // orderline
+            {
+                std::vector<OrderLine> samples;
+                std::vector<size_t> sample_sizes;
+                tables->OrderlineToZstd(num_warehouses, samples, sample_sizes);
+                void *dict_buffer = malloc_orDie(kDictCapacity);
+                size_t dict_size = ZDICT_trainFromBuffer(dict_buffer, kDictCapacity,
+                                                         samples.data(), sample_sizes.data(),
+                                                         samples.size());
+                if (ZDICT_isError(dict_size)) {
+                    std::cout << "Error: " << ZDICT_getErrorName(dict_size) << std::endl;
+                    exit(1);
+                }
+                ZSTD_CDict_s *orderline_cdict = ZSTD_createCDict(dict_buffer, dict_size,
+                                                                 kCompressLevel);
+                ZSTD_DDict_s *orderline_ddict = ZSTD_createDDict(dict_buffer, dict_size);
+                tables->MountCompression(orderline_cdict, orderline_ddict, "orderline");
+            }
+            // customer
+            {
+                std::vector<Customer> samples;
+                std::vector<size_t> sample_sizes;
+                tables->CustomerToZstd(num_warehouses, samples, sample_sizes);
+                void *dict_buffer = malloc_orDie(kDictCapacity);
+                size_t dict_size = ZDICT_trainFromBuffer(dict_buffer, kDictCapacity,
+                                                         samples.data(), sample_sizes.data(),
+                                                         samples.size());
+                if (ZDICT_isError(dict_size)) {
+                    std::cout << "Error: " << ZDICT_getErrorName(dict_size) << std::endl;
+                    exit(1);
+                }
+                ZSTD_CDict_s *customer_cdict = ZSTD_createCDict(dict_buffer, dict_size,
+                                                                kCompressLevel);
+                ZSTD_DDict_s *customer_ddict = ZSTD_createDDict(dict_buffer, dict_size);
+                tables->MountCompression(customer_cdict, customer_ddict, "customer");
+            }
+            // history
+            {
+                std::vector<History> samples;
+                std::vector<size_t> sample_sizes;
+                tables->HistoryToZstd(samples, sample_sizes);
+                void *dict_buffer = malloc_orDie(kDictCapacity);
+                size_t dict_size = ZDICT_trainFromBuffer(dict_buffer, kDictCapacity,
+                                                         samples.data(), sample_sizes.data(),
+                                                         samples.size());
+                if (ZDICT_isError(dict_size)) {
+                    std::cout << "Error: " << ZDICT_getErrorName(dict_size) << std::endl;
+                    exit(1);
+                }
+                ZSTD_CDict_s *history_cdict = ZSTD_createCDict(dict_buffer, dict_size,
+                                                               kCompressLevel);
+                ZSTD_DDict_s *history_ddict = ZSTD_createDDict(dict_buffer, dict_size);
+                tables->MountCompression(history_cdict, history_ddict, "history");
+            }
+            // order
+            {
+                std::vector<Order> samples;
+                std::vector<size_t> sample_sizes;
+                tables->OrderToZstd(num_warehouses, samples, sample_sizes);
+                void *dict_buffer = malloc_orDie(kDictCapacity);
+                size_t dict_size = ZDICT_trainFromBuffer(dict_buffer, kDictCapacity,
+                                                         samples.data(), sample_sizes.data(),
+                                                         samples.size());
+                if (ZDICT_isError(dict_size)) {
+                    std::cout << "Error: " << ZDICT_getErrorName(dict_size) << std::endl;
+                    exit(1);
+                }
+                ZSTD_CDict_s *order_cdict = ZSTD_createCDict(dict_buffer, dict_size,
+                                                             kCompressLevel);
+                ZSTD_DDict_s *order_ddict = ZSTD_createDDict(dict_buffer, dict_size);
+                tables->MountCompression(order_cdict, order_ddict, "order");
+            }
+            printf("Done\n");
+
             // Change the constants for run
             random = new tpcc::RealRandomGenerator();
             random->setC(tpcc::NURandC::makeRandomForRun(random, cLoad));

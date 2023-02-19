@@ -4,12 +4,13 @@
 #include <stdint.h>
 #include <cstring>
 #include <string>
+#include <sstream>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
 // one warehouse ~= 79 MB.
-const uint64_t kMemorySize = uint64_t(1024) * 1024 * 1024 * 0.079;
+const uint64_t kMemorySize = uint64_t(1024) * 1024 * 1024 * 100;
 
 namespace tpcc {
 // was used to select between various non-standard implementations: now use std
@@ -170,6 +171,34 @@ struct Stock {
             ret += stringSize(s_dist[i], DIST + 1);
         ret += stringSize(s_data, MAX_DATA + 1);
         return ret;
+    }
+
+    std::string toString() {
+        std::string ret;
+        ret += std::to_string(s_i_id) + " ";
+        ret += std::to_string(s_w_id) + " ";
+        ret += std::to_string(s_quantity) + " ";
+        ret += std::to_string(s_ytd) + " ";
+        ret += std::to_string(s_order_cnt) + " ";
+        ret += std::to_string(s_remote_cnt) + " ";
+        for (auto &dist: s_dist) {
+            ret += dist;
+            ret += " ";
+        }
+        ret += s_data;
+        return ret;
+    }
+
+    void fromString(const std::string &str) {
+        std::stringstream ss(str);
+        ss >> s_i_id;
+        ss >> s_w_id;
+        ss >> s_quantity;
+        ss >> s_ytd;
+        ss >> s_order_cnt;
+        ss >> s_remote_cnt;
+        for (auto &dist: s_dist) ss >> dist;
+        ss >> s_data;
     }
 };
 

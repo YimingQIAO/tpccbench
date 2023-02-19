@@ -13,17 +13,16 @@ using std::vector;
 
 TPCCClient::TPCCClient(Clock *clock, tpcc::RandomGenerator *generator, TPCCDB *db, int num_items,
                        int num_warehouses, int districts_per_warehouse, int customers_per_district)
-        :
-        clock_(clock),
-        generator_(generator),
-        db_(db),
-        num_items_(num_items),
-        num_warehouses_(num_warehouses),
-        districts_per_warehouse_(districts_per_warehouse),
-        customers_per_district_(customers_per_district),
-        remote_item_milli_p_(OrderLine::REMOTE_PROBABILITY_MILLIS),
-        bound_warehouse_(0),
-        bound_district_(0) {
+        : clock_(clock),
+          generator_(generator),
+          db_(db),
+          num_items_(num_items),
+          num_warehouses_(num_warehouses),
+          districts_per_warehouse_(districts_per_warehouse),
+          customers_per_district_(customers_per_district),
+          remote_item_milli_p_(OrderLine::REMOTE_PROBABILITY_MILLIS),
+          bound_warehouse_(0),
+          bound_district_(0) {
     ASSERT(clock_ != NULL);
     ASSERT(generator_ != NULL);
     ASSERT(db_ != NULL);

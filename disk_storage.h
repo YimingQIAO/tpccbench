@@ -10,11 +10,6 @@
 #include <vector>
 
 
-#if __linux__
-
-#define BLOCKSIZE 4096
-#define DIRECT_IO_BUFFER_SIZE 4096
-
 template<class T>
 struct Tuple {
     bool in_memory_;
@@ -23,6 +18,11 @@ struct Tuple {
 
     Tuple() : in_memory_(false), data_(), id_pos_(-1) {}
 };
+
+#if __linux__
+
+#define BLOCKSIZE 4096
+#define DIRECT_IO_BUFFER_SIZE 4096
 
 /**
  * This is a write buffer for sequence io.
@@ -79,7 +79,7 @@ static inline void DiskTupleWrite(int fd, T *data, int64_t pos) {
 template<typename T>
 static inline void SeqDiskTupleWrite(int fd, T *data) {
 #if __APPLE__
-    int64_t ret = pwrite(fd, data, sizeof(T));
+    int64_t ret = write(fd, data, sizeof(T));
     if (ret < 0) throw std::runtime_error("write error in SeqDiskTupleWrite");
 #elif __linux__
     // get write buffer of fd.

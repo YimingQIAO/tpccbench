@@ -43,7 +43,7 @@ int main(int argc, const char *argv[]) {
     printf("%d ms\n", int(duration / 1e3));
 
     fd = DirectIOFile("test.txt");
-    printf("Size: %ld byte\n", DiskTableSize<Person>(fd));
+    printf("Size: %lld byte\n", DiskTableSize<Person>(fd));
     remove("test.txt");
     return 0;
 }

@@ -255,7 +255,7 @@ void TPCCGenerator::makeStock(TPCCTables *tables, int32_t w_id) {
             bool is_original = selected_rows.find(i) != selected_rows.end();
             int32_t s_id = (i - 1) * scaling + j;
             generateStock(s_id, w_id, is_original, &s);
-            tables->insertStock(s);
+            tables->insertStock(s, true);
         }
     }
 }
@@ -282,11 +282,11 @@ void TPCCGenerator::makeWarehouseWithoutStock(TPCCTables *tables, int32_t w_id) 
             Customer c;
             bool bad_credit = selected_rows.find(c_id) != selected_rows.end();
             generateCustomer(c_id, d_id, w_id, bad_credit, &c);
-            tables->insertCustomer(c);
+            tables->insertCustomer(c, true);
 
             History h;
             generateHistory(c_id, d_id, w_id, &h);
-            tables->insertHistory(h);
+            tables->insertHistory(h, true);
         }
 
         // TODO: TPC-C 4.3.3.1. says that this should be a permutation of [1, 3000]. But since it is
@@ -298,13 +298,13 @@ void TPCCGenerator::makeWarehouseWithoutStock(TPCCTables *tables, int32_t w_id) 
             bool new_order = customers_per_district_ - new_orders_per_district_ < o_id;
             Order o;
             generateOrder(o_id, permutation[o_id - 1], d_id, w_id, new_order, &o);
-            tables->insertOrder(o);
+            tables->insertOrder(o, true);
 
             // Generate each OrderLine for the order
             for (int ol_number = 1; ol_number <= o.o_ol_cnt; ++ol_number) {
                 OrderLine line;
                 generateOrderLine(ol_number, o_id, d_id, w_id, new_order, &line);
-                tables->insertOrderLine(line);
+                tables->insertOrderLine(line, true);
             }
 
             if (new_order) {
