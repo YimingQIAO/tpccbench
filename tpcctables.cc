@@ -789,8 +789,8 @@ Stock *TPCCTables::findStock(int32_t w_id, int32_t s_id, bool is_orig) {
         int32_t key = makeStockKey(w_id, s_id);
         Tuple<std::string> *tuple = find(stock_zstd, key);
         if (tuple) {
-            if (!tuple->in_memory_) DiskTupleRead(stock_fd, &tuple->data_, tuple->id_pos_);
-            ZstdDecompress<Stock>(ddict_stock, &stock_zstd_buf_, tuple->data_);
+            if (!tuple->in_memory_) DiskTupleRead(stock_fd, &stock_zstd_buf_, tuple->id_pos_);
+            else ZstdDecompress<Stock>(ddict_stock, &stock_zstd_buf_, tuple->data_);
             return &stock_zstd_buf_;
         }
         return nullptr;
@@ -851,8 +851,8 @@ Customer *TPCCTables::findCustomer(int32_t w_id, int32_t d_id, int32_t c_id, boo
         int32_t key = makeCustomerKey(w_id, d_id, c_id);
         Tuple<std::string> *tuple = find(customer_zstd, key);
         if (tuple) {
-            if (!tuple->in_memory_) DiskTupleRead(customer_fd, &tuple->data_, tuple->id_pos_);
-            ZstdDecompress(ddict_c, &customer_zstd_buf_, tuple->data_);
+            if (!tuple->in_memory_) DiskTupleRead(customer_fd, &customer_zstd_buf_, tuple->id_pos_);
+            else ZstdDecompress(ddict_c, &customer_zstd_buf_, tuple->data_);
             return &customer_zstd_buf_;
         }
         return nullptr;
@@ -992,8 +992,7 @@ OrderLine *TPCCTables::insertOrderLine(const OrderLine &orderline, bool is_orig)
             num_mem_orderline++;
         } else {
             ol_tuple_buf_.id_pos_ = num_disk_orderline;
-            std::string compressed = ZstdCompress(cdict_ol, &orderline);
-            SeqDiskTupleWrite(orderline_fd, &compressed);
+            SeqDiskTupleWrite(orderline_fd, &orderline);
             num_disk_orderline++;
         }
         int64_t key = makeOrderLineKey(orderline.ol_w_id, orderline.ol_d_id, orderline.ol_o_id,
@@ -1015,8 +1014,8 @@ OrderLine *TPCCTables::findOrderLine(int32_t w_id, int32_t d_id, int32_t o_id, i
         int64_t key = makeOrderLineKey(w_id, d_id, o_id, number);
         Tuple<std::string> *tuple = find(ol_zstd, key);
         if (tuple) {
-            if (!tuple->in_memory_) DiskTupleRead(orderline_fd, &tuple->data_, tuple->id_pos_);
-            ZstdDecompress(ddict_ol, &ol_zstd_buf_, tuple->data_);
+            if (!tuple->in_memory_) DiskTupleRead(orderline_fd, &ol_zstd_buf_, tuple->id_pos_);
+            else ZstdDecompress(ddict_ol, &ol_zstd_buf_, tuple->data_);
             return &ol_zstd_buf_;
         }
         return nullptr;

@@ -10,7 +10,7 @@
 #include <vector>
 
 // one warehouse ~= 79 MB.
-const uint64_t kMemorySize = uint64_t(1024) * 1024 * 1024 * 100;
+const uint64_t kMemorySize = uint64_t(1024) * 1024 * 1024 * 0.01;
 
 namespace tpcc {
 // was used to select between various non-standard implementations: now use std

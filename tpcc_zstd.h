@@ -18,14 +18,15 @@ static std::string ZstdCompress(ZSTD_CDict_s *cdict, T *src) {
     std::string code_buffer(code_capacity, '\0');
     size_t code_size = ZSTD_compress_usingCDict(cctx, code_buffer.data(), code_capacity,
                                                 src, sizeof(T), cdict);
-    CHECK_ZSTD(code_size);
     return code_buffer.substr(0, code_size);
 }
 
 template<typename T>
 static void ZstdDecompress(ZSTD_DDict_s *ddict, T *data, std::string &src) {
     int ret = ZSTD_decompress_usingDDict(dctx, data, sizeof(T), src.data(), src.size(), ddict);
-    CHECK_ZSTD(ret);
+    if (ret < 0) {
+        CHECK_ZSTD(ret);
+    }
 }
 
 #endif //TPCC_TPCC_ZSTD_H
