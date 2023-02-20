@@ -203,11 +203,26 @@ public:
 
     void HistoryToRaman(std::vector<std::vector<std::string>> &samples) {
         for (const History *h: history_) samples.push_back(h->toRamanFormat());
-
     }
 
     void MountCompression(RamanCompressor *forest, const std::string &table_name);
-    
+
+    inline uint32_t RamanDictSize(const std::string &name) {
+        if (name == "stock") {
+            return forest_stock_->Size() + block_stock_.Size();
+        } else if (name == "customer") {
+            return forest_customer_->Size() + block_customer_.Size();
+        } else if (name == "order") {
+            return forest_order_->Size() + block_order_.Size();
+        } else if (name == "orderline") {
+            return forest_orderline_->Size() + block_orderline_.Size();
+        } else if (name == "history") {
+            return forest_history_->Size() + block_history_.Size();
+        } else {
+            throw std::runtime_error("Unknown table name");
+        }
+    }
+
     static const int KEYS_PER_INTERNAL = 8;
     static const int KEYS_PER_LEAF = 8;
 

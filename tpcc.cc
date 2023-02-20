@@ -15,7 +15,7 @@
 #include "tpccgenerator.h"
 #include "tpcctables.h"
 
-static const int NUM_TRANSACTIONS = 200000;
+static const int NUM_TRANSACTIONS = 30000;
 
 enum Mode {
     GenerateCSV,
@@ -186,19 +186,28 @@ void tableSize(TPCCTables *tables) {
     int64_t disk_ol = tables->diskTableSize("orderline");
     int64_t disk_c = tables->diskTableSize("customer");
 
+    // raman dict size
+    int64_t dict_stock = tables->RamanDictSize("stock");
+    int64_t dict_customer = tables->RamanDictSize("customer");
+    int64_t dict_order = tables->RamanDictSize("order");
+    int64_t dict_orderline = tables->RamanDictSize("orderline");
+    int64_t dict_history = tables->RamanDictSize("history");
+
     std::cout << "------------ After Transaction Size ------------ \n";
     std::cout << "[Table Name]: " << "[Memory Size] + [Disk Size]" << std::endl;
     std::cout << "Warehouse: " << ini_warehouses << " byte" << std::endl;
     std::cout << "District: " << ini_districts << " byte" << std::endl;
-    std::cout << "Customer: " << ini_customers << " + " << disk_c << " byte" << std::endl;
-    std::cout << "Order: " << ini_orders << " byte" << std::endl;
-    std::cout << "Orderline: " << ini_orderline << " + " << disk_ol << " byte" << std::endl;
+    std::cout << "Customer: " << ini_customers << " + " << disk_c << " + " << dict_customer << " byte" << std::endl;
+    std::cout << "Order: " << ini_orders << " byte" << " + " << dict_order << std::endl;
+    std::cout << "Orderline: " << ini_orderline << " + " << disk_ol << " + " << dict_orderline << " byte" << std::endl;
     std::cout << "NewOrder: " << ini_neworders << " byte" << std::endl;
     std::cout << "Item: " << ini_items << " byte" << std::endl;
-    std::cout << "Stock: " << ini_stocks << " + " << disk_stock << " byte" << std::endl;
-    std::cout << "History: " << ini_history << " byte" << std::endl;
+    std::cout << "Stock: " << ini_stocks << " + " << disk_stock << " + " << dict_stock << " byte" << std::endl;
+    std::cout << "History: " << ini_history << " + " << dict_history << " byte" << std::endl;
     int64_t total =
-            ini_warehouses + ini_districts + ini_customers + ini_orders + ini_orderline +
-            ini_neworders + ini_items + ini_stocks + ini_history;
+            ini_warehouses + ini_districts + ini_customers + ini_orders + ini_orderline + ini_neworders + ini_items +
+            ini_stocks + ini_history +
+            disk_stock + disk_c + disk_ol +
+            dict_history + dict_order + dict_orderline + dict_stock + dict_customer;
     std::cout << "Total: " << total << " byte" << std::endl;
 }

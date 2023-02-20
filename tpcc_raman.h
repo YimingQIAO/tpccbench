@@ -69,14 +69,14 @@ static void RamanDecompress(RamanCompressor *compressor, T *sample, BitStream &b
 template<typename T>
 class RamanTupleBuffer {
 public:
-    const size_t kBufferSize = 8;
+    const size_t kBufferSize = 1024;
 
     RamanTupleBuffer() : n_tuple(0), keys_(kBufferSize) {}
 
-    ~RamanTupleBuffer() {
+    inline uint32_t Size(){
         uint32_t raman_dict_size = 0;
         for (auto &compressor: compressors_) raman_dict_size += compressor.Size();
-        std::cout << "Raman Dict (buffer) Size: " << raman_dict_size << std::endl;
+        return raman_dict_size;
     }
 
     inline void Append(const T &sample, int64_t key) {

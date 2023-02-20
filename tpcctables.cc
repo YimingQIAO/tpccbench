@@ -97,13 +97,6 @@ TPCCTables::~TPCCTables() {
     std::cout << "# of stock: " << num_mem_stock << " - " << num_disk_stock << std::endl;
     std::cout << "# of orderline: " << num_mem_orderline << " - " << num_disk_orderline
               << std::endl;
-
-    uint32_t raman_dict_size = 0;
-    if (forest_customer_) raman_dict_size += forest_customer_->Size();
-    if (forest_order_) raman_dict_size += forest_order_->Size();
-    if (forest_orderline_) raman_dict_size += forest_orderline_->Size();
-    if (forest_stock_) raman_dict_size += forest_stock_->Size();
-    std::cout << "Raman Dict (Base) Size: " << raman_dict_size << std::endl;
 }
 
 int32_t TPCCTables::stockLevel(int32_t warehouse_id, int32_t district_id, int32_t threshold) {
