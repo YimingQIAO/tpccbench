@@ -10,7 +10,7 @@
 #include <vector>
 
 // one warehouse ~= 79 MB.
-const uint64_t kMemorySize = uint64_t(1024) * 1024 * 1024 * 100;
+const uint64_t kMemorySize = uint64_t(1024) * 1024 * 1024 * 32;
 
 namespace tpcc {
 // was used to select between various non-standard implementations: now use std
@@ -153,7 +153,7 @@ struct Stock {
 
     constexpr static char TABLE_NAME[15] = "stock_disk.bin";
     // static const uint32_t MEMORY_THRESHOLD = 100000 * kNumWarehouse * 1;
-    static const uint64_t MEMORY_THRESHOLD = kMemorySize / 328 * 0.95 * 0.411 * 2;
+    static const uint64_t MEMORY_THRESHOLD = kMemorySize / 328 * 0.95 * 0.411 * 2.7;
 
     int32_t s_i_id;
     int32_t s_w_id;
@@ -226,7 +226,7 @@ struct Customer {
 
     constexpr static char TABLE_NAME[18] = "customer_disk.bin";
     // static const uint32_t MEMORY_THRESHOLD = kNumWarehouse * 10 * 3000;
-    static const uint64_t MEMORY_THRESHOLD = kMemorySize * 0.95 * 0.258 / 688 * 2;
+    static const uint64_t MEMORY_THRESHOLD = kMemorySize * 0.95 * 0.258 / 688 * 2.7;
 
     int32_t c_id;
     int32_t c_d_id;
@@ -377,7 +377,7 @@ struct OrderLine {
 
     constexpr static char TABLE_NAME[19] = "orderline_disk.bin";
     // static const uint32_t MEMORY_THRESHOLD = (kNumWarehouse * 10 * 3000 * 10 + kNumTransactions * 0.45 * 10);
-    static const uint64_t MEMORY_THRESHOLD = kMemorySize / 88 * 0.95 * 0.331 * 2 + 30000 * 0.45 * 10;
+    static const uint64_t MEMORY_THRESHOLD = kMemorySize / 88 * 0.95 * 0.331 * 2.7 + 30000 * 0.45 * 10;
 
     int32_t ol_o_id;
     int32_t ol_d_id;

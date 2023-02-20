@@ -4,7 +4,6 @@
 
 #define __STDC_FORMAT_MACROS
 
-#include <chrono>
 #include <cinttypes>
 #include <climits>
 #include <cstdio>
