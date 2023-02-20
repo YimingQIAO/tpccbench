@@ -4,6 +4,7 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <limits>
 
 #include "btree.h"
 #include "tpccdb.h"
@@ -206,8 +207,7 @@ public:
     }
 
     void MountCompression(RamanCompressor *forest, const std::string &table_name);
-
-
+    
     static const int KEYS_PER_INTERNAL = 8;
     static const int KEYS_PER_LEAF = 8;
 

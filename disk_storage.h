@@ -147,7 +147,7 @@ static inline int64_t DiskTableSize(int fd) {
             case EFAULT:
                 throw std::runtime_error("std buffer is outside of your accessible address space");
             default:
-                throw std::runtime_error("fstat error in DiskTableSize");
+                return 0;
         }
     } else {
 #if __APPLE__

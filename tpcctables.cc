@@ -152,7 +152,7 @@ int32_t TPCCTables::stockLevel(int32_t warehouse_id, int32_t district_id, int32_
             }
 
             // Check if s_quantity < threshold
-            Stock *stock = findStock(warehouse_id, line->ol_i_id, true);
+            Stock *stock = findStock(warehouse_id, line->ol_i_id, false);
             if (stock->s_quantity < threshold) {
                 s_i_ids.push_back(line->ol_i_id);
             }
@@ -176,7 +176,7 @@ int32_t TPCCTables::stockLevel(int32_t warehouse_id, int32_t district_id, int32_
 void TPCCTables::orderStatus(int32_t warehouse_id, int32_t district_id, int32_t customer_id,
                              OrderStatusOutput *output) {
     //~ printf("order status %d %d %d\n", warehouse_id, district_id, customer_id);
-    internalOrderStatus(findCustomer(warehouse_id, district_id, customer_id, true), output);
+    internalOrderStatus(findCustomer(warehouse_id, district_id, customer_id, false), output);
 }
 
 void TPCCTables::orderStatus(int32_t warehouse_id, int32_t district_id, const char *c_last,
@@ -251,9 +251,9 @@ bool TPCCTables::newOrderHome(int32_t warehouse_id, int32_t district_id, int32_t
     District *d = findDistrict(warehouse_id, district_id);
     output->d_tax = d->d_tax;
     output->o_id = d->d_next_o_id;
-    assert(findOrder(warehouse_id, district_id, output->o_id, true) == NULL);
+    assert(findOrder(warehouse_id, district_id, output->o_id, false) == NULL);
 
-    Customer *c = findCustomer(warehouse_id, district_id, customer_id, true);
+    Customer *c = findCustomer(warehouse_id, district_id, customer_id, false);
     assert(sizeof(output->c_last) == sizeof(c->c_last));
     memcpy(output->c_last, c->c_last, sizeof(output->c_last));
     memcpy(output->c_credit, c->c_credit, sizeof(output->c_credit));
@@ -299,7 +299,7 @@ bool TPCCTables::newOrderHome(int32_t warehouse_id, int32_t district_id, int32_t
     order.o_all_local = all_local ? 1 : 0;
     strcpy(order.o_entry_d, now);
     assert(strlen(order.o_entry_d) == DATETIME_SIZE);
-    Order *o = insertOrder(order, true, true);
+    Order *o = insertOrder(order, false, true);
     NewOrder *no = insertNewOrder(warehouse_id, district_id, output->o_id);
     if (undo != NULL) {
         (*undo)->inserted(o);
@@ -324,7 +324,7 @@ bool TPCCTables::newOrderHome(int32_t warehouse_id, int32_t district_id, int32_t
         // these columns are replicated everywhere.
         // TODO: I think this is unrealistic, since it will occupy ~23 MB per warehouse on all
         // replicas. Try the "two round" version in the future.
-        Stock *stock = findStock(items[i].ol_supply_w_id, items[i].i_id, true);
+        Stock *stock = findStock(items[i].ol_supply_w_id, items[i].i_id, false);
         assert(sizeof(line.ol_dist_info) == sizeof(stock->s_dist[district_id]));
         memcpy(line.ol_dist_info, stock->s_dist[district_id], sizeof(line.ol_dist_info));
         // Since we *need* to replicate s_dist_xx columns, might as well replicate s_data
@@ -381,7 +381,7 @@ bool TPCCTables::newOrderRemote(int32_t home_warehouse, int32_t remote_warehouse
         }
 
         // update stock
-        Stock *stock = findStock(items[i].ol_supply_w_id, items[i].i_id, true);
+        Stock *stock = findStock(items[i].ol_supply_w_id, items[i].i_id, false);
         if (undo != NULL) {
             (*undo)->save(stock);
         }
@@ -422,7 +422,7 @@ void TPCCTables::payment(int32_t warehouse_id, int32_t district_id, int32_t c_wa
                          const char *now,
                          PaymentOutput *output, TPCCUndo **undo) {
     //~ printf("payment %d %d %d %d %d %f %s\n", warehouse_id, district_id, c_warehouse_id, c_district_id, customer_id, h_amount, now);
-    Customer *customer = findCustomer(c_warehouse_id, c_district_id, customer_id, true);
+    Customer *customer = findCustomer(c_warehouse_id, c_district_id, customer_id, false);
     paymentHome(warehouse_id, district_id, c_warehouse_id, c_district_id, customer_id, h_amount,
                 now, output, undo);
     internalPaymentRemote(warehouse_id, district_id, customer, h_amount, output, undo);
@@ -463,7 +463,7 @@ void TPCCTables::paymentRemote(int32_t warehouse_id, int32_t district_id, int32_
                                int32_t c_district_id, int32_t c_id, float h_amount,
                                PaymentOutput *output,
                                TPCCUndo **undo) {
-    Customer *customer = findCustomer(c_warehouse_id, c_district_id, c_id, true);
+    Customer *customer = findCustomer(c_warehouse_id, c_district_id, c_id, false);
     internalPaymentRemote(warehouse_id, district_id, customer, h_amount, output, undo);
     zeroWarehouseDistrict(output);
 }
@@ -508,7 +508,7 @@ void TPCCTables::paymentHome(int32_t warehouse_id, int32_t district_id, int32_t 
     strcpy(h.h_data, w->w_name);
     strcat(h.h_data, "    ");
     strcat(h.h_data, d->d_name);
-    History *history = insertHistory(h, true, true);
+    History *history = insertHistory(h, false, true);
     if (undo != NULL) {
         (*undo)->inserted(history);
     }
@@ -611,7 +611,7 @@ void TPCCTables::delivery(int32_t warehouse_id, int32_t carrier_id, const char *
         order.o_id = o_id;
         orders->push_back(order);
 
-        Order *o = findOrder(warehouse_id, d_id, o_id, true);
+        Order *o = findOrder(warehouse_id, d_id, o_id, false);
         assert(o->o_carrier_id == Order::NULL_CARRIER_ID);
         if (undo != NULL) {
             (*undo)->save(o);
@@ -631,7 +631,7 @@ void TPCCTables::delivery(int32_t warehouse_id, int32_t carrier_id, const char *
             total += line->ol_amount;
         }
 
-        Customer *c = findCustomer(warehouse_id, d_id, o->o_c_id, true);
+        Customer *c = findCustomer(warehouse_id, d_id, o->o_c_id, false);
         if (undo != NULL) {
             (*undo)->save(c);
         }

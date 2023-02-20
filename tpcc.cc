@@ -66,21 +66,21 @@ int main(int argc, const char *argv[]) {
         case Benchmark: {
             printf("Load Compressor...");
             fflush(stdout);
-//            // stock
-//            {
-//                std::vector<std::vector<std::string>> samples;
-//                tables->StockToRaman(num_warehouses, samples);
-//                static RamanCompressor forest = RamanLearning(samples);
-//                tables->MountCompression(&forest, "stock");
-//            }
-//            // order
-//            {
-//                std::vector<std::vector<std::string>> samples;
-//                tables->OrderToRaman(num_warehouses, samples);
-//                static RamanCompressor forest = RamanLearning(samples);
-//                tables->MountCompression(&forest, "order");
-//
-//            }
+            // stock
+            {
+                std::vector<std::vector<std::string>> samples;
+                tables->StockToRaman(num_warehouses, samples);
+                static RamanCompressor forest = RamanLearning(samples);
+                tables->MountCompression(&forest, "stock");
+            }
+            // order
+            {
+                std::vector<std::vector<std::string>> samples;
+                tables->OrderToRaman(num_warehouses, samples);
+                static RamanCompressor forest = RamanLearning(samples);
+                tables->MountCompression(&forest, "order");
+
+            }
             // orderline
             {
                 std::vector<std::vector<std::string>> samples;
@@ -90,21 +90,21 @@ int main(int argc, const char *argv[]) {
             }
 
             // customer
-//            {
-//                std::vector<std::vector<std::string>> samples;
-//                tables->CustomerToRaman(num_warehouses, samples);
-//                static RamanCompressor forest = RamanLearning(samples);
-//                tables->MountCompression(&forest, "customer");
-//
-//            }
-//            // history
-//            {
-//                std::vector<std::vector<std::string>> samples;
-//                tables->HistoryToRaman(samples);
-//                static RamanCompressor forest = RamanLearning(samples);
-//                tables->MountCompression(&forest, "history");
-//
-//            }
+            {
+                std::vector<std::vector<std::string>> samples;
+                tables->CustomerToRaman(num_warehouses, samples);
+                static RamanCompressor forest = RamanLearning(samples);
+                tables->MountCompression(&forest, "customer");
+
+            }
+            // history
+            {
+                std::vector<std::vector<std::string>> samples;
+                tables->HistoryToRaman(samples);
+                static RamanCompressor forest = RamanLearning(samples);
+                tables->MountCompression(&forest, "history");
+
+            }
             printf("Done\n");
 
             // Change the constants for run
