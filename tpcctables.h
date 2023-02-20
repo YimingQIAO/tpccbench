@@ -8,7 +8,7 @@
 #include "btree.h"
 #include "tpccdb.h"
 #include "disk_storage.h"
-#include "tpcc_zstd.h"
+#include "tpcc_raman.h"
 
 class CustomerByNameOrdering {
 public:
@@ -157,52 +157,45 @@ public:
 
     static void DeleteDiskData();
 
-    // -------------------- zstd ----------------------
-    void StockToZstd(int64_t num_warehouses, std::vector<Stock> &samples,
-                     std::vector<size_t> &sample_sizes) {
+    // -------------------- raman ----------------------
+    void StockToRaman(int64_t num_warehouses, std::vector<std::vector<std::string>> &samples) {
         for (int32_t w_id = 1; w_id <= num_warehouses; w_id++) {
             for (int32_t s_id = 1; s_id <= Stock::NUM_STOCK_PER_WAREHOUSE; s_id++) {
                 Stock *stock = findStock(w_id, s_id, true);
-                if (stock == nullptr) throw std::runtime_error("Stock not found in StockToZstd");
+                if (stock == nullptr) throw std::runtime_error("Stock not found in StockToRaman");
                 if (samples.size() > 50 * Stock::NUM_STOCK_PER_WAREHOUSE) return;
-                samples.push_back(*stock);
-                sample_sizes.push_back(sizeof(Stock));
+                samples.push_back(stock->toRamanFormat());
             }
         }
     }
 
-    void CustomerToZstd(int64_t num_warehouses, std::vector<Customer> &samples,
-                        std::vector<size_t> &sample_sizes) {
+    void CustomerToRaman(int64_t num_warehouses, std::vector<std::vector<std::string>> &samples) {
         for (int32_t w_id = 1; w_id <= num_warehouses; w_id++) {
             for (int32_t d_id = 1; d_id <= District::NUM_PER_WAREHOUSE; d_id++) {
                 for (int32_t c_id = 1; c_id <= Customer::NUM_PER_DISTRICT; c_id++) {
                     Customer *customer = findCustomer(w_id, d_id, c_id, true);
-                    if (customer == nullptr) throw std::runtime_error("Customer not found in CustomerToZstd");
+                    if (customer == nullptr) throw std::runtime_error("Customer not found in CustomerToraman");
                     if (samples.size() > 50 * District::NUM_PER_WAREHOUSE * Customer::NUM_PER_DISTRICT) return;
-                    samples.push_back(*customer);
-                    sample_sizes.push_back(sizeof(Customer));
+                    samples.push_back(customer->toRamanFormat());
                 }
             }
         }
     }
 
-    void OrderToZstd(int32_t num_warehouses, std::vector<Order> &samples,
-                     std::vector<size_t> &sample_sizes) {
+    void OrderToRaman(int64_t num_warehouses, std::vector<std::vector<std::string>> &samples) {
         for (int32_t w_id = 1; w_id <= num_warehouses; w_id++) {
             for (int32_t d_id = 1; d_id <= District::NUM_PER_WAREHOUSE; d_id++) {
                 for (int32_t o_id = 1; o_id <= Order::INITIAL_ORDERS_PER_DISTRICT; o_id++) {
                     Order *order = findOrder(w_id, d_id, o_id, true);
-                    if (order == nullptr) throw std::runtime_error("Order not found in OrderToZstd");
+                    if (order == nullptr) throw std::runtime_error("Order not found in OrderToraman");
                     if (samples.size() > 50 * District::NUM_PER_WAREHOUSE * Order::INITIAL_ORDERS_PER_DISTRICT) return;
-                    samples.push_back(*order);
-                    sample_sizes.push_back(sizeof(Order));
+                    samples.push_back(order->toRamanFormat());
                 }
             }
         }
     }
 
-    void OrderlineToZstd(int64_t num_warehouses, std::vector<OrderLine> &samples,
-                         std::vector<size_t> &sample_sizes) {
+    void OrderlineToRaman(int64_t num_warehouses, std::vector<std::vector<std::string>> &samples) {
         for (int32_t w_id = 1; w_id <= num_warehouses; w_id++) {
             for (int32_t d_id = 1; d_id <= District::NUM_PER_WAREHOUSE; d_id++) {
                 for (int32_t o_id = 1; o_id <= OrderLine::INITIAL_QUANTITY; o_id++) {
@@ -212,22 +205,20 @@ public:
                         if (samples.size() >
                             50 * District::NUM_PER_WAREHOUSE * Order::INITIAL_ORDERS_PER_DISTRICT * Order::MAX_OL_CNT)
                             return;
-                        samples.push_back(*orderline);
-                        sample_sizes.push_back(sizeof(OrderLine));
+
+                        samples.push_back(orderline->toRamanFormat());
                     }
                 }
             }
         }
     }
 
-    void HistoryToZstd(std::vector<History> &samples, std::vector<size_t> &sample_sizes) {
-        for (const History *h: history_) {
-            samples.push_back(*h);
-            sample_sizes.push_back(sizeof(History));
-        }
+    void HistoryToRaman(std::vector<std::vector<std::string>> &samples) {
+        for (const History *h: history_) samples.push_back(h->toRamanFormat());
+
     }
 
-    void MountCompression(ZSTD_CDict_s *cdict, ZSTD_DDict_s *ddict, const std::string &table_name);
+    void MountCompression(RamanCompressor *forest, const std::string &table_name);
 
 
     static const int KEYS_PER_INTERNAL = 8;
@@ -278,34 +269,30 @@ private:
 
     uint32_t num_mem_orderline = 0;
     uint32_t num_disk_orderline = 0;
-    Tuple<std::string> ol_tuple_buf_;
+    Tuple<BitStream> ol_tuple_buf_;
 
     uint32_t num_mem_customer = 0;
     uint32_t num_disk_customer = 0;
 
-    // zstd
-    Stock stock_zstd_buf_;
-    ZSTD_CDict_s *cdict_stock = nullptr;
-    ZSTD_DDict_s *ddict_stock = nullptr;
-    BPlusTree<int32_t, Tuple<std::string> *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> stock_zstd;
+    // raman
+    RamanCompressor *forest_stock_;
+    BPlusTree<int32_t, Tuple<BitStream> *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> stock_raman;
+    Stock stock_raman_buf_;
 
-    Customer customer_zstd_buf_;
-    ZSTD_CDict_s *cdict_c = nullptr;
-    ZSTD_DDict_s *ddict_c = nullptr;
-    BPlusTree<int32_t, Tuple<std::string> *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> customer_zstd;
+    RamanCompressor *forest_customer_;
+    BPlusTree<int32_t, Tuple<BitStream> *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> customer_raman;
+    Customer customer_raman_buf_;
 
-    Order order_zstd_buf_;
-    ZSTD_CDict_s *cdict_o = nullptr;
-    ZSTD_DDict_s *ddict_o = nullptr;
-    BPlusTree<int32_t, std::string *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> order_zstd;
+    RamanCompressor *forest_order_;
+    BPlusTree<int32_t, BitStream *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> order_raman;
+    Order order_raman_buf_;
 
-    OrderLine ol_zstd_buf_;
-    ZSTD_CDict_s *cdict_ol = nullptr;
-    ZSTD_DDict_s *ddict_ol = nullptr;
-    BPlusTree<int64_t, Tuple<std::string> *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> ol_zstd;
+    RamanCompressor *forest_orderline_;
+    BPlusTree<int64_t, Tuple<BitStream> *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> orderline_raman;
+    OrderLine orderline_raman_buf_;
 
-    ZSTD_CDict_s *cdict_h = nullptr;
-    std::vector<std::string> history_zstd;
+    RamanCompressor *forest_history_;
+    std::vector<BitStream> history_raman;
 };
 
 #endif

@@ -23,7 +23,7 @@ add_executable(tpccgenerator_test tpccgenerator.cc tpcctables.cc tpccdb.cc rando
 add_executable(tpcc tpcc.cc tpccclient.cc tpccgenerator.cc tpcctables.cc tpccdb.cc clock.cc randomgenerator.cc stupidunit.cc disk_storage.h tpcc_zstd.h)
 add_executable(disk_storage_test disk_storage.h disk_storage_test.cc)
 
-# add zstd
-include_directories(libzstd)
-find_library(ZSTD_LIB zstd libzstd)
-target_link_libraries(tpcc LINK_PUBLIC ${ZSTD_LIB})
+# Raman
+add_subdirectory(libraman)
+include_directories(libraman)
+target_link_libraries(tpcc PUBLIC raman)

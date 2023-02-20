@@ -768,17 +768,17 @@ static int32_t makeStockKey(int32_t w_id, int32_t s_id) {
 
 void TPCCTables::insertStock(const Stock &stock, bool is_orig) {
     if (!is_orig) {
-        Tuple<std::string> tuple;
+        Tuple<BitStream> tuple;
         tuple.in_memory_ = num_mem_stock < Stock::MEMORY_THRESHOLD;
         if (tuple.in_memory_) {
-            tuple.data_ = ZstdCompress(cdict_stock, &stock);
+            tuple.data_ = RamanCompress(forest_stock_, &stock);
             num_mem_stock++;
         } else {
             tuple.id_pos_ = num_disk_stock;
             SeqDiskTupleWrite(stock_fd, &stock);
             num_disk_stock++;
         }
-        insert(&stock_zstd, makeStockKey(stock.s_w_id, stock.s_i_id), tuple);
+        insert(&stock_raman, makeStockKey(stock.s_w_id, stock.s_i_id), tuple);
     } else {
         insert(&stock_, makeStockKey(stock.s_w_id, stock.s_i_id), stock);
     }
@@ -787,11 +787,11 @@ void TPCCTables::insertStock(const Stock &stock, bool is_orig) {
 Stock *TPCCTables::findStock(int32_t w_id, int32_t s_id, bool is_orig) {
     if (!is_orig) {
         int32_t key = makeStockKey(w_id, s_id);
-        Tuple<std::string> *tuple = find(stock_zstd, key);
+        Tuple<BitStream> *tuple = find(stock_raman, key);
         if (tuple) {
-            if (!tuple->in_memory_) DiskTupleRead(stock_fd, &stock_zstd_buf_, tuple->id_pos_);
-            else ZstdDecompress<Stock>(ddict_stock, &stock_zstd_buf_, tuple->data_);
-            return &stock_zstd_buf_;
+            if (!tuple->in_memory_) DiskTupleRead(stock_fd, &stock_raman_buf_, tuple->id_pos_);
+            else RamanDecompress<Stock>(forest_stock_, &stock_raman_buf_, tuple->data_);
+            return &stock_raman_buf_;
         }
         return nullptr;
     } else {
@@ -827,10 +827,10 @@ static int32_t makeCustomerKey(int32_t w_id, int32_t d_id, int32_t c_id) {
 
 void TPCCTables::insertCustomer(const Customer &customer, bool is_orig) {
     if (!is_orig) {
-        Tuple<std::string> tuple;
+        Tuple<BitStream> tuple;
         tuple.in_memory_ = num_mem_customer < Customer::MEMORY_THRESHOLD;
         if (tuple.in_memory_) {
-            tuple.data_ = ZstdCompress(cdict_c, &customer);
+            tuple.data_ = RamanCompress(forest_customer_, &customer);
             num_mem_customer++;
         } else {
             tuple.id_pos_ = num_disk_customer;
@@ -838,7 +838,7 @@ void TPCCTables::insertCustomer(const Customer &customer, bool is_orig) {
             num_disk_customer++;
         }
         int32_t key = makeCustomerKey(customer.c_w_id, customer.c_d_id, customer.c_id);
-        insert(&customer_zstd, key, tuple);
+        insert(&customer_raman, key, tuple);
     } else {
         int32_t key = makeCustomerKey(customer.c_w_id, customer.c_d_id, customer.c_id);
         Customer *c = insert(&customers_, key, customer);
@@ -849,11 +849,11 @@ void TPCCTables::insertCustomer(const Customer &customer, bool is_orig) {
 Customer *TPCCTables::findCustomer(int32_t w_id, int32_t d_id, int32_t c_id, bool is_orig) {
     if (!is_orig) {
         int32_t key = makeCustomerKey(w_id, d_id, c_id);
-        Tuple<std::string> *tuple = find(customer_zstd, key);
+        Tuple<BitStream> *tuple = find(customer_raman, key);
         if (tuple) {
-            if (!tuple->in_memory_) DiskTupleRead(customer_fd, &customer_zstd_buf_, tuple->id_pos_);
-            else ZstdDecompress(ddict_c, &customer_zstd_buf_, tuple->data_);
-            return &customer_zstd_buf_;
+            if (!tuple->in_memory_) DiskTupleRead(customer_fd, &customer_raman_buf_, tuple->id_pos_);
+            else RamanDecompress(forest_customer_, &customer_raman_buf_, tuple->data_);
+            return &customer_raman_buf_;
         }
         return nullptr;
     } else {
@@ -929,7 +929,7 @@ static int64_t makeOrderByCustomerKey(int32_t w_id, int32_t d_id, int32_t c_id, 
 Order *TPCCTables::insertOrder(const Order &order, bool is_orig) {
     if (!is_orig) {
         int32_t key = makeOrderKey(order.o_w_id, order.o_d_id, order.o_id);
-        insert(&order_zstd, key, ZstdCompress(cdict_o, &order));
+        insert(&order_raman, key, RamanCompress(forest_order_, &order));
         return nullptr;
     } else {
         Order *tuple = insert(&orders_, makeOrderKey(order.o_w_id, order.o_d_id, order.o_id),
@@ -945,10 +945,10 @@ Order *TPCCTables::insertOrder(const Order &order, bool is_orig) {
 Order *TPCCTables::findOrder(int32_t w_id, int32_t d_id, int32_t o_id, bool is_orig) {
     if (!is_orig) {
         int32_t key = makeOrderKey(w_id, d_id, o_id);
-        std::string *compressed = find(order_zstd, key);
+        BitStream *compressed = find(order_raman, key);
         if (compressed == nullptr) return nullptr;
-        ZstdDecompress(ddict_o, &order_zstd_buf_, *find(order_zstd, key));
-        return &order_zstd_buf_;
+        RamanDecompress(forest_order_, &order_raman_buf_, *find(order_raman, key));
+        return &order_raman_buf_;
     } else {
         int32_t key = makeOrderKey(w_id, d_id, o_id);
         if (key < 0) return nullptr;
@@ -988,7 +988,7 @@ OrderLine *TPCCTables::insertOrderLine(const OrderLine &orderline, bool is_orig)
     if (!is_orig) {
         ol_tuple_buf_.in_memory_ = num_mem_orderline < OrderLine::MEMORY_THRESHOLD;
         if (ol_tuple_buf_.in_memory_) {
-            ol_tuple_buf_.data_ = ZstdCompress(cdict_ol, &orderline);
+            ol_tuple_buf_.data_ = RamanCompress(forest_orderline_, &orderline);
             num_mem_orderline++;
         } else {
             ol_tuple_buf_.id_pos_ = num_disk_orderline;
@@ -997,7 +997,7 @@ OrderLine *TPCCTables::insertOrderLine(const OrderLine &orderline, bool is_orig)
         }
         int64_t key = makeOrderLineKey(orderline.ol_w_id, orderline.ol_d_id, orderline.ol_o_id,
                                        orderline.ol_number);
-        insert(&ol_zstd, key, ol_tuple_buf_);
+        insert(&orderline_raman, key, ol_tuple_buf_);
         return nullptr;
     } else {
         OrderLine *tuple = insert(&orderlines_,
@@ -1012,11 +1012,11 @@ OrderLine *TPCCTables::findOrderLine(int32_t w_id, int32_t d_id, int32_t o_id, i
                                      bool is_orig) {
     if (!is_orig) {
         int64_t key = makeOrderLineKey(w_id, d_id, o_id, number);
-        Tuple<std::string> *tuple = find(ol_zstd, key);
+        Tuple<BitStream> *tuple = find(orderline_raman, key);
         if (tuple) {
-            if (!tuple->in_memory_) DiskTupleRead(orderline_fd, &ol_zstd_buf_, tuple->id_pos_);
-            else ZstdDecompress(ddict_ol, &ol_zstd_buf_, tuple->data_);
-            return &ol_zstd_buf_;
+            if (!tuple->in_memory_) DiskTupleRead(orderline_fd, &orderline_raman_buf_, tuple->id_pos_);
+            else RamanDecompress(forest_orderline_, &orderline_raman_buf_, tuple->data_);
+            return &orderline_raman_buf_;
         }
         return nullptr;
     } else {
@@ -1053,7 +1053,7 @@ NewOrder *TPCCTables::findNewOrder(int32_t w_id, int32_t d_id, int32_t o_id) {
 
 History *TPCCTables::insertHistory(const History &history, bool is_orig) {
     if (!is_orig) {
-        history_zstd.push_back(ZstdCompress(cdict_h, &history));
+        history_raman.push_back(RamanCompress(forest_history_, &history));
         return nullptr;
     } else {
         History *h = new History(history);
@@ -1188,8 +1188,8 @@ int64_t TPCCTables::districtSize() {
 int64_t TPCCTables::stockSize() {
     int64_t ret = 0;
     int32_t key = std::numeric_limits<int32_t>::max();
-    Tuple<std::string> *value;
-    while (stock_zstd.findLastLessThan(key, &value, &key)) {
+    Tuple<BitStream> *value;
+    while (stock_raman.findLastLessThan(key, &value, &key)) {
         if (value == nullptr) throw std::runtime_error("null value in stockSize");
         if (value->in_memory_) ret += value->data_.size();
     }
@@ -1208,8 +1208,8 @@ int64_t TPCCTables::diskTableSize(const std::string &file_name) {
 int64_t TPCCTables::customerSize() {
     int64_t ret = 0;
     int32_t key = std::numeric_limits<int32_t>::max();
-    Tuple<std::string> *value;
-    while (customer_zstd.findLastLessThan(key, &value, &key)) {
+    Tuple<BitStream> *value;
+    while (customer_raman.findLastLessThan(key, &value, &key)) {
         if (value == nullptr) throw std::runtime_error("null value in customerSize");
         if (value->in_memory_) ret += value->data_.size();
     }
@@ -1223,8 +1223,8 @@ int64_t TPCCTables::orderSize() {
 int64_t TPCCTables::orderlineSize() {
     int64_t ret = 0;
     int64_t key = std::numeric_limits<int64_t>::max();
-    Tuple<std::string> *value;
-    while (ol_zstd.findLastLessThan(key, &value, &key)) {
+    Tuple<BitStream> *value;
+    while (orderline_raman.findLastLessThan(key, &value, &key)) {
         if (value == nullptr) throw std::runtime_error("null value in orderlineSize");
         if (value->in_memory_) ret += value->data_.size();
     }
@@ -1244,11 +1244,9 @@ int64_t TPCCTables::historySize() {
     return ret;
 }
 
-void TPCCTables::MountCompression(ZSTD_CDict_s *cdict, ZSTD_DDict_s *ddict,
-                                  const std::string &table_name) {
+void TPCCTables::MountCompression(RamanCompressor *forest, const std::string &table_name) {
     if (table_name == "stock") {
-        cdict_stock = cdict;
-        ddict_stock = ddict;
+        forest_stock_ = forest;
 
         int32_t key = std::numeric_limits<int32_t>::max();
         Stock *value = nullptr;
@@ -1257,8 +1255,7 @@ void TPCCTables::MountCompression(ZSTD_CDict_s *cdict, ZSTD_DDict_s *ddict,
             insertStock(*value, false);
         }
     } else if (table_name == "customer") {
-        cdict_c = cdict;
-        ddict_c = ddict;
+        forest_customer_ = forest;
 
         int32_t key = std::numeric_limits<int32_t>::max();
         Customer *value = nullptr;
@@ -1267,8 +1264,7 @@ void TPCCTables::MountCompression(ZSTD_CDict_s *cdict, ZSTD_DDict_s *ddict,
             insertCustomer(*value, false);
         }
     } else if (table_name == "orderline") {
-        cdict_ol = cdict;
-        ddict_ol = ddict;
+        forest_orderline_ = forest;
 
         int64_t key = std::numeric_limits<int64_t>::max();
         OrderLine *value = nullptr;
@@ -1277,12 +1273,11 @@ void TPCCTables::MountCompression(ZSTD_CDict_s *cdict, ZSTD_DDict_s *ddict,
             insertOrderLine(*value, false);
         }
     } else if (table_name == "history") {
-        cdict_h = cdict;
+        forest_history_ = forest;
 
         for (auto &h: history_) insertHistory(*h, false);
     } else if (table_name == "order") {
-        cdict_o = cdict;
-        ddict_o = ddict;
+        forest_order_ = forest;
 
         int64_t key = std::numeric_limits<int64_t>::max();
         Order *value = nullptr;

@@ -173,32 +173,30 @@ struct Stock {
         return ret;
     }
 
-    std::string toString() {
-        std::string ret;
-        ret += std::to_string(s_i_id) + " ";
-        ret += std::to_string(s_w_id) + " ";
-        ret += std::to_string(s_quantity) + " ";
-        ret += std::to_string(s_ytd) + " ";
-        ret += std::to_string(s_order_cnt) + " ";
-        ret += std::to_string(s_remote_cnt) + " ";
-        for (auto &dist: s_dist) {
-            ret += dist;
-            ret += " ";
-        }
-        ret += s_data;
-        return ret;
+    std::vector<std::string> toRamanFormat() const {
+        std::vector<std::string> sample;
+        sample.push_back(std::to_string(s_i_id));
+        sample.push_back(std::to_string(s_w_id));
+        sample.push_back(std::to_string(s_quantity));
+        sample.push_back(std::to_string(s_ytd));
+        sample.push_back(std::to_string(s_order_cnt));
+        sample.push_back(std::to_string(s_remote_cnt));
+        for (int i = 0; i < District::NUM_PER_WAREHOUSE; ++i)
+            sample.emplace_back(s_dist[i]);
+        sample.emplace_back(s_data);
+        return sample;
     }
 
-    void fromString(const std::string &str) {
-        std::stringstream ss(str);
-        ss >> s_i_id;
-        ss >> s_w_id;
-        ss >> s_quantity;
-        ss >> s_ytd;
-        ss >> s_order_cnt;
-        ss >> s_remote_cnt;
-        for (auto &dist: s_dist) ss >> dist;
-        ss >> s_data;
+    void fromRamanFormat(const std::vector<std::string> &sample) {
+        s_i_id = std::stoi(sample[0]);
+        s_w_id = std::stoi(sample[1]);
+        s_quantity = std::stoi(sample[2]);
+        s_ytd = std::stoi(sample[3]);
+        s_order_cnt = std::stoi(sample[4]);
+        s_remote_cnt = std::stoi(sample[5]);
+        for (int i = 0; i < District::NUM_PER_WAREHOUSE; ++i)
+            strcpy(s_dist[i], sample[6 + i].c_str());
+        strcpy(s_data, sample[6 + District::NUM_PER_WAREHOUSE].c_str());
     }
 };
 
@@ -253,6 +251,56 @@ struct Customer {
     char c_data[MAX_DATA + 1];
 
     uint32_t size();
+
+    std::vector<std::string> toRamanFormat() const {
+        std::vector<std::string> sample;
+        sample.push_back(std::to_string(c_id));
+        sample.push_back(std::to_string(c_d_id));
+        sample.push_back(std::to_string(c_w_id));
+        sample.push_back(std::to_string(c_discount));
+        sample.push_back(std::to_string(c_credit_lim));
+        sample.push_back(std::to_string(c_balance));
+        sample.push_back(std::to_string(c_ytd_payment));
+        sample.push_back(std::to_string(c_payment_cnt));
+        sample.push_back(std::to_string(c_delivery_cnt));
+        sample.emplace_back(c_first);
+        sample.emplace_back(c_middle);
+        sample.emplace_back(c_last);
+        sample.emplace_back(c_street_1);
+        sample.emplace_back(c_street_2);
+        sample.emplace_back(c_city);
+        sample.emplace_back(c_state);
+        sample.emplace_back(c_zip);
+        sample.emplace_back(c_phone);
+        sample.emplace_back(c_since);
+        sample.emplace_back(c_credit);
+        sample.emplace_back(c_data);
+        return sample;
+    }
+
+    void fromRamanFormat(const std::vector<std::string> &sample) {
+        c_id = std::stoi(sample[0]);
+        c_d_id = std::stoi(sample[1]);
+        c_w_id = std::stoi(sample[2]);
+        c_discount = std::stof(sample[3]);
+        c_credit_lim = std::stof(sample[4]);
+        c_balance = std::stof(sample[5]);
+        c_ytd_payment = std::stof(sample[6]);
+        c_payment_cnt = std::stoi(sample[7]);
+        c_delivery_cnt = std::stoi(sample[8]);
+        strcpy(c_first, sample[9].c_str());
+        strcpy(c_middle, sample[10].c_str());
+        strcpy(c_last, sample[11].c_str());
+        strcpy(c_street_1, sample[12].c_str());
+        strcpy(c_street_2, sample[13].c_str());
+        strcpy(c_city, sample[14].c_str());
+        strcpy(c_state, sample[15].c_str());
+        strcpy(c_zip, sample[16].c_str());
+        strcpy(c_phone, sample[17].c_str());
+        strcpy(c_since, sample[18].c_str());
+        strcpy(c_credit, sample[19].c_str());
+        strcpy(c_data, sample[20].c_str());
+    }
 };
 
 struct Order {
@@ -291,6 +339,30 @@ struct Order {
         ret += stringSize(o_entry_d, DATETIME_SIZE + 1);
         return ret;
     }
+
+    std::vector<std::string> toRamanFormat() const {
+        std::vector<std::string> sample;
+        sample.push_back(std::to_string(o_id));
+        sample.push_back(std::to_string(o_d_id));
+        sample.push_back(std::to_string(o_w_id));
+        sample.push_back(std::to_string(o_c_id));
+        sample.push_back(std::to_string(o_carrier_id));
+        sample.push_back(std::to_string(o_ol_cnt));
+        sample.push_back(std::to_string(o_all_local));
+        sample.emplace_back(o_entry_d);
+        return sample;
+    }
+
+    void fromRamanFormat(const std::vector<std::string> &sample) {
+        o_id = std::stoi(sample[0]);
+        o_d_id = std::stoi(sample[1]);
+        o_w_id = std::stoi(sample[2]);
+        o_c_id = std::stoi(sample[3]);
+        o_carrier_id = std::stoi(sample[4]);
+        o_ol_cnt = std::stoi(sample[5]);
+        o_all_local = std::stoi(sample[6]);
+        strcpy(o_entry_d, sample[7].c_str());
+    }
 };
 
 struct OrderLine {
@@ -323,6 +395,34 @@ struct OrderLine {
             return 8 * 4 + 25;
         else
             return 8 * 4 + 20 + 25;
+    }
+
+    std::vector<std::string> toRamanFormat() const {
+        std::vector<std::string> sample;
+        sample.push_back(std::to_string(ol_o_id));
+        sample.push_back(std::to_string(ol_d_id));
+        sample.push_back(std::to_string(ol_w_id));
+        sample.push_back(std::to_string(ol_number));
+        sample.push_back(std::to_string(ol_i_id));
+        sample.push_back(std::to_string(ol_supply_w_id));
+        sample.push_back(std::to_string(ol_quantity));
+        sample.push_back(std::to_string(ol_amount));
+        sample.emplace_back(ol_delivery_d);
+        sample.emplace_back(ol_dist_info);
+        return sample;
+    }
+
+    void fromRamanFormat(const std::vector<std::string> &sample) {
+        ol_o_id = std::stoi(sample[0]);
+        ol_d_id = std::stoi(sample[1]);
+        ol_w_id = std::stoi(sample[2]);
+        ol_number = std::stoi(sample[3]);
+        ol_i_id = std::stoi(sample[4]);
+        ol_supply_w_id = std::stoi(sample[5]);
+        ol_quantity = std::stoi(sample[6]);
+        ol_amount = std::stof(sample[7]);
+        strcpy(ol_delivery_d, sample[8].c_str());
+        strcpy(ol_dist_info, sample[9].c_str());
     }
 };
 
@@ -367,6 +467,30 @@ struct History {
         ret += stringSize(h_date, DATETIME_SIZE + 1);
         ret += stringSize(h_data, MAX_DATA + 1);
         return ret;
+    }
+
+    std::vector<std::string> toRamanFormat() const {
+        std::vector<std::string> sample;
+        sample.push_back(std::to_string(h_c_id));
+        sample.push_back(std::to_string(h_c_d_id));
+        sample.push_back(std::to_string(h_c_w_id));
+        sample.push_back(std::to_string(h_d_id));
+        sample.push_back(std::to_string(h_w_id));
+        sample.emplace_back(h_date);
+        sample.push_back(std::to_string(h_amount));
+        sample.emplace_back(h_data);
+        return sample;
+    }
+
+    void fromRamanFormat(const std::vector<std::string> &sample) {
+        h_c_id = std::stoi(sample[0]);
+        h_c_d_id = std::stoi(sample[1]);
+        h_c_w_id = std::stoi(sample[2]);
+        h_d_id = std::stoi(sample[3]);
+        h_w_id = std::stoi(sample[4]);
+        strcpy(h_date, sample[5].c_str());
+        h_amount = std::stof(sample[6]);
+        strcpy(h_data, sample[7].c_str());
     }
 };
 
