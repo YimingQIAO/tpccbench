@@ -476,8 +476,8 @@ struct History {
         sample.push_back(std::to_string(h_c_w_id));
         sample.push_back(std::to_string(h_d_id));
         sample.push_back(std::to_string(h_w_id));
-        sample.emplace_back(h_date);
         sample.push_back(std::to_string(h_amount));
+        sample.emplace_back(h_date);
         sample.emplace_back(h_data);
         return sample;
     }

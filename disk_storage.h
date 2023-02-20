@@ -13,10 +13,11 @@
 template<class T>
 struct Tuple {
     bool in_memory_;
+    int32_t dict_id_;
     T data_;      // in memory
     int64_t id_pos_; // on disk
 
-    Tuple() : in_memory_(false), data_(), id_pos_(-1) {}
+    Tuple() : in_memory_(false), dict_id_(-1), data_(), id_pos_(-1) {}
 };
 
 #if __linux__

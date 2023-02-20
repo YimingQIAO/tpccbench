@@ -10,6 +10,7 @@
 #include "disk_storage.h"
 #include "tpcc_raman.h"
 
+
 class CustomerByNameOrdering {
 public:
     bool operator()(const Customer *a, const Customer *b) const;
@@ -89,7 +90,7 @@ public:
 
     Warehouse *findWarehouse(int32_t w_id);
 
-    void insertStock(const Stock &stock, bool is_orig);
+    void insertStock(const Stock &stock, bool is_orig, bool relearn);
 
     Stock *findStock(int32_t w_id, int32_t s_id, bool is_orig);
 
@@ -97,7 +98,7 @@ public:
 
     District *findDistrict(int32_t w_id, int32_t d_id);
 
-    void insertCustomer(const Customer &customer, bool is_orig);
+    void insertCustomer(const Customer &customer, bool is_orig, bool relearn);
 
     Customer *findCustomer(int32_t w_id, int32_t d_id, int32_t c_id, bool is_orig);
 
@@ -105,14 +106,14 @@ public:
     Customer *findCustomerByName(int32_t w_id, int32_t d_id, const char *c_last);
 
     // Stores order in the database. Returns a pointer to the database's tuple.
-    Order *insertOrder(const Order &order, bool is_orig);
+    Order *insertOrder(const Order &order, bool is_orig, bool relearn);
 
     Order *findOrder(int32_t w_id, int32_t d_id, int32_t o_id, bool is_orig);
 
     Order *findLastOrderByCustomer(int32_t w_id, int32_t d_id, int32_t c_id);
 
     // Stores orderline in the database. Returns a pointer to the database's tuple.
-    OrderLine *insertOrderLine(const OrderLine &orderline, bool is_orig);
+    OrderLine *insertOrderLine(const OrderLine &orderline, bool is_orig, bool relearn);
 
     OrderLine *
     findOrderLine(int32_t w_id, int32_t d_id, int32_t o_id, int32_t number, bool is_orig);
@@ -125,7 +126,7 @@ public:
     const std::vector<const History *> &history() const { return history_; }
 
     // Stores order in the database. Returns a pointer to the database's tuple.
-    History *insertHistory(const History &history, bool is_orig);
+    History *insertHistory(const History &history, bool is_orig, bool relearn);
 
     int64_t itemSize();
 
@@ -163,7 +164,7 @@ public:
             for (int32_t s_id = 1; s_id <= Stock::NUM_STOCK_PER_WAREHOUSE; s_id++) {
                 Stock *stock = findStock(w_id, s_id, true);
                 if (stock == nullptr) throw std::runtime_error("Stock not found in StockToRaman");
-                if (samples.size() > 50 * Stock::NUM_STOCK_PER_WAREHOUSE) return;
+                // if (samples.size() > 50 * Stock::NUM_STOCK_PER_WAREHOUSE) return;
                 samples.push_back(stock->toRamanFormat());
             }
         }
@@ -174,8 +175,9 @@ public:
             for (int32_t d_id = 1; d_id <= District::NUM_PER_WAREHOUSE; d_id++) {
                 for (int32_t c_id = 1; c_id <= Customer::NUM_PER_DISTRICT; c_id++) {
                     Customer *customer = findCustomer(w_id, d_id, c_id, true);
-                    if (customer == nullptr) throw std::runtime_error("Customer not found in CustomerToraman");
-                    if (samples.size() > 50 * District::NUM_PER_WAREHOUSE * Customer::NUM_PER_DISTRICT) return;
+                    if (customer == nullptr)
+                        throw std::runtime_error("Customer not found in CustomerToraman");
+                    // if (samples.size() > 50 * District::NUM_PER_WAREHOUSE * Customer::NUM_PER_DISTRICT) return;
                     samples.push_back(customer->toRamanFormat());
                 }
             }
@@ -183,33 +185,18 @@ public:
     }
 
     void OrderToRaman(int64_t num_warehouses, std::vector<std::vector<std::string>> &samples) {
-        for (int32_t w_id = 1; w_id <= num_warehouses; w_id++) {
-            for (int32_t d_id = 1; d_id <= District::NUM_PER_WAREHOUSE; d_id++) {
-                for (int32_t o_id = 1; o_id <= Order::INITIAL_ORDERS_PER_DISTRICT; o_id++) {
-                    Order *order = findOrder(w_id, d_id, o_id, true);
-                    if (order == nullptr) throw std::runtime_error("Order not found in OrderToraman");
-                    if (samples.size() > 50 * District::NUM_PER_WAREHOUSE * Order::INITIAL_ORDERS_PER_DISTRICT) return;
-                    samples.push_back(order->toRamanFormat());
-                }
-            }
+        int64_t key = std::numeric_limits<int64_t>::max();
+        Order *order = nullptr;
+        while (orders_.findLastLessThan(key, &order, &key)) {
+            samples.push_back(order->toRamanFormat());
         }
     }
 
     void OrderlineToRaman(int64_t num_warehouses, std::vector<std::vector<std::string>> &samples) {
-        for (int32_t w_id = 1; w_id <= num_warehouses; w_id++) {
-            for (int32_t d_id = 1; d_id <= District::NUM_PER_WAREHOUSE; d_id++) {
-                for (int32_t o_id = 1; o_id <= OrderLine::INITIAL_QUANTITY; o_id++) {
-                    for (int32_t ol_number = 1; ol_number <= Order::MAX_OL_CNT; ol_number++) {
-                        OrderLine *orderline = findOrderLine(w_id, d_id, o_id, ol_number, true);
-                        if (orderline == nullptr) break;
-                        if (samples.size() >
-                            50 * District::NUM_PER_WAREHOUSE * Order::INITIAL_ORDERS_PER_DISTRICT * Order::MAX_OL_CNT)
-                            return;
-
-                        samples.push_back(orderline->toRamanFormat());
-                    }
-                }
-            }
+        int64_t key = std::numeric_limits<int64_t>::max();
+        OrderLine *orderline = nullptr;
+        while (orderlines_.findLastLessThan(key, &orderline, &key)) {
+            samples.push_back(orderline->toRamanFormat());
         }
     }
 
@@ -266,33 +253,40 @@ private:
     // disk storage
     uint32_t num_mem_stock = 0;
     uint32_t num_disk_stock = 0;
+    Tuple<BitStream> stock_tuple_disk_;
 
     uint32_t num_mem_orderline = 0;
     uint32_t num_disk_orderline = 0;
-    Tuple<BitStream> ol_tuple_buf_;
+    Tuple<BitStream> ol_tuple_disk_;
 
     uint32_t num_mem_customer = 0;
     uint32_t num_disk_customer = 0;
+    Tuple<BitStream> customer_tuple_disk_;
 
     // raman
     RamanCompressor *forest_stock_;
     BPlusTree<int32_t, Tuple<BitStream> *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> stock_raman;
     Stock stock_raman_buf_;
+    RamanTupleBuffer<Stock> block_stock_;
 
     RamanCompressor *forest_customer_;
     BPlusTree<int32_t, Tuple<BitStream> *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> customer_raman;
     Customer customer_raman_buf_;
+    RamanTupleBuffer<Customer> block_customer_;
 
     RamanCompressor *forest_order_;
-    BPlusTree<int32_t, BitStream *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> order_raman;
+    BPlusTree<int64_t, Tuple<BitStream> *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> order_raman;
     Order order_raman_buf_;
+    RamanTupleBuffer<Order> block_order_;
 
     RamanCompressor *forest_orderline_;
     BPlusTree<int64_t, Tuple<BitStream> *, KEYS_PER_INTERNAL, KEYS_PER_LEAF> orderline_raman;
     OrderLine orderline_raman_buf_;
+    RamanTupleBuffer<OrderLine> block_orderline_;
 
     RamanCompressor *forest_history_;
     std::vector<BitStream> history_raman;
+    RamanTupleBuffer<History> block_history_;
 };
 
 #endif

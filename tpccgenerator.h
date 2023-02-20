@@ -1,7 +1,6 @@
 #ifndef TPCCGENERATOR_H__
 #define TPCCGENERATOR_H__
 
-//~ #include <cstdint>
 #include <stdint.h>
 
 #include "tpccdb.h"

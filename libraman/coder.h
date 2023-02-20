@@ -8,28 +8,29 @@
 
 namespace raman {
 
-uint32_t Decode(size_t &sym, CodeTree *code_tree, BitStream &bits, uint32_t pos = 0) {
-  if (code_tree == nullptr) throw std::logic_error("Code tree is null");
+    static inline void
+    Decode(size_t &sym, CodeTree *code_tree, BitStream &bits, uint32_t &pos) {
+        if (code_tree == nullptr) throw std::logic_error("Code tree is null");
 
-  const InternalNode *current = &code_tree->root_;
-  while (true) {
-    bool bit = bits.ReadBit(pos++);
-    const Node *next;
+        const InternalNode *current = &code_tree->root_;
+        while (true) {
+            bool bit = bits.GetBit(pos++);
+            const Node *next;
 
-    if (bit)
-      next = current->r_.get();
-    else
-      next = current->l_.get();
+            if (bit)
+                next = current->r_.get();
+            else
+                next = current->l_.get();
 
-    if (dynamic_cast<const Leaf *>(next) != nullptr) {
-      sym = dynamic_cast<const Leaf *>(next)->sym_;
-      return pos;
-    } else if (dynamic_cast<const InternalNode *>(next))
-      current = dynamic_cast<const InternalNode *>(next);
-    else
-      throw std::logic_error("Assertion error: Illegal node type");
-  }
-}
+            if (dynamic_cast<const Leaf *>(next) != nullptr) {
+                sym = dynamic_cast<const Leaf *>(next)->sym_;
+                return;
+            } else if (dynamic_cast<const InternalNode *>(next))
+                current = dynamic_cast<const InternalNode *>(next);
+            else
+                throw std::logic_error("Assertion error: Illegal node type");
+        }
+    }
 
 }  // namespace raman
 

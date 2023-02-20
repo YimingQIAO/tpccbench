@@ -98,6 +98,12 @@ TPCCTables::~TPCCTables() {
     std::cout << "# of orderline: " << num_mem_orderline << " - " << num_disk_orderline
               << std::endl;
 
+    uint32_t raman_dict_size = 0;
+    if (forest_customer_) raman_dict_size += forest_customer_->Size();
+    if (forest_order_) raman_dict_size += forest_order_->Size();
+    if (forest_orderline_) raman_dict_size += forest_orderline_->Size();
+    if (forest_stock_) raman_dict_size += forest_stock_->Size();
+    std::cout << "Raman Dict (Base) Size: " << raman_dict_size << std::endl;
 }
 
 int32_t TPCCTables::stockLevel(int32_t warehouse_id, int32_t district_id, int32_t threshold) {
@@ -146,7 +152,7 @@ int32_t TPCCTables::stockLevel(int32_t warehouse_id, int32_t district_id, int32_
             }
 
             // Check if s_quantity < threshold
-            Stock *stock = findStock(warehouse_id, line->ol_i_id, false);
+            Stock *stock = findStock(warehouse_id, line->ol_i_id, true);
             if (stock->s_quantity < threshold) {
                 s_i_ids.push_back(line->ol_i_id);
             }
@@ -170,7 +176,7 @@ int32_t TPCCTables::stockLevel(int32_t warehouse_id, int32_t district_id, int32_
 void TPCCTables::orderStatus(int32_t warehouse_id, int32_t district_id, int32_t customer_id,
                              OrderStatusOutput *output) {
     //~ printf("order status %d %d %d\n", warehouse_id, district_id, customer_id);
-    internalOrderStatus(findCustomer(warehouse_id, district_id, customer_id, false), output);
+    internalOrderStatus(findCustomer(warehouse_id, district_id, customer_id, true), output);
 }
 
 void TPCCTables::orderStatus(int32_t warehouse_id, int32_t district_id, const char *c_last,
@@ -245,9 +251,9 @@ bool TPCCTables::newOrderHome(int32_t warehouse_id, int32_t district_id, int32_t
     District *d = findDistrict(warehouse_id, district_id);
     output->d_tax = d->d_tax;
     output->o_id = d->d_next_o_id;
-    assert(findOrder(warehouse_id, district_id, output->o_id, false) == NULL);
+    assert(findOrder(warehouse_id, district_id, output->o_id, true) == NULL);
 
-    Customer *c = findCustomer(warehouse_id, district_id, customer_id, false);
+    Customer *c = findCustomer(warehouse_id, district_id, customer_id, true);
     assert(sizeof(output->c_last) == sizeof(c->c_last));
     memcpy(output->c_last, c->c_last, sizeof(output->c_last));
     memcpy(output->c_credit, c->c_credit, sizeof(output->c_credit));
@@ -293,7 +299,7 @@ bool TPCCTables::newOrderHome(int32_t warehouse_id, int32_t district_id, int32_t
     order.o_all_local = all_local ? 1 : 0;
     strcpy(order.o_entry_d, now);
     assert(strlen(order.o_entry_d) == DATETIME_SIZE);
-    Order *o = insertOrder(order, false);
+    Order *o = insertOrder(order, true, true);
     NewOrder *no = insertNewOrder(warehouse_id, district_id, output->o_id);
     if (undo != NULL) {
         (*undo)->inserted(o);
@@ -318,7 +324,7 @@ bool TPCCTables::newOrderHome(int32_t warehouse_id, int32_t district_id, int32_t
         // these columns are replicated everywhere.
         // TODO: I think this is unrealistic, since it will occupy ~23 MB per warehouse on all
         // replicas. Try the "two round" version in the future.
-        Stock *stock = findStock(items[i].ol_supply_w_id, items[i].i_id, false);
+        Stock *stock = findStock(items[i].ol_supply_w_id, items[i].i_id, true);
         assert(sizeof(line.ol_dist_info) == sizeof(stock->s_dist[district_id]));
         memcpy(line.ol_dist_info, stock->s_dist[district_id], sizeof(line.ol_dist_info));
         // Since we *need* to replicate s_dist_xx columns, might as well replicate s_data
@@ -337,7 +343,7 @@ bool TPCCTables::newOrderHome(int32_t warehouse_id, int32_t district_id, int32_t
                 static_cast<float>(items[i].ol_quantity) * item_tuples[i]->i_price;
         line.ol_amount = output->items[i].ol_amount;
         output->total += output->items[i].ol_amount;
-        OrderLine *ol = insertOrderLine(line, false);
+        OrderLine *ol = insertOrderLine(line, false, true);
         if (undo != NULL) {
             (*undo)->inserted(ol);
         }
@@ -375,7 +381,7 @@ bool TPCCTables::newOrderRemote(int32_t home_warehouse, int32_t remote_warehouse
         }
 
         // update stock
-        Stock *stock = findStock(items[i].ol_supply_w_id, items[i].i_id, false);
+        Stock *stock = findStock(items[i].ol_supply_w_id, items[i].i_id, true);
         if (undo != NULL) {
             (*undo)->save(stock);
         }
@@ -416,7 +422,7 @@ void TPCCTables::payment(int32_t warehouse_id, int32_t district_id, int32_t c_wa
                          const char *now,
                          PaymentOutput *output, TPCCUndo **undo) {
     //~ printf("payment %d %d %d %d %d %f %s\n", warehouse_id, district_id, c_warehouse_id, c_district_id, customer_id, h_amount, now);
-    Customer *customer = findCustomer(c_warehouse_id, c_district_id, customer_id, false);
+    Customer *customer = findCustomer(c_warehouse_id, c_district_id, customer_id, true);
     paymentHome(warehouse_id, district_id, c_warehouse_id, c_district_id, customer_id, h_amount,
                 now, output, undo);
     internalPaymentRemote(warehouse_id, district_id, customer, h_amount, output, undo);
@@ -457,7 +463,7 @@ void TPCCTables::paymentRemote(int32_t warehouse_id, int32_t district_id, int32_
                                int32_t c_district_id, int32_t c_id, float h_amount,
                                PaymentOutput *output,
                                TPCCUndo **undo) {
-    Customer *customer = findCustomer(c_warehouse_id, c_district_id, c_id, false);
+    Customer *customer = findCustomer(c_warehouse_id, c_district_id, c_id, true);
     internalPaymentRemote(warehouse_id, district_id, customer, h_amount, output, undo);
     zeroWarehouseDistrict(output);
 }
@@ -502,7 +508,7 @@ void TPCCTables::paymentHome(int32_t warehouse_id, int32_t district_id, int32_t 
     strcpy(h.h_data, w->w_name);
     strcat(h.h_data, "    ");
     strcat(h.h_data, d->d_name);
-    History *history = insertHistory(h, false);
+    History *history = insertHistory(h, true, true);
     if (undo != NULL) {
         (*undo)->inserted(history);
     }
@@ -605,7 +611,7 @@ void TPCCTables::delivery(int32_t warehouse_id, int32_t carrier_id, const char *
         order.o_id = o_id;
         orders->push_back(order);
 
-        Order *o = findOrder(warehouse_id, d_id, o_id, false);
+        Order *o = findOrder(warehouse_id, d_id, o_id, true);
         assert(o->o_carrier_id == Order::NULL_CARRIER_ID);
         if (undo != NULL) {
             (*undo)->save(o);
@@ -625,7 +631,7 @@ void TPCCTables::delivery(int32_t warehouse_id, int32_t carrier_id, const char *
             total += line->ol_amount;
         }
 
-        Customer *c = findCustomer(warehouse_id, d_id, o->o_c_id, false);
+        Customer *c = findCustomer(warehouse_id, d_id, o->o_c_id, true);
         if (undo != NULL) {
             (*undo)->save(c);
         }
@@ -766,36 +772,74 @@ static int32_t makeStockKey(int32_t w_id, int32_t s_id) {
     return id;
 }
 
-void TPCCTables::insertStock(const Stock &stock, bool is_orig) {
+void TPCCTables::insertStock(const Stock &stock, bool is_orig, bool relearn) {
+    int64_t key = makeStockKey(stock.s_w_id, stock.s_i_id);
     if (!is_orig) {
-        Tuple<BitStream> tuple;
-        tuple.in_memory_ = num_mem_stock < Stock::MEMORY_THRESHOLD;
-        if (tuple.in_memory_) {
-            tuple.data_ = RamanCompress(forest_stock_, &stock);
+        stock_tuple_disk_.in_memory_ = num_mem_stock < Stock::MEMORY_THRESHOLD;
+        if (stock_tuple_disk_.in_memory_) {
             num_mem_stock++;
+
+            // in memory
+            if (!relearn) {
+                stock_tuple_disk_.dict_id_ = -1;
+                stock_tuple_disk_.data_ = RamanCompress(forest_stock_, &stock);
+                insert(&stock_raman, (int32_t) key, stock_tuple_disk_);
+                return;
+            }
+
+            // in buffer
+            block_stock_.Append(stock, key);
+            if (block_stock_.IsFull()) {
+                int32_t dict_id;
+                std::vector<int64_t> keys;
+                std::vector<BitStream> compressed;
+
+                block_stock_.BlockCompress(compressed, &keys, &dict_id);
+
+                stock_tuple_disk_.dict_id_ = dict_id;
+                for (int i = 0; i < compressed.size(); i++) {
+                    stock_tuple_disk_.data_ = compressed[i];
+                    insert(&stock_raman, keys[i], stock_tuple_disk_);
+                }
+            }
         } else {
-            tuple.id_pos_ = num_disk_stock;
-            SeqDiskTupleWrite(stock_fd, &stock);
+            // on disk
+            stock_tuple_disk_.id_pos_ = num_disk_stock;
             num_disk_stock++;
+            SeqDiskTupleWrite(stock_fd, &stock);
+            insert(&stock_raman, (int32_t) key, stock_tuple_disk_);
         }
-        insert(&stock_raman, makeStockKey(stock.s_w_id, stock.s_i_id), tuple);
-    } else {
-        insert(&stock_, makeStockKey(stock.s_w_id, stock.s_i_id), stock);
-    }
+    } else
+        insert(&stock_, (int32_t) key, stock);
 }
 
 Stock *TPCCTables::findStock(int32_t w_id, int32_t s_id, bool is_orig) {
+    int64_t key = makeStockKey(w_id, s_id);
     if (!is_orig) {
-        int32_t key = makeStockKey(w_id, s_id);
-        Tuple<BitStream> *tuple = find(stock_raman, key);
-        if (tuple) {
-            if (!tuple->in_memory_) DiskTupleRead(stock_fd, &stock_raman_buf_, tuple->id_pos_);
-            else RamanDecompress<Stock>(forest_stock_, &stock_raman_buf_, tuple->data_);
+        // find it in buffer
+        Stock *stock = block_stock_.find(key);
+        if (stock != nullptr) return stock;
+
+        Tuple<BitStream> *tuple = find(stock_raman, (int32_t) key);
+        if (tuple == nullptr) return nullptr;
+
+        // find it on disk
+        if (!tuple->in_memory_) {
+            DiskTupleRead(stock_fd, &stock_raman_buf_, tuple->id_pos_);
             return &stock_raman_buf_;
         }
-        return nullptr;
+
+        // find it in memory, decompress it with suitable dict.
+        if (tuple->dict_id_ < 0)
+            RamanDecompress(forest_stock_, &stock_raman_buf_, tuple->data_);
+        else {
+            RamanCompressor *compressor = block_stock_.GetCompressor(tuple->dict_id_);
+            RamanDecompress(compressor, &stock_raman_buf_, tuple->data_);
+        }
+        return &stock_raman_buf_;
     } else {
-        return find(stock_, makeStockKey(w_id, s_id));
+        if (key < 0) return nullptr;
+        return find(stock_, key);
     }
 }
 
@@ -825,39 +869,75 @@ static int32_t makeCustomerKey(int32_t w_id, int32_t d_id, int32_t c_id) {
     return id;
 }
 
-void TPCCTables::insertCustomer(const Customer &customer, bool is_orig) {
+void TPCCTables::insertCustomer(const Customer &customer, bool is_orig, bool relearn) {
+    int64_t key = makeCustomerKey(customer.c_w_id, customer.c_d_id, customer.c_id);
     if (!is_orig) {
-        Tuple<BitStream> tuple;
-        tuple.in_memory_ = num_mem_customer < Customer::MEMORY_THRESHOLD;
-        if (tuple.in_memory_) {
-            tuple.data_ = RamanCompress(forest_customer_, &customer);
+        customer_tuple_disk_.in_memory_ = num_mem_customer < Customer::MEMORY_THRESHOLD;
+        if (customer_tuple_disk_.in_memory_) {
             num_mem_customer++;
+            // in memory
+            if (!relearn) {
+                customer_tuple_disk_.dict_id_ = -1;
+                customer_tuple_disk_.data_ = RamanCompress(forest_customer_, &customer);
+                insert(&customer_raman, (int32_t) key, customer_tuple_disk_);
+                return;
+            }
+
+            // in buffer
+            block_customer_.Append(customer, key);
+            if (block_customer_.IsFull()) {
+                int32_t dict_id;
+                std::vector<int64_t> keys;
+                std::vector<BitStream> compressed;
+
+                block_customer_.BlockCompress(compressed, &keys, &dict_id);
+
+                customer_tuple_disk_.dict_id_ = dict_id;
+                for (int i = 0; i < compressed.size(); i++) {
+                    customer_tuple_disk_.data_ = compressed[i];
+                    insert(&customer_raman, keys[i], customer_tuple_disk_);
+                }
+            }
         } else {
-            tuple.id_pos_ = num_disk_customer;
-            SeqDiskTupleWrite(customer_fd, &customer);
+            // on disk
+            customer_tuple_disk_.id_pos_ = num_disk_customer;
             num_disk_customer++;
+            SeqDiskTupleWrite(customer_fd, &customer);
+            insert(&customer_raman, (int32_t) key, customer_tuple_disk_);
         }
-        int32_t key = makeCustomerKey(customer.c_w_id, customer.c_d_id, customer.c_id);
-        insert(&customer_raman, key, tuple);
     } else {
-        int32_t key = makeCustomerKey(customer.c_w_id, customer.c_d_id, customer.c_id);
-        Customer *c = insert(&customers_, key, customer);
+        Customer *c = insert(&customers_, (int32_t) key, customer);
         customers_by_name_.insert(c);
     }
 }
 
 Customer *TPCCTables::findCustomer(int32_t w_id, int32_t d_id, int32_t c_id, bool is_orig) {
+    int64_t key = makeCustomerKey(w_id, d_id, c_id);
     if (!is_orig) {
-        int32_t key = makeCustomerKey(w_id, d_id, c_id);
-        Tuple<BitStream> *tuple = find(customer_raman, key);
-        if (tuple) {
-            if (!tuple->in_memory_) DiskTupleRead(customer_fd, &customer_raman_buf_, tuple->id_pos_);
-            else RamanDecompress(forest_customer_, &customer_raman_buf_, tuple->data_);
+        // find it in buffer
+        Customer *customer = block_customer_.find(key);
+        if (customer != nullptr) return customer;
+
+        Tuple<BitStream> *tuple = find(customer_raman, (int32_t) key);
+        if (tuple == nullptr) return nullptr;
+
+        // find it on disk
+        if (!tuple->in_memory_) {
+            DiskTupleRead(customer_fd, &customer_raman_buf_, tuple->id_pos_);
             return &customer_raman_buf_;
         }
-        return nullptr;
+
+        // find it in memory, decompress it with suitable dict.
+        if (tuple->dict_id_ < 0)
+            RamanDecompress(forest_customer_, &customer_raman_buf_, tuple->data_);
+        else {
+            RamanCompressor *compressor = block_customer_.GetCompressor(tuple->dict_id_);
+            RamanDecompress(compressor, &customer_raman_buf_, tuple->data_);
+        }
+        return &customer_raman_buf_;
     } else {
-        return find(customers_, makeCustomerKey(w_id, d_id, c_id));
+        if (key < 0) return nullptr;
+        return find(customers_, (int32_t) key);
     }
 }
 
@@ -926,16 +1006,40 @@ static int64_t makeOrderByCustomerKey(int32_t w_id, int32_t d_id, int32_t c_id, 
     return id;
 }
 
-Order *TPCCTables::insertOrder(const Order &order, bool is_orig) {
+Order *TPCCTables::insertOrder(const Order &order, bool is_orig, bool relearn) {
+    int64_t key = makeOrderKey(order.o_w_id, order.o_d_id, order.o_id);
     if (!is_orig) {
-        int32_t key = makeOrderKey(order.o_w_id, order.o_d_id, order.o_id);
-        insert(&order_raman, key, RamanCompress(forest_order_, &order));
+        if (!relearn) {
+            Tuple<BitStream> tuple;
+            tuple.in_memory_ = true;
+            tuple.data_ = RamanCompress(forest_order_, &order);
+            tuple.dict_id_ = -1;
+            insert(&order_raman, key, tuple);
+            return nullptr;
+        }
+
+        block_order_.Append(order, key);
+        // if block is full
+        if (block_order_.IsFull()) {
+            int32_t dict_id;
+            std::vector<int64_t> keys;
+            std::vector<BitStream> compressed;
+
+            block_order_.BlockCompress(compressed, &keys, &dict_id);
+
+            Tuple<BitStream> tuple;
+            tuple.in_memory_ = true;
+            tuple.dict_id_ = dict_id;
+            for (int i = 0; i < compressed.size(); i++) {
+                tuple.data_ = compressed[i];
+                insert(&order_raman, (int32_t) keys[i], tuple);
+            }
+        }
         return nullptr;
     } else {
-        Order *tuple = insert(&orders_, makeOrderKey(order.o_w_id, order.o_d_id, order.o_id),
-                              order);
+        Order *tuple = insert(&orders_, key, order);
         // Secondary index based on customer id
-        int64_t key = makeOrderByCustomerKey(order.o_w_id, order.o_d_id, order.o_c_id, order.o_id);
+        key = makeOrderByCustomerKey(order.o_w_id, order.o_d_id, order.o_c_id, order.o_id);
         assert(!orders_by_customer_.find(key));
         orders_by_customer_.insert(key, tuple);
         return tuple;
@@ -943,14 +1047,24 @@ Order *TPCCTables::insertOrder(const Order &order, bool is_orig) {
 }
 
 Order *TPCCTables::findOrder(int32_t w_id, int32_t d_id, int32_t o_id, bool is_orig) {
+    int32_t key = makeOrderKey(w_id, d_id, o_id);
     if (!is_orig) {
-        int32_t key = makeOrderKey(w_id, d_id, o_id);
-        BitStream *compressed = find(order_raman, key);
-        if (compressed == nullptr) return nullptr;
-        RamanDecompress(forest_order_, &order_raman_buf_, *find(order_raman, key));
+        // in buffer
+        Order *order = block_order_.find(key);
+        if (order != nullptr) return order;
+
+        Tuple<BitStream> *tuple = find(order_raman, key);
+        if (tuple == nullptr) return nullptr;
+
+        // in memory
+        if (tuple->dict_id_ < 0)
+            RamanDecompress(forest_order_, &order_raman_buf_, tuple->data_);
+        else {
+            RamanCompressor *compressor = block_order_.GetCompressor(tuple->dict_id_);
+            RamanDecompress(compressor, &order_raman_buf_, tuple->data_);
+        }
         return &order_raman_buf_;
     } else {
-        int32_t key = makeOrderKey(w_id, d_id, o_id);
         if (key < 0) return nullptr;
         return find(orders_, key);
     }
@@ -980,47 +1094,92 @@ static int64_t makeOrderLineKey(int32_t w_id, int32_t d_id, int32_t o_id, int32_
     // but stock level fetches order lines for a range of (w_id, d_id, o_id) values
     int64_t id = ((o_id * District::NUM_PER_WAREHOUSE + d_id)
                   * Warehouse::MAX_WAREHOUSE_ID + w_id) * Order::MAX_OL_CNT + number;
-    if (id < 0) throw std::runtime_error("id < 0 in makeOrderLineKey");
+    // if (id < 0) throw std::runtime_error("id < 0 in makeOrderLineKey");
     return id;
 }
 
-OrderLine *TPCCTables::insertOrderLine(const OrderLine &orderline, bool is_orig) {
+OrderLine *TPCCTables::insertOrderLine(const OrderLine &orderline, bool is_orig, bool relearn) {
+    int64_t key = makeOrderLineKey(orderline.ol_w_id, orderline.ol_d_id, orderline.ol_o_id,
+                                   orderline.ol_number);
     if (!is_orig) {
-        ol_tuple_buf_.in_memory_ = num_mem_orderline < OrderLine::MEMORY_THRESHOLD;
-        if (ol_tuple_buf_.in_memory_) {
-            ol_tuple_buf_.data_ = RamanCompress(forest_orderline_, &orderline);
+        ol_tuple_disk_.in_memory_ = num_mem_orderline < OrderLine::MEMORY_THRESHOLD;
+        if (ol_tuple_disk_.in_memory_) {
             num_mem_orderline++;
+            // in memory
+            if (!relearn) {
+                ol_tuple_disk_.dict_id_ = -1;
+                ol_tuple_disk_.data_ = RamanCompress(forest_orderline_, &orderline);
+                insert(&orderline_raman, key, ol_tuple_disk_);
+                return nullptr;
+            }
+
+            // in buffer
+            block_orderline_.Append(orderline, key);
+            if (block_orderline_.IsFull()) {
+                int32_t dict_id;
+                std::vector<int64_t> keys;
+                std::vector<BitStream> compressed;
+
+                block_orderline_.BlockCompress(compressed, &keys, &dict_id);
+
+                ol_tuple_disk_.dict_id_ = dict_id;
+                for (int i = 0; i < compressed.size(); i++) {
+                    ol_tuple_disk_.data_ = compressed[i];
+                    insert(&orderline_raman, keys[i], ol_tuple_disk_);
+                }
+                return nullptr;
+            }
         } else {
-            ol_tuple_buf_.id_pos_ = num_disk_orderline;
+            // on disk
+            ol_tuple_disk_.id_pos_ = num_disk_orderline;
             SeqDiskTupleWrite(orderline_fd, &orderline);
             num_disk_orderline++;
+            insert(&orderline_raman, key, ol_tuple_disk_);
+            return nullptr;
         }
-        int64_t key = makeOrderLineKey(orderline.ol_w_id, orderline.ol_d_id, orderline.ol_o_id,
-                                       orderline.ol_number);
-        insert(&orderline_raman, key, ol_tuple_buf_);
-        return nullptr;
     } else {
-        OrderLine *tuple = insert(&orderlines_,
-                                  makeOrderLineKey(orderline.ol_w_id, orderline.ol_d_id,
-                                                   orderline.ol_o_id, orderline.ol_number),
-                                  orderline);
+        OrderLine *tuple = insert(&orderlines_, key, orderline);
         return tuple;
     }
+    return nullptr;
 }
 
 OrderLine *TPCCTables::findOrderLine(int32_t w_id, int32_t d_id, int32_t o_id, int32_t number,
                                      bool is_orig) {
+    int64_t key = makeOrderLineKey(w_id, d_id, o_id, number);
     if (!is_orig) {
-        int64_t key = makeOrderLineKey(w_id, d_id, o_id, number);
+        // find it in buffer
+        OrderLine *orderline = block_orderline_.find(key);
+        if (orderline != nullptr) {
+            int64_t get_key = makeOrderLineKey(orderline->ol_w_id, orderline->ol_d_id,
+                                               orderline->ol_o_id,
+                                               orderline->ol_number);
+            if (get_key != key)
+                throw std::runtime_error("findOrderLine: key mismatch");
+
+            return orderline;
+        }
+
         Tuple<BitStream> *tuple = find(orderline_raman, key);
-        if (tuple) {
-            if (!tuple->in_memory_) DiskTupleRead(orderline_fd, &orderline_raman_buf_, tuple->id_pos_);
-            else RamanDecompress(forest_orderline_, &orderline_raman_buf_, tuple->data_);
+        if (tuple == nullptr) return nullptr;
+
+        // find it on disk
+        if (!tuple->in_memory_) {
+            DiskTupleRead(orderline_fd, &orderline_raman_buf_, tuple->id_pos_);
             return &orderline_raman_buf_;
         }
-        return nullptr;
+
+        // find it in memory, decompress it with suitable dict.
+        if (tuple->dict_id_ < 0)
+            RamanDecompress(forest_orderline_, &orderline_raman_buf_, tuple->data_);
+        else {
+            RamanCompressor *compressor = block_orderline_.GetCompressor(tuple->dict_id_);
+            RamanDecompress(compressor, &orderline_raman_buf_, tuple->data_);
+        }
+        return &orderline_raman_buf_;
     } else {
-        return find(orderlines_, makeOrderLineKey(w_id, d_id, o_id, number));
+        if (key < 0) return nullptr;
+        return find(orderlines_, key);
     }
 }
 
@@ -1051,9 +1210,14 @@ NewOrder *TPCCTables::findNewOrder(int32_t w_id, int32_t d_id, int32_t o_id) {
     return it->second;
 }
 
-History *TPCCTables::insertHistory(const History &history, bool is_orig) {
+History *TPCCTables::insertHistory(const History &history, bool is_orig, bool relearn) {
     if (!is_orig) {
-        history_raman.push_back(RamanCompress(forest_history_, &history));
+        if (!relearn) history_raman.push_back(RamanCompress(forest_history_, &history));
+        else {
+            block_history_.Append(history, 0);
+            if (block_history_.IsFull())
+                block_history_.BlockCompress(history_raman, nullptr, nullptr);
+        }
         return nullptr;
     } else {
         History *h = new History(history);
@@ -1252,7 +1416,7 @@ void TPCCTables::MountCompression(RamanCompressor *forest, const std::string &ta
         Stock *value = nullptr;
         while (stock_.findLastLessThan(key, &value, &key)) {
             if (value == nullptr) throw std::runtime_error("value is nullptr in MountCompression");
-            insertStock(*value, false);
+            insertStock(*value, false, false);
         }
     } else if (table_name == "customer") {
         forest_customer_ = forest;
@@ -1261,7 +1425,7 @@ void TPCCTables::MountCompression(RamanCompressor *forest, const std::string &ta
         Customer *value = nullptr;
         while (customers_.findLastLessThan(key, &value, &key)) {
             if (value == nullptr) throw std::runtime_error("value is nullptr in MountCompression");
-            insertCustomer(*value, false);
+            insertCustomer(*value, false, false);
         }
     } else if (table_name == "orderline") {
         forest_orderline_ = forest;
@@ -1270,12 +1434,12 @@ void TPCCTables::MountCompression(RamanCompressor *forest, const std::string &ta
         OrderLine *value = nullptr;
         while (orderlines_.findLastLessThan(key, &value, &key)) {
             if (value == nullptr) throw std::runtime_error("value is nullptr in MountCompression");
-            insertOrderLine(*value, false);
+            insertOrderLine(*value, false, false);
         }
     } else if (table_name == "history") {
         forest_history_ = forest;
 
-        for (auto &h: history_) insertHistory(*h, false);
+        for (auto &h: history_) insertHistory(*h, false, false);
     } else if (table_name == "order") {
         forest_order_ = forest;
 
@@ -1283,7 +1447,7 @@ void TPCCTables::MountCompression(RamanCompressor *forest, const std::string &ta
         Order *value = nullptr;
         while (orders_.findLastLessThan(key, &value, &key)) {
             if (value == nullptr) throw std::runtime_error("value is nullptr in MountCompression");
-            insertOrder(*value, false);
+            insertOrder(*value, false, false);
         }
     } else {
         throw std::runtime_error("Unknown table name");

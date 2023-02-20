@@ -5,6 +5,7 @@
 #include <queue>
 #include <unordered_map>
 #include <vector>
+#include <string>
 
 #include "code_tree.h"
 
@@ -22,8 +23,9 @@ class FreqStat final {
   BiMap bimap_;
 
  public:
-  explicit FreqStat() {
-    std::string str = "-";
+  FreqStat() {
+    std::string str;
+    str.push_back('-');
     Str2Idx(str);
   }
 
