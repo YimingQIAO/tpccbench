@@ -66,16 +66,18 @@ int main(int argc, const char *argv[]) {
             printf("Transforming %ld warehouses... ", num_warehouses);
             fflush(stdout);
             begin = clock->getMicroseconds();
+            int32_t model_id = rand();
             // orderline
             {
                 OrderLineBlitz order_line_blitz;
                 tables->OrderLineToBlitz(order_line_blitz, num_warehouses);
-                static db_compress::RelationCompressor ol_compressor("ol_model.blitz",
+                std::string ol_model_name = std::to_string(model_id) + "ol_model.blitz";
+                static db_compress::RelationCompressor ol_compressor(ol_model_name.c_str(),
                                                                      order_line_blitz.schema(),
                                                                      order_line_blitz.compressionConfig(),
                                                                      kBlockSize);
                 BlitzLearning(order_line_blitz, ol_compressor);
-                static db_compress::RelationDecompressor ol_decompressor("ol_model.blitz",
+                static db_compress::RelationDecompressor ol_decompressor(ol_model_name.c_str(),
                                                                          order_line_blitz.schema(),
                                                                          kBlockSize);
                 ol_decompressor.InitWithoutIndex();
@@ -86,12 +88,13 @@ int main(int argc, const char *argv[]) {
             {
                 StockBlitz stock_blitz;
                 tables->StockToBlitz(stock_blitz, num_warehouses);
-                static db_compress::RelationCompressor stock_compressor("stock_model.blitz",
+                std::string stock_model_name = std::to_string(model_id) + "stock_model.blitz";
+                static db_compress::RelationCompressor stock_compressor(stock_model_name.c_str(),
                                                                         stock_blitz.schema(),
                                                                         stock_blitz.compressionConfig(),
                                                                         kBlockSize);
                 BlitzLearning(stock_blitz, stock_compressor);
-                static db_compress::RelationDecompressor stock_decompressor("stock_model.blitz",
+                static db_compress::RelationDecompressor stock_decompressor(stock_model_name.c_str(),
                                                                             stock_blitz.schema(), kBlockSize);
                 stock_decompressor.InitWithoutIndex();
                 tables->MountCompressor(stock_compressor, stock_decompressor, num_warehouses, "stock");
@@ -101,12 +104,13 @@ int main(int argc, const char *argv[]) {
             {
                 CustomerBlitz cust_blitz;
                 tables->CustomerToBlitz(cust_blitz, num_warehouses);
-                static db_compress::RelationCompressor cust_compressor("cust_model.blitz",
+                std::string customer_model_name = std::to_string(model_id) + "customer_model.blitz";
+                static db_compress::RelationCompressor cust_compressor(customer_model_name.c_str(),
                                                                        cust_blitz.schema(),
                                                                        cust_blitz.compressionConfig(),
                                                                        kBlockSize);
                 BlitzLearning(cust_blitz, cust_compressor);
-                static db_compress::RelationDecompressor cust_decompressor("cust_model.blitz",
+                static db_compress::RelationDecompressor cust_decompressor(customer_model_name.c_str(),
                                                                            cust_blitz.schema(),
                                                                            kBlockSize);
                 cust_decompressor.InitWithoutIndex();
@@ -174,10 +178,6 @@ void welcome(int argc, const char *const *argv) {
                 Warehouse::MAX_WAREHOUSE_ID, num_warehouses);
         exit(1);
     }
-
-    remove(Stock::TABLE_NAME);
-    remove(Customer::TABLE_NAME);
-    remove(OrderLine::TABLE_NAME);
 }
 
 void tableSize(TPCCTables *tables, bool is_initial, bool is_compressed) {

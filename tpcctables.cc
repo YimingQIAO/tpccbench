@@ -12,9 +12,13 @@
 using std::vector;
 
 namespace {
-    int stock_fd = DirectIOFile(Stock::TABLE_NAME);
-    int orderline_fd = DirectIOFile(OrderLine::TABLE_NAME);
-    int customer_fd = DirectIOFile(Customer::TABLE_NAME);
+    int file_id = rand();
+    const std::string kStockFile = std::to_string(file_id) + "_" + Stock::TABLE_NAME;
+    const std::string kCustomerFile = std::to_string(file_id) + "_" + Customer::TABLE_NAME;
+    const std::string kOrderLineFile = std::to_string(file_id) + "_" + OrderLine::TABLE_NAME;
+    int stock_fd = DirectIOFile(kStockFile);
+    int orderline_fd = DirectIOFile(kCustomerFile);
+    int customer_fd = DirectIOFile(kOrderLineFile);
 }
 
 bool CustomerByNameOrdering::operator()(const Customer *a,
@@ -79,6 +83,10 @@ TPCCTables::~TPCCTables() {
     STLDeleteValues(&neworders_);
     STLDeleteElements(&customers_by_name_);
     STLDeleteElements(&history_);
+
+    remove(kStockFile.c_str());
+    remove(kOrderLineFile.c_str());
+    remove(kCustomerFile.c_str());
 
     std::cout << "# of stock tuples: " << num_mem_stock << " - " << num_disk_stock << "\n";
     std::cout << "# of customer tuples: " << num_mem_customer << " - " << num_disk_stock << "\n";
