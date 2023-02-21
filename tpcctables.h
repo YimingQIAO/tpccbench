@@ -19,6 +19,8 @@ public:
 // Stores all the tables in TPC-C
 class TPCCTables : public TPCCDB {
 public:
+    explicit TPCCTables(double memory_size);
+
     virtual ~TPCCTables();
 
     virtual int32_t stockLevel(int32_t warehouse_id, int32_t district_id, int32_t threshold);
@@ -153,8 +155,6 @@ public:
 
     void HistoryToCSV(int64_t num_warehouses);
 
-    static void DeleteDiskData();
-
     static const int KEYS_PER_INTERNAL = 8;
     static const int KEYS_PER_LEAF = 8;
 
@@ -199,6 +199,7 @@ private:
     NewOrderMap neworders_;
     std::vector<const History *> history_;
 
+    // disk storage
     uint32_t num_mem_stock = 0;
     uint32_t num_disk_stock = 0;
 
@@ -208,6 +209,12 @@ private:
 
     uint32_t num_mem_customer = 0;
     uint32_t num_disk_customer = 0;
+
+    // disk storage
+    std::string kStockFileName, kCustomerFileName, kOrderlineFileName;
+    uint64_t kStockMT;
+    uint64_t kCustomerMT;
+    uint64_t kOrderlineMT;
 };
 
 #endif
