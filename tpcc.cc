@@ -196,7 +196,7 @@ void tableSize(TPCCTables *tables) {
     std::cout << "Warehouse: " << ini_warehouses << " byte" << std::endl;
     std::cout << "District: " << ini_districts << " byte" << std::endl;
     std::cout << "Customer: " << ini_customers << " + " << disk_c << " + " << dict_customer << " byte" << std::endl;
-    std::cout << "Order: " << ini_orders << " byte" << " + " << dict_order << std::endl;
+    std::cout << "Order: " << ini_orders << " byte" << " + " << dict_order << " byte" << std::endl;
     std::cout << "Orderline: " << ini_orderline << " + " << disk_ol << " + " << dict_orderline << " byte" << std::endl;
     std::cout << "NewOrder: " << ini_neworders << " byte" << std::endl;
     std::cout << "Item: " << ini_items << " byte" << std::endl;
