@@ -150,9 +150,6 @@ struct Stock {
     static const int MAX_DATA = 50;
     static const int NUM_STOCK_PER_WAREHOUSE = 100000;
 
-    constexpr static char TABLE_NAME[15] = "stock_disk.bin";
-    static const uint64_t MEMORY_THRESHOLD = 9 * kMemorySize / 328 * 0.95 * 0.411;
-
     int32_t s_quantity;
     int32_t s_ytd;
     int32_t s_order_cnt;
@@ -195,9 +192,6 @@ struct Customer {
     static const int NUM_PER_DISTRICT = 3000;
     static const char GOOD_CREDIT[];
     static const char BAD_CREDIT[];
-
-    constexpr static char TABLE_NAME[18] = "customer_disk.bin";
-    static const uint64_t MEMORY_THRESHOLD = 14 * kMemorySize * 0.95 * 0.258 / 688;
 
     int32_t c_id;
     int32_t c_d_id;
@@ -285,9 +279,6 @@ struct OrderLine {
     static constexpr float MAX_AMOUNT = 9999.99f;
     // new order has 10/1000 probability of selecting a remote warehouse for ol_supply_w_id
     static const int REMOTE_PROBABILITY_MILLIS = 10;
-
-    constexpr static char TABLE_NAME[19] = "orderline_disk.bin";
-    static const uint64_t MEMORY_THRESHOLD = 6 * kMemorySize / 88 * 0.95 * 0.331 + 200000 * 0.45 * 10;
 
     int32_t ol_i_id;
     float ol_amount;

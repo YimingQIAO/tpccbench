@@ -12,13 +12,9 @@
 using std::vector;
 
 namespace {
-    int file_id = rand();
-    const std::string kStockFile = std::to_string(file_id) + "_" + Stock::TABLE_NAME;
-    const std::string kCustomerFile = std::to_string(file_id) + "_" + Customer::TABLE_NAME;
-    const std::string kOrderLineFile = std::to_string(file_id) + "_" + OrderLine::TABLE_NAME;
-    int stock_fd = DirectIOFile(kStockFile);
-    int orderline_fd = DirectIOFile(kCustomerFile);
-    int customer_fd = DirectIOFile(kOrderLineFile);
+    int stock_fd;
+    int orderline_fd;
+    int customer_fd;
 }
 
 bool CustomerByNameOrdering::operator()(const Customer *a,
@@ -72,6 +68,26 @@ BTreeSize(BPlusTree<KeyType, ValueType *, TPCCTables::KEYS_PER_INTERNAL,
     return ret;
 }
 
+TPCCTables::TPCCTables(double memory_size) : ol_buffer_(10), stock_buffer_(District::NUM_PER_WAREHOUSE + 7),
+                                             customer_buffer_(21) {
+    std::cout << "Memory size: " << memory_size << "\n";
+    memory_size *= 1024 * 1024 * 1024;
+    kStockMT = memory_size / 328 * 0.95 * 0.411;
+    kCustomerMT = memory_size * 0.95 * 0.258 / 688;
+    kOrderlineMT = memory_size / 88 * 0.95 * 0.331 + 200000 * 0.45 * 10;
+
+    srand(time(nullptr));
+    int32_t file_id = rand();
+    std::cout << "Random file id: " << file_id << "\n";
+    kStockFileName = std::to_string(file_id) + "_stock.disk";
+    kCustomerFileName = std::to_string(file_id) + "_customer.disk";
+    kOrderlineFileName = std::to_string(file_id) + "_orderline.disk";
+
+    stock_fd = DirectIOFile(kStockFileName);
+    orderline_fd = DirectIOFile(kOrderlineFileName);
+    customer_fd = DirectIOFile(kCustomerFileName);
+}
+
 TPCCTables::~TPCCTables() {
     // Clean up the b-trees with this gross hack
     deleteBTreeValues(&warehouses_);
@@ -84,9 +100,9 @@ TPCCTables::~TPCCTables() {
     STLDeleteElements(&customers_by_name_);
     STLDeleteElements(&history_);
 
-    remove(kStockFile.c_str());
-    remove(kOrderLineFile.c_str());
-    remove(kCustomerFile.c_str());
+    remove(kCustomerFileName.c_str());
+    remove(kOrderlineFileName.c_str());
+    remove(kStockFileName.c_str());
 
     std::cout << "# of stock tuples: " << num_mem_stock << " - " << num_disk_stock << "\n";
     std::cout << "# of customer tuples: " << num_mem_customer << " - " << num_disk_stock << "\n";
@@ -882,7 +898,7 @@ void TPCCTables::insertStock(const Stock &stock) {
 
 void TPCCTables::insertStockBlitz(db_compress::AttrVector &stock, int32_t stop_idx) {
     if (stop_idx == StockBlitz::kNumAttrs) {
-        disk_tuple_buf_.in_memory_ = num_mem_stock < Stock::MEMORY_THRESHOLD;
+        disk_tuple_buf_.in_memory_ = num_mem_stock < kStockMT;
         if (disk_tuple_buf_.in_memory_) {
             disk_tuple_buf_.data_ = stock_compressor_->TransformTupleToBits(stock, stop_idx);
             num_mem_stock++;
@@ -958,7 +974,7 @@ void TPCCTables::insertCustomerBlitz(db_compress::AttrVector &customer, int32_t 
     if (!single_attr) {
         // sub-tuple should not be written to B+-tree
         if (attr_idx == CustomerBlitz::kNumAttrs) {
-            disk_tuple_buf_.in_memory_ = num_mem_customer < Customer::MEMORY_THRESHOLD;
+            disk_tuple_buf_.in_memory_ = num_mem_customer < kCustomerMT;
             if (disk_tuple_buf_.in_memory_) {
                 disk_tuple_buf_.data_ = customer_compressor_->TransformTupleToBits(customer, attr_idx);
                 num_mem_customer++;
@@ -1148,7 +1164,7 @@ OrderLine *TPCCTables::insertOrderLine(const OrderLine &orderline) {
 void TPCCTables::insertOrderLineBlitz(db_compress::AttrVector &orderline, int32_t stop_idx) {
     // sub-tuple should not be written to B+-tree
     if (stop_idx == OrderLineBlitz::kNumAttrs) {
-        disk_tuple_buf_.in_memory_ = num_mem_orderline < OrderLine::MEMORY_THRESHOLD;
+        disk_tuple_buf_.in_memory_ = num_mem_orderline < kOrderlineMT;
         if (disk_tuple_buf_.in_memory_) {
             disk_tuple_buf_.data_ = orderline_compressor_->TransformTupleToBits(orderline, stop_idx);
             num_mem_orderline++;

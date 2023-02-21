@@ -70,11 +70,11 @@ namespace tpcc {
 
         void setC(const NURandC &c) { c_values_ = c; }
 
-        void stockData(char *s, int upper_length){
+        void stockData(char *s, int upper_length) {
             wordsData(s, upper_length, 4);
         }
 
-        void historyData(char *s, int upper_length){
+        void historyData(char *s, int upper_length) {
             wordsData(s, upper_length, 3);
         }
 

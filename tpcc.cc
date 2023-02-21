@@ -22,6 +22,7 @@ enum Mode {
 };
 static Mode mode;
 static long num_warehouses = 1;
+static double memory_size;
 
 void tableSize(TPCCTables *tables, bool is_initial, bool is_compressed);
 
@@ -30,7 +31,7 @@ void welcome(int argc, const char *const *argv);
 int main(int argc, const char *argv[]) {
     welcome(argc, argv);
 
-    TPCCTables *tables = new TPCCTables();
+    TPCCTables *tables = new TPCCTables(memory_size);
     SystemClock *clock = new SystemClock();
 
     // Create a generator for filling the database.
@@ -150,11 +151,13 @@ int main(int argc, const char *argv[]) {
 }
 
 void welcome(int argc, const char *const *argv) {
-    if (argc == 2) {
+    if (argc == 3) {
         num_warehouses = strtol(argv[1], NULL, 10);
-    } else if (argc == 3) {
+        memory_size = strtod(argv[2], NULL);
+    } else if (argc == 4) {
         num_warehouses = strtol(argv[1], NULL, 10);
-        bool is_download = std::stoi(argv[2]);
+        memory_size = strtod(argv[2], NULL);
+        bool is_download = std::stoi(argv[3]);
         if (is_download) mode = GenerateCSV;
         else
             mode = Benchmark;

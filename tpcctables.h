@@ -18,8 +18,7 @@ public:
 // Stores all the tables in TPC-C
 class TPCCTables : public TPCCDB {
 public:
-    TPCCTables() : ol_buffer_(10), stock_buffer_(District::NUM_PER_WAREHOUSE + 7),
-                   customer_buffer_(21) {}
+    TPCCTables(double memory_size);
 
     virtual ~TPCCTables();
 
@@ -260,6 +259,7 @@ private:
     db_compress::RelationDecompressor *customer_decompressor_;
     db_compress::AttrVector customer_buffer_;
 
+    // disk storage
     uint32_t num_mem_stock = 0;
     uint32_t num_disk_stock = 0;
 
@@ -269,6 +269,12 @@ private:
     uint32_t num_mem_customer = 0;
     uint32_t num_disk_customer = 0;
     Tuple<std::vector<uint8_t>> disk_tuple_buf_;
+
+    // disk storage
+    std::string kStockFileName, kCustomerFileName, kOrderlineFileName;
+    uint64_t kStockMT;
+    uint64_t kCustomerMT;
+    uint64_t kOrderlineMT;
 };
 
 #endif
