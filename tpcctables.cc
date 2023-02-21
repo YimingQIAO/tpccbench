@@ -82,9 +82,9 @@ BTreeSize(
 TPCCTables::TPCCTables(double memory_size) {
     std::cout << "Memory size: " << memory_size << "\n";
     memory_size *= 1024 * 1024 * 1024;
-    kStockMT = memory_size / 328 * 0.95 * 0.411;
-    kCustomerMT = memory_size * 0.95 * 0.258 / 688;
-    kOrderlineMT = memory_size / 88 * 0.95 * 0.331 + 200000 * 0.45 * 10;
+    kStockMT = memory_size / 328 * 0.95 * 0.411 * 2.7;
+    kCustomerMT = memory_size * 0.95 * 0.258 / 688 * 2.7;
+    kOrderlineMT = memory_size / 88 * 0.95 * 0.331 * 2.7 + 200000 * 0.45 * 10;
 
     srand(time(nullptr));
     int32_t file_id = rand();
