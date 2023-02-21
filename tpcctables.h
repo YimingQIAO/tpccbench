@@ -20,6 +20,8 @@ public:
 // Stores all the tables in TPC-C
 class TPCCTables : public TPCCDB {
 public:
+    explicit TPCCTables(double memory_size);
+
     virtual ~TPCCTables();
 
     virtual int32_t stockLevel(int32_t warehouse_id, int32_t district_id, int32_t threshold);
@@ -155,8 +157,6 @@ public:
 
     void HistoryToCSV(int64_t num_warehouses);
 
-    static void DeleteDiskData();
-
     // -------------------- zstd ----------------------
     void StockToZstd(int64_t num_warehouses, std::vector<Stock> &samples,
                      std::vector<size_t> &sample_sizes) {
@@ -282,6 +282,12 @@ private:
 
     uint32_t num_mem_customer = 0;
     uint32_t num_disk_customer = 0;
+
+    // disk storage
+    std::string kStockFileName, kCustomerFileName, kOrderlineFileName;
+    uint64_t kStockMT;
+    uint64_t kCustomerMT;
+    uint64_t kOrderlineMT;
 
     // zstd
     Stock stock_zstd_buf_;
