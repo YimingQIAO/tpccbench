@@ -67,12 +67,13 @@ int main(int argc, const char *argv[]) {
             printf("Transforming %ld warehouses... ", num_warehouses);
             fflush(stdout);
             begin = clock->getMicroseconds();
+            srand(time(nullptr));
             int32_t model_id = rand();
             // orderline
             {
                 OrderLineBlitz order_line_blitz;
                 tables->OrderLineToBlitz(order_line_blitz, num_warehouses);
-                std::string ol_model_name = std::to_string(model_id) + "ol_model.blitz";
+                std::string ol_model_name = std::to_string(model_id) + "_ol_model.blitz";
                 static db_compress::RelationCompressor ol_compressor(ol_model_name.c_str(),
                                                                      order_line_blitz.schema(),
                                                                      order_line_blitz.compressionConfig(),
@@ -89,7 +90,7 @@ int main(int argc, const char *argv[]) {
             {
                 StockBlitz stock_blitz;
                 tables->StockToBlitz(stock_blitz, num_warehouses);
-                std::string stock_model_name = std::to_string(model_id) + "stock_model.blitz";
+                std::string stock_model_name = std::to_string(model_id) + "_stock_model.blitz";
                 static db_compress::RelationCompressor stock_compressor(stock_model_name.c_str(),
                                                                         stock_blitz.schema(),
                                                                         stock_blitz.compressionConfig(),
@@ -105,7 +106,7 @@ int main(int argc, const char *argv[]) {
             {
                 CustomerBlitz cust_blitz;
                 tables->CustomerToBlitz(cust_blitz, num_warehouses);
-                std::string customer_model_name = std::to_string(model_id) + "customer_model.blitz";
+                std::string customer_model_name = std::to_string(model_id) + "_customer_model.blitz";
                 static db_compress::RelationCompressor cust_compressor(customer_model_name.c_str(),
                                                                        cust_blitz.schema(),
                                                                        cust_blitz.compressionConfig(),
