@@ -12,9 +12,13 @@
 using std::vector;
 
 namespace {
-    int stock_fd = DirectIOFile(Stock::TABLE_NAME);
-    int orderline_fd = DirectIOFile(OrderLine::TABLE_NAME);
-    int customer_fd = DirectIOFile(Customer::TABLE_NAME);
+    int file_id = rand();
+    const std::string kStockFile = std::to_string(file_id) + "_" + Stock::TABLE_NAME;
+    const std::string kCustomerFile = std::to_string(file_id) + "_" + Customer::TABLE_NAME;
+    const std::string kOrderLineFile = std::to_string(file_id) + "_" + OrderLine::TABLE_NAME;
+    int stock_fd = DirectIOFile(kStockFile);
+    int orderline_fd = DirectIOFile(kCustomerFile);
+    int customer_fd = DirectIOFile(kOrderLineFile);
 }
 
 bool CustomerByNameOrdering::operator()(const Customer *a, const Customer *b) const {
@@ -1112,9 +1116,9 @@ void TPCCTables::DeleteDiskData() {
     close(stock_fd);
     close(orderline_fd);
     close(customer_fd);
-    remove(Stock::TABLE_NAME);
-    remove(OrderLine::TABLE_NAME);
-    remove(Customer::TABLE_NAME);
+    remove(kCustomerFile.c_str());
+    remove(kOrderLineFile.c_str());
+    remove(kStockFile.c_str());
 }
 
 int64_t TPCCTables::itemSize() {
