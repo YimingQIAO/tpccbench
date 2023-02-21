@@ -22,6 +22,8 @@ public:
 // Stores all the tables in TPC-C
 class TPCCTables : public TPCCDB {
 public:
+    explicit TPCCTables(double memory_size);
+
     virtual ~TPCCTables();
 
     virtual int32_t stockLevel(int32_t warehouse_id, int32_t district_id, int32_t threshold);
@@ -157,8 +159,6 @@ public:
 
     void HistoryToCSV(int64_t num_warehouses);
 
-    static void DeleteDiskData();
-
     // -------------------- raman ----------------------
     void StockToRaman(int64_t num_warehouses, std::vector<std::vector<std::string>> &samples) {
         for (int32_t w_id = 1; w_id <= num_warehouses; w_id++) {
@@ -277,6 +277,12 @@ private:
     uint32_t num_mem_customer = 0;
     uint32_t num_disk_customer = 0;
     Tuple<BitStream> customer_tuple_disk_;
+
+    // disk storage
+    std::string kStockFileName, kCustomerFileName, kOrderlineFileName;
+    uint64_t kStockMT;
+    uint64_t kCustomerMT;
+    uint64_t kOrderlineMT;
 
     // raman
     RamanCompressor *forest_stock_;
