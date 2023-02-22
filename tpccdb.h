@@ -59,7 +59,7 @@ struct Item {
     char i_name[MAX_NAME + 1];
     char i_data[MAX_DATA + 1];
 
-    uint32_t Size() {
+    uint32_t Size() const  {
         uint32_t ret = 0;
         ret += std::to_string(i_id).size();
         ret += std::to_string(i_im_id).size();
@@ -90,7 +90,7 @@ struct Warehouse {
     char w_state[Address::STATE + 1];
     char w_zip[Address::ZIP + 1];
 
-    uint32_t size() {
+    uint32_t size() const {
         uint32_t ret = 0;
         ret += std::to_string(w_id).size();
         ret += std::to_string(w_tax).size();
@@ -126,7 +126,7 @@ struct District {
     char d_state[Address::STATE + 1];
     char d_zip[Address::ZIP + 1];
 
-    uint32_t size() {
+    uint32_t size() const {
         uint32_t ret = 0;
         ret += std::to_string(d_id).size();
         ret += std::to_string(d_w_id).size();
@@ -160,7 +160,7 @@ struct Stock {
     char s_dist[District::NUM_PER_WAREHOUSE][DIST + 1];
     char s_data[MAX_DATA + 1];
 
-    uint32_t size() {
+    uint32_t size() const {
         uint32_t ret = 0;
         ret += 6 * 4;
         for (int32_t i = 0; i < District::NUM_PER_WAREHOUSE; i++)
@@ -242,7 +242,7 @@ struct Customer {
     char c_credit[CREDIT + 1];
     char c_data[MAX_DATA + 1];
 
-    uint32_t size();
+    uint32_t size() const;
 
     std::vector<std::string> toRamanFormat() const {
         std::vector<std::string> sample;
@@ -319,7 +319,7 @@ struct Order {
     int32_t o_all_local;
     char o_entry_d[DATETIME_SIZE + 1];
 
-    uint32_t size() {
+    uint32_t size() const {
         uint32_t ret = 0;
         ret += std::to_string(o_id).size();
         ret += std::to_string(o_c_id).size();
@@ -378,7 +378,7 @@ struct OrderLine {
     char ol_delivery_d[DATETIME_SIZE + 1];
     char ol_dist_info[Stock::DIST + 1];
 
-    uint32_t size() {
+    uint32_t size() const {
         if (ol_delivery_d[0] == '\0')
             return 8 * 4 + 25;
         else
@@ -421,7 +421,7 @@ struct NewOrder {
     int32_t no_d_id;
     int32_t no_o_id;
 
-    uint32_t size() {
+    uint32_t size() const{
         uint32_t ret = 0;
         ret += std::to_string(no_w_id).size();
         ret += std::to_string(no_d_id).size();

@@ -79,13 +79,8 @@ BTreeSize(
     return ret;
 }
 
-TPCCTables::TPCCTables(double memory_size) {
-    std::cout << "Memory size: " << memory_size << "\n";
-    memory_size *= 1024 * 1024 * 1024;
-    kStockMT = memory_size / 328 * 0.95 * 0.411 * 1.7;
-    kCustomerMT = memory_size * 0.95 * 0.258 / 688 * 3.2;
-    kOrderlineMT = memory_size / 88 * 0.95 * 0.331 * 3.9 + 200000 * 0.45 * 10;
-
+TPCCTables::TPCCTables(double memory_size) : stat_(memory_size * 1000 * 1000 * 1000) {
+    std::cout << "Memory size: " << memory_size << " GB\n";
     srand(time(nullptr));
     int32_t file_id = rand();
     std::cout << "Random file id: " << file_id << "\n";
@@ -765,6 +760,8 @@ erase(BPlusTree<KeyType, T *, TPCCTables::KEYS_PER_INTERNAL, TPCCTables::KEYS_PE
 void TPCCTables::insertItem(const Item &item) {
     assert(item.i_id == items_.size() + 1);
     items_.push_back(item);
+
+    stat_.Insert(item.Size(), true, "item");
 }
 
 Item *TPCCTables::findItem(int32_t id) {
@@ -776,6 +773,8 @@ Item *TPCCTables::findItem(int32_t id) {
 
 void TPCCTables::insertWarehouse(const Warehouse &w) {
     insert(&warehouses_, w.w_id, w);
+
+    stat_.Insert(w.size(), true, "warehouse");
 }
 
 Warehouse *TPCCTables::findWarehouse(int32_t id) {
@@ -793,7 +792,7 @@ static int32_t makeStockKey(int32_t w_id, int32_t s_id) {
 void TPCCTables::insertStock(const Stock &stock, bool is_orig, bool relearn) {
     int64_t key = makeStockKey(stock.s_w_id, stock.s_i_id);
     if (!is_orig) {
-        stock_tuple_disk_.in_memory_ = num_mem_stock < kStockMT;
+        stock_tuple_disk_.in_memory_ = stat_.ToMemory(stock.size());
         if (stock_tuple_disk_.in_memory_) {
             num_mem_stock++;
 
@@ -802,6 +801,8 @@ void TPCCTables::insertStock(const Stock &stock, bool is_orig, bool relearn) {
                 stock_tuple_disk_.dict_id_ = -1;
                 stock_tuple_disk_.data_ = RamanCompress(forest_stock_, &stock);
                 insert(&stock_raman, (int32_t) key, stock_tuple_disk_);
+
+                stat_.Insert(stock_tuple_disk_.data_.size(), true, "stock");
                 return;
             }
 
@@ -818,6 +819,8 @@ void TPCCTables::insertStock(const Stock &stock, bool is_orig, bool relearn) {
                 for (int i = 0; i < compressed.size(); i++) {
                     stock_tuple_disk_.data_ = compressed[i];
                     insert(&stock_raman, keys[i], stock_tuple_disk_);
+
+                    stat_.Insert(stock_tuple_disk_.data_.size(), true, "stock");
                 }
             }
         } else {
@@ -826,6 +829,8 @@ void TPCCTables::insertStock(const Stock &stock, bool is_orig, bool relearn) {
             num_disk_stock++;
             SeqDiskTupleWrite(stock_fd, &stock);
             insert(&stock_raman, (int32_t) key, stock_tuple_disk_);
+
+            stat_.Insert(stock_tuple_disk_.data_.size(), false, "stock");
         }
     } else
         insert(&stock_, (int32_t) key, stock);
@@ -844,6 +849,7 @@ Stock *TPCCTables::findStock(int32_t w_id, int32_t s_id, bool is_orig) {
         // find it on disk
         if (!tuple->in_memory_) {
             DiskTupleRead(stock_fd, &stock_raman_buf_, tuple->id_pos_);
+            stat_.SwapTuple(stock_raman_buf_.size(), "stock");
             return &stock_raman_buf_;
         }
 
@@ -871,6 +877,8 @@ static int32_t makeDistrictKey(int32_t w_id, int32_t d_id) {
 
 void TPCCTables::insertDistrict(const District &district) {
     insert(&districts_, makeDistrictKey(district.d_w_id, district.d_id), district);
+
+    stat_.Insert(district.size(), true, "district");
 }
 
 District *TPCCTables::findDistrict(int32_t w_id, int32_t d_id) {
@@ -890,7 +898,7 @@ static int32_t makeCustomerKey(int32_t w_id, int32_t d_id, int32_t c_id) {
 void TPCCTables::insertCustomer(const Customer &customer, bool is_orig, bool relearn) {
     int64_t key = makeCustomerKey(customer.c_w_id, customer.c_d_id, customer.c_id);
     if (!is_orig) {
-        customer_tuple_disk_.in_memory_ = num_mem_customer < kCustomerMT;
+        customer_tuple_disk_.in_memory_ = stat_.ToMemory(customer.size());
         if (customer_tuple_disk_.in_memory_) {
             num_mem_customer++;
             // in memory
@@ -898,6 +906,8 @@ void TPCCTables::insertCustomer(const Customer &customer, bool is_orig, bool rel
                 customer_tuple_disk_.dict_id_ = -1;
                 customer_tuple_disk_.data_ = RamanCompress(forest_customer_, &customer);
                 insert(&customer_raman, (int32_t) key, customer_tuple_disk_);
+
+                stat_.Insert(customer_tuple_disk_.data_.size(), true, "customer");
                 return;
             }
 
@@ -922,6 +932,8 @@ void TPCCTables::insertCustomer(const Customer &customer, bool is_orig, bool rel
             num_disk_customer++;
             SeqDiskTupleWrite(customer_fd, &customer);
             insert(&customer_raman, (int32_t) key, customer_tuple_disk_);
+
+            stat_.Insert(customer_tuple_disk_.data_.size(), false, "customer");
         }
     } else {
         Customer *c = insert(&customers_, (int32_t) key, customer);
@@ -942,6 +954,7 @@ Customer *TPCCTables::findCustomer(int32_t w_id, int32_t d_id, int32_t c_id, boo
         // find it on disk
         if (!tuple->in_memory_) {
             DiskTupleRead(customer_fd, &customer_raman_buf_, tuple->id_pos_);
+            stat_.SwapTuple(customer_raman_buf_.size(), "customer");
             return &customer_raman_buf_;
         }
 
@@ -1033,6 +1046,8 @@ Order *TPCCTables::insertOrder(const Order &order, bool is_orig, bool relearn) {
             tuple.data_ = RamanCompress(forest_order_, &order);
             tuple.dict_id_ = -1;
             insert(&order_raman, key, tuple);
+
+            stat_.Insert(tuple.data_.size(), true, "order");
             return nullptr;
         }
 
@@ -1051,6 +1066,8 @@ Order *TPCCTables::insertOrder(const Order &order, bool is_orig, bool relearn) {
             for (int i = 0; i < compressed.size(); i++) {
                 tuple.data_ = compressed[i];
                 insert(&order_raman, (int32_t) keys[i], tuple);
+
+                stat_.Insert(tuple.data_.size(), false, "order");
             }
         }
         return nullptr;
@@ -1120,7 +1137,7 @@ OrderLine *TPCCTables::insertOrderLine(const OrderLine &orderline, bool is_orig,
     int64_t key = makeOrderLineKey(orderline.ol_w_id, orderline.ol_d_id, orderline.ol_o_id,
                                    orderline.ol_number);
     if (!is_orig) {
-        ol_tuple_disk_.in_memory_ = num_mem_orderline < kOrderlineMT;
+        ol_tuple_disk_.in_memory_ = stat_.ToMemory(orderline.size());
         if (ol_tuple_disk_.in_memory_) {
             num_mem_orderline++;
             // in memory
@@ -1128,6 +1145,7 @@ OrderLine *TPCCTables::insertOrderLine(const OrderLine &orderline, bool is_orig,
                 ol_tuple_disk_.dict_id_ = -1;
                 ol_tuple_disk_.data_ = RamanCompress(forest_orderline_, &orderline);
                 insert(&orderline_raman, key, ol_tuple_disk_);
+                stat_.Insert(ol_tuple_disk_.data_.size(), true, "orderline");
                 return nullptr;
             }
 
@@ -1144,6 +1162,8 @@ OrderLine *TPCCTables::insertOrderLine(const OrderLine &orderline, bool is_orig,
                 for (int i = 0; i < compressed.size(); i++) {
                     ol_tuple_disk_.data_ = compressed[i];
                     insert(&orderline_raman, keys[i], ol_tuple_disk_);
+
+                    stat_.Insert(ol_tuple_disk_.data_.size(), true, "orderline");
                 }
                 return nullptr;
             }
@@ -1153,6 +1173,8 @@ OrderLine *TPCCTables::insertOrderLine(const OrderLine &orderline, bool is_orig,
             SeqDiskTupleWrite(orderline_fd, &orderline);
             num_disk_orderline++;
             insert(&orderline_raman, key, ol_tuple_disk_);
+
+            stat_.Insert(ol_tuple_disk_.data_.size(), false, "orderline");
             return nullptr;
         }
     } else {
@@ -1184,6 +1206,8 @@ OrderLine *TPCCTables::findOrderLine(int32_t w_id, int32_t d_id, int32_t o_id, i
         // find it on disk
         if (!tuple->in_memory_) {
             DiskTupleRead(orderline_fd, &orderline_raman_buf_, tuple->id_pos_);
+
+            stat_.SwapTuple(orderline_raman_buf_.size() << 2, "orderline");
             return &orderline_raman_buf_;
         }
 
@@ -1218,6 +1242,8 @@ NewOrder *TPCCTables::insertNewOrder(int32_t w_id, int32_t d_id, int32_t o_id) {
     neworder->no_d_id = d_id;
     neworder->no_o_id = o_id;
 
+    stat_.Insert(neworder->size(), true, "neworder");
+
     return insertNewOrderObject(&neworders_, neworder);
 }
 
@@ -1230,8 +1256,11 @@ NewOrder *TPCCTables::findNewOrder(int32_t w_id, int32_t d_id, int32_t o_id) {
 
 History *TPCCTables::insertHistory(const History &history, bool is_orig, bool relearn) {
     if (!is_orig) {
-        if (!relearn) history_raman.push_back(RamanCompress(forest_history_, &history));
-        else {
+        if (!relearn) {
+            BitStream bits = RamanCompress(forest_history_, &history);
+            history_raman.push_back(bits);
+            stat_.Insert(bits.size(), true, "history");
+        } else {
             block_history_.Append(history, 0);
             if (block_history_.IsFull())
                 block_history_.BlockCompress(history_raman, nullptr, nullptr);
@@ -1342,79 +1371,6 @@ void TPCCTables::HistoryToCSV(int64_t num_warehouses) {
               << h->h_data << "\n";
     }
     his_f.close();
-}
-
-int64_t TPCCTables::itemSize() {
-    int32_t ret = 0;
-    for (Item &item: items_) ret += item.Size();
-    return ret;
-}
-
-int64_t TPCCTables::warehouseSize() {
-    return BTreeSize(&warehouses_);
-}
-
-int64_t TPCCTables::districtSize() {
-    return BTreeSize(&districts_);
-}
-
-int64_t TPCCTables::stockSize() {
-    int64_t ret = 0;
-    int32_t key = std::numeric_limits<int32_t>::max();
-    Tuple<BitStream> *value;
-    while (stock_raman.findLastLessThan(key, &value, &key)) {
-        if (value == nullptr) throw std::runtime_error("null value in stockSize");
-        if (value->in_memory_) ret += value->data_.size();
-    }
-    return ret;
-}
-
-int64_t TPCCTables::diskTableSize(const std::string &file_name) {
-    if (file_name == "stock") return DiskTableSize<Stock>(stock_fd);
-    else if (file_name == "orderline") return DiskTableSize<OrderLine>(orderline_fd);
-    else if (file_name == "customer") return DiskTableSize<Customer>(customer_fd);
-    else {
-        throw std::runtime_error("Unknown file name");
-    }
-}
-
-int64_t TPCCTables::customerSize() {
-    int64_t ret = 0;
-    int32_t key = std::numeric_limits<int32_t>::max();
-    Tuple<BitStream> *value;
-    while (customer_raman.findLastLessThan(key, &value, &key)) {
-        if (value == nullptr) throw std::runtime_error("null value in customerSize");
-        if (value->in_memory_) ret += value->data_.size();
-    }
-    return ret;
-}
-
-int64_t TPCCTables::orderSize() {
-    return BTreeSize(&orders_);
-}
-
-int64_t TPCCTables::orderlineSize() {
-    int64_t ret = 0;
-    int64_t key = std::numeric_limits<int64_t>::max();
-    Tuple<BitStream> *value;
-    while (orderline_raman.findLastLessThan(key, &value, &key)) {
-        if (value == nullptr) throw std::runtime_error("null value in orderlineSize");
-        if (value->in_memory_) ret += value->data_.size();
-    }
-    return ret;
-
-}
-
-int64_t TPCCTables::newOrderSize() {
-    int64_t ret = 0;
-    for (auto &no: neworders_) ret += no.second->size();
-    return ret;
-}
-
-int64_t TPCCTables::historySize() {
-    int64_t ret = 0;
-    for (auto &h: history_) ret += h->size();
-    return ret;
 }
 
 void TPCCTables::MountCompression(RamanCompressor *forest, const std::string &table_name) {
