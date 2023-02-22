@@ -9,6 +9,7 @@
 #include "btree.h"
 #include "tpccdb.h"
 #include "disk_storage.h"
+#include "tpcc_stat.h"
 
 class CustomerByNameOrdering {
 public:
@@ -174,10 +175,10 @@ public:
 
     void HistoryToCSV(int64_t num_warehouses);
 
-    int64_t diskTableSize(const std::string &file_name);
-
     static const int KEYS_PER_INTERNAL = 8;
     static const int KEYS_PER_LEAF = 8;
+
+    TPCCStat stat_;
 
 private:
     static const int STOCK_LEVEL_ORDERS = 20;
@@ -272,9 +273,6 @@ private:
 
     // disk storage
     std::string kStockFileName, kCustomerFileName, kOrderlineFileName;
-    uint64_t kStockMT;
-    uint64_t kCustomerMT;
-    uint64_t kOrderlineMT;
 };
 
 #endif

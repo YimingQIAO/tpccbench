@@ -68,13 +68,11 @@ BTreeSize(BPlusTree<KeyType, ValueType *, TPCCTables::KEYS_PER_INTERNAL,
     return ret;
 }
 
-TPCCTables::TPCCTables(double memory_size) : ol_buffer_(10), stock_buffer_(District::NUM_PER_WAREHOUSE + 7),
+TPCCTables::TPCCTables(double memory_size) : stat_(memory_size * 1000 * 1000 * 1000),
+                                             ol_buffer_(10),
+                                             stock_buffer_(District::NUM_PER_WAREHOUSE + 7),
                                              customer_buffer_(21) {
-    std::cout << "Memory size: " << memory_size << "\n";
-    memory_size *= 1024 * 1024 * 1024;
-    kStockMT = memory_size / 328 * 0.95 * 0.411 * 9;
-    kCustomerMT = memory_size * 0.95 * 0.258 / 688 * 14;
-    kOrderlineMT = memory_size / 88 * 0.95 * 0.331 * 6 + 200000 * 0.45 * 10;
+    std::cout << "Memory size: " << memory_size << " GB\n";
 
     srand(time(nullptr));
     int32_t file_id = rand();
@@ -106,7 +104,8 @@ TPCCTables::~TPCCTables() {
 
     std::cout << "# of stock tuples: " << num_mem_stock << " - " << num_disk_stock << "\n";
     std::cout << "# of customer tuples: " << num_mem_customer << " - " << num_disk_stock << "\n";
-    std::cout << "# of orderline tuples: " << num_mem_orderline << " - " << num_disk_orderline << "\n";
+    std::cout << "# of orderline tuples: " << num_mem_orderline << " - " << num_disk_orderline
+              << "\n";
 }
 
 int32_t TPCCTables::stockLevel(int32_t warehouse_id, int32_t district_id,
@@ -866,6 +865,8 @@ static void erase(BPlusTree<KeyType, T *, TPCCTables::KEYS_PER_INTERNAL,
 void TPCCTables::insertItem(const Item &item) {
     assert(item.i_id == items_.size() + 1);
     items_.push_back(item);
+
+    stat_.Insert(item.Size(), true, "item");
 }
 
 Item *TPCCTables::findItem(int32_t id) {
@@ -878,6 +879,8 @@ Item *TPCCTables::findItem(int32_t id) {
 
 void TPCCTables::insertWarehouse(const Warehouse &w) {
     insert(&warehouses_, w.w_id, w);
+
+    stat_.Insert(w.size(), true, "warehouse");
 }
 
 Warehouse *TPCCTables::findWarehouse(int32_t id) {
@@ -898,17 +901,22 @@ void TPCCTables::insertStock(const Stock &stock) {
 
 void TPCCTables::insertStockBlitz(db_compress::AttrVector &stock, int32_t stop_idx) {
     if (stop_idx == StockBlitz::kNumAttrs) {
-        disk_tuple_buf_.in_memory_ = num_mem_stock < kStockMT;
+        disk_tuple_buf_.in_memory_ = stat_.ToMemory(328);
         if (disk_tuple_buf_.in_memory_) {
             disk_tuple_buf_.data_ = stock_compressor_->TransformTupleToBits(stock, stop_idx);
             num_mem_stock++;
+
+            stat_.Insert(disk_tuple_buf_.data_.size(), true, "stock");
         } else {
             Stock s = attrVectorToStock(stock);
             disk_tuple_buf_.id_pos_ = num_disk_stock;
             SeqDiskTupleWrite(stock_fd, &s);
             num_disk_stock++;
+
+            stat_.Insert(s.size(), false, "stock");
         }
-        insert(&stock_blitz_, makeStockKey(stock.attr_[16].Int(), stock.attr_[15].Int()), disk_tuple_buf_);
+        insert(&stock_blitz_, makeStockKey(stock.attr_[16].Int(), stock.attr_[15].Int()),
+               disk_tuple_buf_);
     } else {
         stock_compressor_->TransformTupleToBits(stock, stop_idx);
     }
@@ -921,12 +929,13 @@ Stock *TPCCTables::findStock(int32_t w_id, int32_t s_id) {
 db_compress::AttrVector *TPCCTables::findStockBlitz(int32_t w_id, int32_t s_id,
                                                     int32_t stop_idx) {
     int32_t key = makeStockKey(w_id, s_id);
-    Tuple<std::vector<uint8_t>> *tuple = find(stock_blitz_, key);
+    Tuple <std::vector<uint8_t>> *tuple = find(stock_blitz_, key);
     if (tuple) {
         if (!tuple->in_memory_) {
             Stock s;
             DiskTupleRead(stock_fd, &s, tuple->id_pos_);
             stockToAttrVector(s, stock_buffer_);
+            stat_.SwapTuple(s.size(), "stock");
         } else {
             stock_decompressor_->TransformBytesToTuple(&tuple->data_, &stock_buffer_, stop_idx);
         }
@@ -946,6 +955,8 @@ static int32_t makeDistrictKey(int32_t w_id, int32_t d_id) {
 void TPCCTables::insertDistrict(const District &district) {
     insert(&districts_, makeDistrictKey(district.d_w_id, district.d_id),
            district);
+
+    stat_.Insert(district.size(), true, "district");
 }
 
 District *TPCCTables::findDistrict(int32_t w_id, int32_t d_id) {
@@ -974,15 +985,20 @@ void TPCCTables::insertCustomerBlitz(db_compress::AttrVector &customer, int32_t 
     if (!single_attr) {
         // sub-tuple should not be written to B+-tree
         if (attr_idx == CustomerBlitz::kNumAttrs) {
-            disk_tuple_buf_.in_memory_ = num_mem_customer < kCustomerMT;
+            disk_tuple_buf_.in_memory_ = stat_.ToMemory(688);
             if (disk_tuple_buf_.in_memory_) {
-                disk_tuple_buf_.data_ = customer_compressor_->TransformTupleToBits(customer, attr_idx);
+                disk_tuple_buf_.data_ = customer_compressor_->TransformTupleToBits(customer,
+                                                                                   attr_idx);
                 num_mem_customer++;
+
+                stat_.Insert(disk_tuple_buf_.data_.size(), true, "customer");
             } else {
                 disk_tuple_buf_.id_pos_ = num_disk_customer;
                 Customer c = attrVectorToCustomer(customer);
                 SeqDiskTupleWrite(customer_fd, &c);
                 num_disk_customer++;
+
+                stat_.Insert(c.size(), false, "customer");
             }
             int32_t key = makeCustomerKey(customer.attr_[2].Int(), customer.attr_[1].Int(),
                                           customer.attr_[0].Int());
@@ -1003,14 +1019,16 @@ db_compress::AttrVector *TPCCTables::findCustomerBlitz(int32_t w_id,
                                                        int32_t c_id,
                                                        int32_t stop_idx) {
     int32_t key = makeCustomerKey(w_id, d_id, c_id);
-    Tuple<std::vector<uint8_t>> *tuple = find(customers_blitz_, key);
+    Tuple <std::vector<uint8_t>> *tuple = find(customers_blitz_, key);
     if (tuple) {
         if (!tuple->in_memory_) {
             Customer c;
             DiskTupleRead(customer_fd, &c, tuple->id_pos_);
             customerToAttrVector(c, customer_buffer_);
+            stat_.SwapTuple(c.size(), "customer");
         } else {
-            customer_decompressor_->TransformBytesToTuple(&tuple->data_, &customer_buffer_, stop_idx);
+            customer_decompressor_->TransformBytesToTuple(&tuple->data_, &customer_buffer_,
+                                                          stop_idx);
         }
         return &customer_buffer_;
     }
@@ -1096,6 +1114,7 @@ static int64_t makeOrderByCustomerKey(int32_t w_id, int32_t d_id, int32_t c_id,
 Order *TPCCTables::insertOrder(const Order &order) {
     Order *tuple = insert(
             &orders_, makeOrderKey(order.o_w_id, order.o_d_id, order.o_id), order);
+    stat_.Insert(order.size(), true, "order");
     // Secondary index based on customer id
     int64_t key = makeOrderByCustomerKey(order.o_w_id, order.o_d_id, order.o_c_id,
                                          order.o_id);
@@ -1148,7 +1167,8 @@ static int64_t makeOrderLineKey(int32_t w_id, int32_t d_id, int32_t o_id,
     // tuple, so it may be fine, but stock level fetches order lines for a range
     // of (w_id, d_id, o_id) values
     int64_t id =
-            ((int64_t(o_id) * District::NUM_PER_WAREHOUSE + d_id) * Warehouse::MAX_WAREHOUSE_ID + w_id) *
+            ((int64_t(o_id) * District::NUM_PER_WAREHOUSE + d_id) * Warehouse::MAX_WAREHOUSE_ID +
+             w_id) *
             Order::MAX_OL_CNT +
             number;
     if (id < 0) throw std::runtime_error("Order line key overflow.");
@@ -1164,15 +1184,20 @@ OrderLine *TPCCTables::insertOrderLine(const OrderLine &orderline) {
 void TPCCTables::insertOrderLineBlitz(db_compress::AttrVector &orderline, int32_t stop_idx) {
     // sub-tuple should not be written to B+-tree
     if (stop_idx == OrderLineBlitz::kNumAttrs) {
-        disk_tuple_buf_.in_memory_ = num_mem_orderline < kOrderlineMT;
+        disk_tuple_buf_.in_memory_ = stat_.ToMemory(88);
         if (disk_tuple_buf_.in_memory_) {
-            disk_tuple_buf_.data_ = orderline_compressor_->TransformTupleToBits(orderline, stop_idx);
+            disk_tuple_buf_.data_ = orderline_compressor_->TransformTupleToBits(orderline,
+                                                                                stop_idx);
             num_mem_orderline++;
+
+            stat_.Insert(disk_tuple_buf_.data_.size(), true, "orderline");
         } else {
             disk_tuple_buf_.id_pos_ = num_disk_orderline;
             OrderLine ol = attrVectorToOrderLine(orderline);
             SeqDiskTupleWrite(orderline_fd, &ol);
             num_disk_orderline++;
+
+            stat_.Insert(ol.size(), false, "orderline");
         }
         int64_t key = makeOrderLineKey(orderline.attr_[9].Int(), orderline.attr_[8].Int(),
                                        orderline.attr_[7].Int(), orderline.attr_[2].Int());
@@ -1192,12 +1217,13 @@ db_compress::AttrVector *
 TPCCTables::findOrderLineBlitz(int32_t w_id, int32_t d_id, int32_t o_id,
                                int32_t number, int32_t stop_idx) {
     int64_t key = makeOrderLineKey(w_id, d_id, o_id, number);
-    Tuple<std::vector<uint8_t>> *tuple = find(orderlines_blitz_, key);
+    Tuple <std::vector<uint8_t>> *tuple = find(orderlines_blitz_, key);
     if (tuple) {
         if (!tuple->in_memory_) {
             OrderLine ol;
             DiskTupleRead(orderline_fd, &ol, tuple->id_pos_);
             orderlineToAttrVector(ol, ol_buffer_);
+            stat_.SwapTuple(ol.size() << 2, "orderline");
         } else {
             orderline_decompressor_->TransformBytesToTuple(&tuple->data_, &ol_buffer_, stop_idx);
         }
@@ -1230,6 +1256,8 @@ NewOrder *TPCCTables::insertNewOrder(int32_t w_id, int32_t d_id, int32_t o_id) {
     neworder->no_d_id = d_id;
     neworder->no_o_id = o_id;
 
+    stat_.Insert(neworder->size(), true, "neworder");
+
     return insertNewOrderObject(&neworders_, neworder);
 }
 
@@ -1254,6 +1282,8 @@ void TPCCTables::eraseNewOrder(const NewOrder *new_order) {
 History *TPCCTables::insertHistory(const History &history) {
     History *h = new History(history);
     history_.push_back(h);
+
+    stat_.Insert(history.size(), true, "history");
     return h;
 }
 
@@ -1321,7 +1351,8 @@ void TPCCTables::CustomerToBlitz(CustomerBlitz &table, int64_t num_warehouses) {
 }
 
 void TPCCTables::MountCompressor(db_compress::RelationCompressor &compressor,
-                                 db_compress::RelationDecompressor &decompressor, int64_t num_warehouses,
+                                 db_compress::RelationDecompressor &decompressor,
+                                 int64_t num_warehouses,
                                  const std::string &table_name) {
     if (table_name == "orderline") {
         orderline_compressor_ = &compressor;
@@ -1467,70 +1498,4 @@ void TPCCTables::HistoryToCSV(int64_t num_warehouses) {
               << h->h_data << "\n";
     }
     his_f.close();
-}
-
-int64_t TPCCTables::diskTableSize(const std::string &file_name) {
-    if (file_name == "stock") return DiskTableSize<Stock>(stock_fd);
-    else if (file_name == "orderline") return DiskTableSize<OrderLine>(orderline_fd);
-    else if (file_name == "customer") return DiskTableSize<Customer>(customer_fd);
-    else {
-        throw std::runtime_error("Unknown file name");
-    }
-}
-
-int64_t TPCCTables::TableSize(const std::string &name) {
-    if (name == "item") {
-        int64_t ret = 0;
-        for (Item &item: items_) ret += item.Size();
-        return ret;
-    } else if (name == "warehouse") {
-        return BTreeSize(&warehouses_);
-    } else if (name == "district") {
-        return BTreeSize(&districts_);
-    } else if (name == "stock") {
-        return BTreeSize(&stock_);
-    } else if (name == "stock blitz") {
-        int64_t ret = 0;
-        int32_t key = std::numeric_limits<int32_t>::max();
-        Tuple<std::vector<uint8_t>> *value;
-        while (stock_blitz_.findLastLessThan(key, &value, &key)) {
-            if (value == nullptr) throw std::runtime_error("null value in stock blitz Size");
-            if (value->in_memory_) ret += value->data_.size();
-        }
-        return ret;
-    } else if (name == "customer") {
-        return BTreeSize(&customers_);
-    } else if (name == "customer blitz") {
-        int64_t ret = 0;
-        int32_t key = std::numeric_limits<int32_t>::max();
-        Tuple<std::vector<uint8_t>> *value;
-        while (customers_blitz_.findLastLessThan(key, &value, &key)) {
-            if (value == nullptr) throw std::runtime_error("null value in customer blitz Size");
-            if (value->in_memory_) ret += value->data_.size();
-        }
-        return ret;
-    } else if (name == "order") {
-        return BTreeSize(&orders_);
-    } else if (name == "orderline") {
-        return BTreeSize(&orderlines_);
-    } else if (name == "orderline blitz") {
-        int64_t ret = 0;
-        int64_t key = std::numeric_limits<int64_t>::max();
-        Tuple<std::vector<uint8_t>> *value;
-        while (orderlines_blitz_.findLastLessThan(key, &value, &key)) {
-            if (value == nullptr) throw std::runtime_error("null value in customer blitz Size");
-            if (value->in_memory_) ret += value->data_.size();
-        }
-        return ret;
-    } else if (name == "newOrder") {
-        int64_t ret = 0;
-        for (auto &no: neworders_) ret += no.second->size();
-        return ret;
-    } else if (name == "history") {
-        int64_t ret = 0;
-        for (auto &h: history_) ret += h->size();
-        return ret;
-    } else {
-        throw std::runtime_error("Unknown table name: " + name);
-    }
 }

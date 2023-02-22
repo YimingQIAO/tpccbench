@@ -15,7 +15,8 @@
 #include "tpccgenerator.h"
 #include "tpcctables.h"
 
-static const int NUM_TRANSACTIONS = 200000;
+static const int NUM_TRANSACTIONS = 1000000;
+static const int kTxnsInterval = 50000;
 enum Mode {
     GenerateCSV,
     Benchmark
@@ -24,9 +25,9 @@ static Mode mode;
 static long num_warehouses = 1;
 static double memory_size;
 
-void tableSize(TPCCTables *tables, bool is_initial, bool is_compressed);
-
 void welcome(int argc, const char *const *argv);
+
+void MemDiskSize(TPCCStat &stat, bool detailed);
 
 int main(int argc, const char *argv[]) {
     welcome(argc, argv);
@@ -83,7 +84,8 @@ int main(int argc, const char *argv[]) {
                                                                          order_line_blitz.schema(),
                                                                          kBlockSize);
                 ol_decompressor.InitWithoutIndex();
-                tables->MountCompressor(ol_compressor, ol_decompressor, num_warehouses, "orderline");
+                tables->MountCompressor(ol_compressor, ol_decompressor, num_warehouses,
+                                        "orderline");
                 db_compress::NextTableAttrInterpreter();
             }
             // stock
@@ -96,53 +98,71 @@ int main(int argc, const char *argv[]) {
                                                                         stock_blitz.compressionConfig(),
                                                                         kBlockSize);
                 BlitzLearning(stock_blitz, stock_compressor);
-                static db_compress::RelationDecompressor stock_decompressor(stock_model_name.c_str(),
-                                                                            stock_blitz.schema(), kBlockSize);
+                static db_compress::RelationDecompressor stock_decompressor(
+                        stock_model_name.c_str(),
+                        stock_blitz.schema(), kBlockSize);
                 stock_decompressor.InitWithoutIndex();
-                tables->MountCompressor(stock_compressor, stock_decompressor, num_warehouses, "stock");
+                tables->MountCompressor(stock_compressor, stock_decompressor, num_warehouses,
+                                        "stock");
                 db_compress::NextTableAttrInterpreter();
             }
             // customer
             {
                 CustomerBlitz cust_blitz;
                 tables->CustomerToBlitz(cust_blitz, num_warehouses);
-                std::string customer_model_name = std::to_string(model_id) + "_customer_model.blitz";
+                std::string customer_model_name =
+                        std::to_string(model_id) + "_customer_model.blitz";
                 static db_compress::RelationCompressor cust_compressor(customer_model_name.c_str(),
                                                                        cust_blitz.schema(),
                                                                        cust_blitz.compressionConfig(),
                                                                        kBlockSize);
                 BlitzLearning(cust_blitz, cust_compressor);
-                static db_compress::RelationDecompressor cust_decompressor(customer_model_name.c_str(),
-                                                                           cust_blitz.schema(),
-                                                                           kBlockSize);
+                static db_compress::RelationDecompressor cust_decompressor(
+                        customer_model_name.c_str(),
+                        cust_blitz.schema(),
+                        kBlockSize);
                 cust_decompressor.InitWithoutIndex();
-                tables->MountCompressor(cust_compressor, cust_decompressor, num_warehouses, "customer");
+                tables->MountCompressor(cust_compressor, cust_decompressor, num_warehouses,
+                                        "customer");
                 db_compress::NextTableAttrInterpreter();
             }
             end = clock->getMicroseconds();
             printf("%" PRId64 " ms\n", (end - begin + 500) / 1000);
             fflush(stdout);
-            tableSize(tables, true, true);
 
             // Change the constants for run
             random = new tpcc::RealRandomGenerator();
             random->setC(tpcc::NURandC::makeRandomForRun(random, cLoad));
 
             // Client owns all the parameters
-            TPCCClient client(clock, random, tables, Item::NUM_ITEMS, static_cast<int>(num_warehouses),
+            TPCCClient client(clock, random, tables, Item::NUM_ITEMS,
+                              static_cast<int>(num_warehouses),
                               District::NUM_PER_WAREHOUSE, Customer::NUM_PER_DISTRICT, now);
-            printf("Running... ");
+            printf("Running...\n");
             fflush(stdout);
 
-            uint64_t nanoseconds = 0;
+            uint64_t total_nanoseconds = 0;
+            uint64_t interval_ns = 0;
             for (int i = 0; i < NUM_TRANSACTIONS; ++i) {
-                nanoseconds += client.doOne();
+                interval_ns += client.doOne();
+
+                if (i % kTxnsInterval == 0 && i > 0) {
+                    // show stat
+                    uint64_t interval_ms = interval_ns / 1000;
+                    double throughput = kTxnsInterval / (double) interval_ms * 1000000.0;
+                    uint64_t mem = tables->stat_.total_mem_;
+                    uint64_t disk = tables->stat_.total_disk_;
+                    printf("%f, %llu, %llu\n", throughput, mem, disk);
+
+                    total_nanoseconds += interval_ns;
+                    interval_ns = 0;
+                }
             }
-            uint64_t microseconds = nanoseconds / 1000;
+            uint64_t microseconds = total_nanoseconds / 1000;
             printf("%d transactions in %" PRId64 " ms = %f txns/s\n", NUM_TRANSACTIONS,
                    (microseconds + 500) / 1000,
                    NUM_TRANSACTIONS / (double) microseconds * 1000000.0);
-            tableSize(tables, false, true);
+            MemDiskSize(tables->stat_, true);
             break;
         }
         default:
@@ -184,86 +204,30 @@ void welcome(int argc, const char *const *argv) {
     }
 }
 
-void tableSize(TPCCTables *tables, bool is_initial, bool is_compressed) {
-    int64_t ini_warehouses = tables->TableSize("warehouse");
-    int64_t ini_districts = tables->TableSize("district");
-    int64_t ini_customers = tables->TableSize("customer");
-    int64_t ini_orders = tables->TableSize("order");
-    int64_t ini_orderline = tables->TableSize("orderline");
-    int64_t ini_neworders = tables->TableSize("newOrder");
-    int64_t ini_items = tables->TableSize("item");
-    int64_t ini_stocks = tables->TableSize("stock");
-    int64_t ini_history = tables->TableSize("history");
-
-    if (is_initial && !is_compressed) {
-        std::cout << "------------ Initial and uncompressed Size ------------ \n";
-        std::cout << "Warehouse: " << ini_warehouses << " byte" << std::endl;
-        std::cout << "District: " << ini_districts << " byte" << std::endl;
-        std::cout << "Customer: " << ini_customers << " byte" << std::endl;
-        std::cout << "Order: " << ini_orders << " byte" << std::endl;
-        std::cout << "Orderline: " << ini_orderline << " byte" << std::endl;
-        std::cout << "NewOrder: " << ini_neworders << " byte" << std::endl;
-        std::cout << "Item: " << ini_items << " byte" << std::endl;
-        std::cout << "Stock: " << ini_stocks << " byte" << std::endl;
-        std::cout << "History: " << ini_history << " byte" << std::endl;
-        int64_t total =
-                ini_warehouses + ini_districts + ini_customers + ini_orders + ini_orderline +
-                ini_neworders + ini_items + ini_stocks + ini_history;
-        std::cout << "Total: " << total << " byte" << std::endl;
-    } else if (is_initial && is_compressed) {
-        int64_t com_customers = tables->TableSize("customer blitz");
-        int64_t com_stocks = tables->TableSize("stock blitz");
-        int64_t com_orderline = tables->TableSize("orderline blitz");
-
-        std::cout << "------------ Initial but compressed Size ------------ \n";
-        std::cout << "Warehouse: " << ini_warehouses << " byte" << std::endl;
-        std::cout << "District: " << ini_districts << " byte" << std::endl;
-        std::cout << "Customer: " << ini_customers << " byte"
-                  << " --> " << com_customers << " byte"
-                  << std::endl;
-        std::cout << "Order: " << ini_orders << " byte" << std::endl;
-        std::cout << "Orderline: " << ini_orderline << " byte"
-                  << " --> " << com_orderline
-                  << " byte" << std::endl;
-        std::cout << "NewOrder: " << ini_neworders << " byte" << std::endl;
-        std::cout << "Item: " << ini_items << " byte" << std::endl;
-        std::cout << "Stock: " << ini_stocks << " byte"
-                  << " --> " << com_stocks << " byte"
-                  << std::endl;
-        std::cout << "History: " << ini_history << " byte" << std::endl;
-        int64_t total =
-                ini_warehouses + ini_districts + ini_customers + ini_orders + ini_orderline +
-                ini_neworders + ini_items + ini_stocks + ini_history;
-        std::cout << "Orig Total: " << total << " byte" << std::endl;
-    } else if (!is_initial && is_compressed) {
-        ini_history = ini_history * 17 / 96;
-        ini_orders = ini_orders * 12 / 61;
-
-        int64_t com_customers = tables->TableSize("customer blitz");
-        int64_t com_stocks = tables->TableSize("stock blitz");
-        int64_t com_orderline = tables->TableSize("orderline blitz");
-
-        // disk size
-        int64_t disk_stock = tables->diskTableSize("stock");
-        int64_t disk_ol = tables->diskTableSize("orderline");
-        int64_t disk_c = tables->diskTableSize("customer");
-
-        std::cout << "------------ After Transaction Size ------------ \n";
+void MemDiskSize(TPCCStat &stat, bool detailed) {
+    if (detailed) {
         std::cout << "[Table Name]: " << "[Memory Size] + [Disk Size]" << std::endl;
-        std::cout << "Warehouse: " << ini_warehouses << " byte" << std::endl;
-        std::cout << "District: " << ini_districts << " byte" << std::endl;
-        std::cout << "Customer: " << com_customers << " + " << disk_c << " byte" << std::endl;
-        std::cout << "Order: " << ini_orders << " byte" << std::endl;
-        std::cout << "Orderline: " << com_orderline << " + " << disk_ol << " byte" << std::endl;
-        std::cout << "NewOrder: " << ini_neworders << " byte" << std::endl;
-        std::cout << "Item: " << ini_items << " byte" << std::endl;
-        std::cout << "Stock: " << com_stocks << " + " << disk_stock << " byte" << std::endl;
-        std::cout << "History: " << ini_history << " byte" << std::endl;
-        int64_t total =
-                ini_warehouses + ini_districts + com_customers + ini_orders + com_orderline +
-                ini_neworders + ini_items + com_stocks + ini_history;
-        std::cout << "Total: " << total << " byte" << std::endl;
-    } else {
-        std::cout << "Meaningless" << std::endl;
+        std::cout << "Warehouse: " << stat.warehouse_mem_ << " byte" << std::endl;
+        std::cout << "District: " << stat.district_mem_ << " byte" << std::endl;
+        std::cout << "Customer: " << stat.customer_mem_ << " + " << stat.customer_disk_ << " byte"
+                  << std::endl;
+        std::cout << "Order: " << stat.order_mem_ << " byte" << std::endl;
+        std::cout << "Orderline: " << stat.orderline_mem_ << " + " << stat.orderline_disk_
+                  << " byte" << std::endl;
+        std::cout << "NewOrder: " << stat.neworder_mem_ << " byte" << std::endl;
+        std::cout << "Item: " << stat.item_mem_ << " byte" << std::endl;
+        std::cout << "Stock: " << stat.stock_mem_ << " + " << stat.stock_disk_ << " byte"
+                  << std::endl;
+        std::cout << "History: " << stat.history_mem_ << " byte" << std::endl;
+        std::cout << "--------------------------------------------" << std::endl;
     }
+    uint64_t mem_total = stat.warehouse_mem_ + stat.district_mem_ + stat.customer_mem_ +
+                         stat.orderline_mem_ + stat.item_mem_ + stat.stock_mem_;
+    uint64_t disk_total = stat.customer_disk_ + stat.orderline_disk_ + stat.stock_disk_;
+    uint64_t others = stat.history_mem_ + stat.neworder_mem_ + stat.order_mem_;
+    std::cout << "Mem: " << mem_total << ", " << "Disk: " << disk_total << " byte " << "Other: "
+              << others << " byte" << std::endl;
+    std::cout << "Total: " << mem_total + disk_total << " byte" << std::endl;
 }
+
+

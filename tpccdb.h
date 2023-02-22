@@ -58,7 +58,7 @@ struct Item {
     char i_name[MAX_NAME + 1];
     char i_data[MAX_DATA + 1];
 
-    uint32_t Size() {
+    uint32_t Size() const  {
         uint32_t ret = 0;
         ret += std::to_string(i_id).size();
         ret += std::to_string(i_im_id).size();
@@ -89,7 +89,7 @@ struct Warehouse {
     char w_state[Address::STATE + 1];
     char w_zip[Address::ZIP + 1];
 
-    uint32_t size() {
+    uint32_t size() const {
         uint32_t ret = 0;
         ret += std::to_string(w_id).size();
         ret += std::to_string(w_tax).size();
@@ -125,7 +125,7 @@ struct District {
     char d_state[Address::STATE + 1];
     char d_zip[Address::ZIP + 1];
 
-    uint32_t size() {
+    uint32_t size() const {
         uint32_t ret = 0;
         ret += std::to_string(d_id).size();
         ret += std::to_string(d_w_id).size();
@@ -159,7 +159,7 @@ struct Stock {
     int32_t s_i_id;
     int32_t s_w_id;
 
-    uint32_t size() {
+    uint32_t size() const {
         uint32_t ret = 0;
         ret += 6 * 4;
         for (int32_t i = 0; i < District::NUM_PER_WAREHOUSE; i++)
@@ -215,7 +215,7 @@ struct Customer {
     char c_since[DATETIME_SIZE + 1];
     char c_data[MAX_DATA + 1];
 
-    uint32_t size() {
+    uint32_t size() const {
         uint32_t ret = 0;
         ret += 9 * 4;
         ret += stringSize(c_first, Customer::MAX_FIRST + 1);
@@ -257,7 +257,7 @@ struct Order {
     int32_t o_all_local;
     char o_entry_d[DATETIME_SIZE + 1];
 
-    uint32_t size() {
+    uint32_t size() const {
         uint32_t ret = 0;
         ret += std::to_string(o_id).size();
         ret += std::to_string(o_c_id).size();
@@ -291,10 +291,11 @@ struct OrderLine {
     int32_t ol_d_id;
     int32_t ol_w_id;
 
-    uint32_t size() {
-        if (ol_delivery_d[0] == '0') return 8 * 4 + 20 + 25;
-        else
+    uint32_t size() const {
+        if (ol_delivery_d[0] == '\0')
             return 8 * 4 + 25;
+        else
+            return 8 * 4 + 20 + 25;
     }
 };
 
@@ -305,7 +306,7 @@ struct NewOrder {
     int32_t no_d_id;
     int32_t no_o_id;
 
-    uint32_t size() {
+    uint32_t size() const{
         uint32_t ret = 0;
         ret += std::to_string(no_w_id).size();
         ret += std::to_string(no_d_id).size();

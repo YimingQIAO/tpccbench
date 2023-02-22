@@ -18,6 +18,7 @@ void Address::copy(char *street1, char *street2, char *city, char *state, char *
 // Non-integral constants must be defined in a .cc file according to the standard
 const char Customer::GOOD_CREDIT[] = "GC";
 const char Customer::BAD_CREDIT[] = "BC";
+
 const char NewOrderOutput::INVALID_ITEM_STATUS[] = "Item number is not valid";
 
 TPCCUndo::~TPCCUndo() {
@@ -159,10 +160,10 @@ void TPCCDB::paymentCombine(const PaymentOutput &remote, PaymentOutput *home) {
 #undef COPY_ADDRESS
 
 uint32_t stringSize(const char *data, uint32_t max_size) {
-    uint32_t ret;
-    for (ret = 0; ret < max_size; ++ret) {
-        if (data[ret] == '\0') break;
+    int32_t i;
+    for (i = 0; i < max_size; ++i) {
+        if (data[i] == '\0') break;
     }
-    assert(data[ret] == '\0');
-    return ret;
+    assert(data[i] == '\0');
+    return i;
 }
