@@ -73,7 +73,7 @@ public:
 
     RamanTupleBuffer() : n_tuple(0), keys_(kBufferSize) {}
 
-    inline uint32_t Size(){
+    inline uint32_t Size() {
         uint32_t raman_dict_size = 0;
         for (auto &compressor: compressors_) raman_dict_size += compressor.Size();
         return raman_dict_size;
@@ -90,7 +90,7 @@ public:
         return n_tuple == kBufferSize;
     }
 
-    void BlockCompress(std::vector<BitStream> &db, std::vector<int64_t> *keys, int32_t *dict_id) {
+    uint64_t BlockCompress(std::vector<BitStream> &db, std::vector<int64_t> *keys, int32_t *dict_id) {
         // block learning
         std::vector<std::vector<std::string>> samples;
         for (auto &sample: buffer_) samples.push_back(sample.toRamanFormat());
@@ -106,6 +106,8 @@ public:
 
         // clear block
         Clear();
+
+        return compressor.Size();
     }
 
     inline T *find(int64_t key) {

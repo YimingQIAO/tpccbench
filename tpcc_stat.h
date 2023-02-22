@@ -28,13 +28,13 @@ struct TPCCStat {
     uint64_t stock_mem_{};
     uint64_t stock_disk_{};
 
+    uint64_t raman_dict{};
     uint64_t total_mem_{};
     uint64_t total_disk_{};
 
     uint64_t total_mem_limit_;
 
     uint64_t last_size_{};
-    int32_t table_id_{};
 
     explicit TPCCStat(uint64_t total_mem_limit) : total_mem_limit_(total_mem_limit) {}
 
@@ -83,22 +83,30 @@ struct TPCCStat {
 
         while (total_mem_ + size > total_mem_limit_) {
             total_mem_ -= last_size_;
+            total_disk_ += last_size_;
 
-            if (table_name == "stock")
+            if (table_name == "stock") {
                 stock_mem_ -= last_size_;
-            else if (table_name == "customer")
+                stock_disk_ += last_size_;
+            } else if (table_name == "customer") {
                 customer_mem_ -= last_size_;
-            else if (table_name == "orderline")
+                customer_disk_ += last_size_;
+            } else if (table_name == "orderline") {
                 orderline_mem_ -= last_size_;
-            else
+                orderline_disk_ += last_size_;
+            } else
                 printf("Error: table name not found!\n");
-
         }
         Insert(size, true, table_name);
     }
 
     inline bool ToMemory(uint64_t size) const {
         return total_mem_limit_ > total_mem_ + size;
+    }
+
+    void RamanDictAdd(uint64_t size) {
+        raman_dict += size;
+        total_mem_ += size;
     }
 };
 

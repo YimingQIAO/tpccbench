@@ -813,7 +813,8 @@ void TPCCTables::insertStock(const Stock &stock, bool is_orig, bool relearn) {
                 std::vector<int64_t> keys;
                 std::vector<BitStream> compressed;
 
-                block_stock_.BlockCompress(compressed, &keys, &dict_id);
+                uint64_t dict_size = block_stock_.BlockCompress(compressed, &keys, &dict_id);
+                stat_.RamanDictAdd(dict_size);
 
                 stock_tuple_disk_.dict_id_ = dict_id;
                 for (int i = 0; i < compressed.size(); i++) {
@@ -918,12 +919,15 @@ void TPCCTables::insertCustomer(const Customer &customer, bool is_orig, bool rel
                 std::vector<int64_t> keys;
                 std::vector<BitStream> compressed;
 
-                block_customer_.BlockCompress(compressed, &keys, &dict_id);
+                uint64_t dict_size = block_customer_.BlockCompress(compressed, &keys, &dict_id);
+                stat_.RamanDictAdd(dict_size);
 
                 customer_tuple_disk_.dict_id_ = dict_id;
                 for (int i = 0; i < compressed.size(); i++) {
                     customer_tuple_disk_.data_ = compressed[i];
                     insert(&customer_raman, keys[i], customer_tuple_disk_);
+
+                    stat_.Insert(customer_tuple_disk_.data_.size(), false, "customer");
                 }
             }
         } else {
@@ -1058,7 +1062,8 @@ Order *TPCCTables::insertOrder(const Order &order, bool is_orig, bool relearn) {
             std::vector<int64_t> keys;
             std::vector<BitStream> compressed;
 
-            block_order_.BlockCompress(compressed, &keys, &dict_id);
+            uint64_t dict_size = block_order_.BlockCompress(compressed, &keys, &dict_id);
+            stat_.RamanDictAdd(dict_size);
 
             Tuple<BitStream> tuple;
             tuple.in_memory_ = true;
@@ -1156,7 +1161,8 @@ OrderLine *TPCCTables::insertOrderLine(const OrderLine &orderline, bool is_orig,
                 std::vector<int64_t> keys;
                 std::vector<BitStream> compressed;
 
-                block_orderline_.BlockCompress(compressed, &keys, &dict_id);
+                uint64_t dict_size = block_orderline_.BlockCompress(compressed, &keys, &dict_id);
+                stat_.RamanDictAdd(dict_size);
 
                 ol_tuple_disk_.dict_id_ = dict_id;
                 for (int i = 0; i < compressed.size(); i++) {
@@ -1262,8 +1268,10 @@ History *TPCCTables::insertHistory(const History &history, bool is_orig, bool re
             stat_.Insert(bits.size(), true, "history");
         } else {
             block_history_.Append(history, 0);
-            if (block_history_.IsFull())
-                block_history_.BlockCompress(history_raman, nullptr, nullptr);
+            if (block_history_.IsFull()) {
+                uint64_t dict_size = block_history_.BlockCompress(history_raman, nullptr, nullptr);
+                stat_.RamanDictAdd(dict_size);
+            }
         }
         return nullptr;
     } else {
@@ -1376,6 +1384,7 @@ void TPCCTables::HistoryToCSV(int64_t num_warehouses) {
 void TPCCTables::MountCompression(RamanCompressor *forest, const std::string &table_name) {
     if (table_name == "stock") {
         forest_stock_ = forest;
+        stat_.RamanDictAdd(forest_stock_->Size());
 
         int32_t key = std::numeric_limits<int32_t>::max();
         Stock *value = nullptr;
@@ -1385,6 +1394,7 @@ void TPCCTables::MountCompression(RamanCompressor *forest, const std::string &ta
         }
     } else if (table_name == "customer") {
         forest_customer_ = forest;
+        stat_.RamanDictAdd(forest_customer_->Size());
 
         int32_t key = std::numeric_limits<int32_t>::max();
         Customer *value = nullptr;
@@ -1394,6 +1404,7 @@ void TPCCTables::MountCompression(RamanCompressor *forest, const std::string &ta
         }
     } else if (table_name == "orderline") {
         forest_orderline_ = forest;
+        stat_.RamanDictAdd(forest_orderline_->Size());
 
         int64_t key = std::numeric_limits<int64_t>::max();
         OrderLine *value = nullptr;
@@ -1403,10 +1414,12 @@ void TPCCTables::MountCompression(RamanCompressor *forest, const std::string &ta
         }
     } else if (table_name == "history") {
         forest_history_ = forest;
+        stat_.RamanDictAdd(forest_history_->Size());
 
         for (auto &h: history_) insertHistory(*h, false, false);
     } else if (table_name == "order") {
         forest_order_ = forest;
+        stat_.RamanDictAdd(forest_order_->Size());
 
         int64_t key = std::numeric_limits<int64_t>::max();
         Order *value = nullptr;

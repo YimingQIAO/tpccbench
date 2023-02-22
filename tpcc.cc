@@ -14,8 +14,8 @@
 #include "tpccgenerator.h"
 #include "tpcctables.h"
 
-static const int NUM_TRANSACTIONS = 1000000;
-static const int kTxnsInterval = 50000;
+static const int NUM_TRANSACTIONS = 100000;
+static const int kTxnsInterval = 5000;
 
 enum Mode {
     GenerateCSV,
@@ -27,7 +27,7 @@ static double memory_size;
 
 void welcome(int argc, const char *const *argv);
 
-void MemDiskSize(TPCCStat &stat, bool detailed);
+void MemDiskSize(TPCCTables *table, bool detailed);
 
 int main(int argc, const char *argv[]) {
     welcome(argc, argv);
@@ -53,7 +53,6 @@ int main(int argc, const char *argv[]) {
     for (int i = 0; i < num_warehouses; ++i) generator.makeWarehouse(tables, i + 1);
     int64_t end = clock->getMicroseconds();
     printf("%" PRId64 " ms\n", (end - begin + 500) / 1000);
-    // tableSize(tables);
 
     switch (mode) {
         case GenerateCSV: {
@@ -130,7 +129,8 @@ int main(int argc, const char *argv[]) {
                     double throughput = kTxnsInterval / (double) interval_ms * 1000000.0;
                     uint64_t mem = tables->stat_.total_mem_;
                     uint64_t disk = tables->stat_.total_disk_;
-                    printf("%f, %llu, %llu\n", throughput, mem, disk);
+                    printf("%f, %lu, %lu\n", throughput, mem, disk);
+                    MemDiskSize(tables, false);
 
                     total_nanoseconds += interval_ns;
                     interval_ns = 0;
@@ -180,7 +180,34 @@ void welcome(int argc, const char *const *argv) {
     }
 }
 
-void MemDiskSize(TPCCStat &stat, bool detailed) {
-
+void MemDiskSize(TPCCTables *table, bool detailed) {
+    if (detailed) {
+        std::cout << "[Table Name]: " << "[Memory Size] + [Disk Size] + [Raman Dict Size]" << std::endl;
+        std::cout << "Warehouse: " << table->stat_.warehouse_mem_ << " byte" << std::endl;
+        std::cout << "District: " << table->stat_.district_mem_ << " byte" << std::endl;
+        std::cout << "Customer: " << table->stat_.customer_mem_ << " + " << table->stat_.customer_disk_ << " + "
+                  << table->RamanDictSize("customer") << " byte" << std::endl;
+        std::cout << "Order: " << table->stat_.order_mem_ << " + " << table->RamanDictSize("order") << " byte"
+                  << std::endl;
+        std::cout << "Orderline: " << table->stat_.orderline_mem_ << " + " << table->stat_.orderline_disk_ << " + "
+                  << table->RamanDictSize("orderline") << " byte" << std::endl;
+        std::cout << "NewOrder: " << table->stat_.neworder_mem_ << " byte" << std::endl;
+        std::cout << "Item: " << table->stat_.item_mem_ << " byte" << std::endl;
+        std::cout << "Stock: " << table->stat_.stock_mem_ << " + " << table->stat_.stock_disk_ << " + "
+                  << table->RamanDictSize("stock") << " byte" << std::endl;
+        std::cout << "History: " << table->stat_.history_mem_ << " + 0 + " << table->RamanDictSize("history") << " byte"
+                  << std::endl;
+        std::cout << "--------------------------------------------" << std::endl;
+    }
+    uint64_t mem_total =
+            table->stat_.warehouse_mem_ + table->stat_.district_mem_ + table->stat_.customer_mem_ +
+            table->stat_.raman_dict + table->stat_.orderline_mem_ + table->stat_.item_mem_ + table->stat_.stock_mem_;
+    uint64_t disk_total = table->stat_.customer_disk_ + table->stat_.orderline_disk_ + table->stat_.stock_disk_;
+    uint64_t others = table->stat_.history_mem_ + table->stat_.neworder_mem_ + table->stat_.order_mem_;
+    std::cout << "Raman Model Size: " << table->stat_.raman_dict << " byte" << std::endl;
+    std::cout << "Mem: " << mem_total << ", " << "Disk: " << disk_total << " byte " << "Other: "
+              << others << " byte" << std::endl;
+    std::cout << "Total: " << mem_total + disk_total << " byte" << std::endl;
+    std::cout << "--------------------------------------------" << std::endl;
 }
 
