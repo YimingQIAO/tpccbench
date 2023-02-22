@@ -268,9 +268,6 @@ private:
 
     // disk storage
     std::string kStockFileName, kCustomerFileName, kOrderlineFileName;
-    uint64_t kStockMT;
-    uint64_t kCustomerMT;
-    uint64_t kOrderlineMT;
 
     // zstd
     Stock stock_zstd_buf_;

@@ -253,10 +253,11 @@ void MemDiskSize(TPCCStat &stat, bool detailed) {
         std::cout << "--------------------------------------------" << std::endl;
     }
     uint64_t mem_total =
-            stat.warehouse_mem_ + stat.district_mem_ + stat.customer_mem_ + stat.order_mem_ +
-            stat.orderline_mem_ +
-            stat.neworder_mem_ + stat.item_mem_ + stat.stock_mem_ + stat.history_mem_;
+            stat.warehouse_mem_ + stat.district_mem_ + stat.customer_mem_ +
+            stat.orderline_mem_ + stat.item_mem_ + stat.stock_mem_;
     uint64_t disk_total = stat.customer_disk_ + stat.orderline_disk_ + stat.stock_disk_;
-    std::cout << "Mem: " << mem_total << ", " << "Disk: " << disk_total << " byte" << std::endl;
+    uint64_t others = stat.history_mem_ + stat.neworder_mem_ + stat.order_mem_;
+    std::cout << "Mem: " << mem_total << ", " << "Disk: " << disk_total << " byte " << "Other: "
+              << others << " byte" << std::endl;
     std::cout << "Total: " << mem_total + disk_total << " byte" << std::endl;
 }

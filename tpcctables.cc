@@ -79,13 +79,8 @@ BTreeSize(
     return ret;
 }
 
-TPCCTables::TPCCTables(double memory_size) {
-    std::cout << "Memory size: " << memory_size << "\n";
-    memory_size *= 1024 * 1024 * 1024;
-    kStockMT = memory_size / 328 * 0.95 * 0.411 * 3.78;
-    kCustomerMT = memory_size * 0.95 * 0.258 / 688 * 1.5;
-    kOrderlineMT = memory_size / 88 * 0.95 * 0.331 * 1.8 + 200000 * 0.45 * 10;
-
+TPCCTables::TPCCTables(double memory_size) : stat_(memory_size * 1000 * 1000 * 1000) {
+    std::cout << "Memory size: " << memory_size << " GB \n";
     srand(time(nullptr));
     int32_t file_id = rand();
     std::cout << "Random file id: " << file_id << "\n";
@@ -798,7 +793,7 @@ static int32_t makeStockKey(int32_t w_id, int32_t s_id) {
 void TPCCTables::insertStock(const Stock &stock, bool is_orig) {
     if (!is_orig) {
         Tuple<std::string> tuple;
-        tuple.in_memory_ = num_mem_stock < kStockMT;
+        tuple.in_memory_ = stat_.ToMemory(stock.size());
         if (tuple.in_memory_) {
             tuple.data_ = ZstdCompress(cdict_stock, &stock);
             num_mem_stock++;
@@ -822,8 +817,10 @@ Stock *TPCCTables::findStock(int32_t w_id, int32_t s_id, bool is_orig) {
         int32_t key = makeStockKey(w_id, s_id);
         Tuple<std::string> *tuple = find(stock_zstd, key);
         if (tuple) {
-            if (!tuple->in_memory_) DiskTupleRead(stock_fd, &stock_zstd_buf_, tuple->id_pos_);
-            else ZstdDecompress<Stock>(ddict_stock, &stock_zstd_buf_, tuple->data_);
+            if (!tuple->in_memory_) {
+                DiskTupleRead(stock_fd, &stock_zstd_buf_, tuple->id_pos_);
+                stat_.SwapTuple(stock_zstd_buf_.size(), "stock");
+            } else ZstdDecompress<Stock>(ddict_stock, &stock_zstd_buf_, tuple->data_);
             return &stock_zstd_buf_;
         }
         return nullptr;
@@ -863,7 +860,7 @@ static int32_t makeCustomerKey(int32_t w_id, int32_t d_id, int32_t c_id) {
 void TPCCTables::insertCustomer(const Customer &customer, bool is_orig) {
     if (!is_orig) {
         Tuple<std::string> tuple;
-        tuple.in_memory_ = num_mem_customer < kCustomerMT;
+        tuple.in_memory_ = stat_.ToMemory(customer.size());
         if (tuple.in_memory_) {
             tuple.data_ = ZstdCompress(cdict_c, &customer);
             num_mem_customer++;
@@ -890,8 +887,10 @@ Customer *TPCCTables::findCustomer(int32_t w_id, int32_t d_id, int32_t c_id, boo
         int32_t key = makeCustomerKey(w_id, d_id, c_id);
         Tuple<std::string> *tuple = find(customer_zstd, key);
         if (tuple) {
-            if (!tuple->in_memory_) DiskTupleRead(customer_fd, &customer_zstd_buf_, tuple->id_pos_);
-            else ZstdDecompress(ddict_c, &customer_zstd_buf_, tuple->data_);
+            if (!tuple->in_memory_) {
+                DiskTupleRead(customer_fd, &customer_zstd_buf_, tuple->id_pos_);
+                stat_.SwapTuple(customer_zstd_buf_.size(), "customer");
+            } else ZstdDecompress(ddict_c, &customer_zstd_buf_, tuple->data_);
             return &customer_zstd_buf_;
         }
         return nullptr;
@@ -1029,7 +1028,7 @@ static int64_t makeOrderLineKey(int32_t w_id, int32_t d_id, int32_t o_id, int32_
 
 OrderLine *TPCCTables::insertOrderLine(const OrderLine &orderline, bool is_orig) {
     if (!is_orig) {
-        ol_tuple_buf_.in_memory_ = num_mem_orderline < kOrderlineMT;
+        ol_tuple_buf_.in_memory_ = stat_.ToMemory(orderline.size());
         if (ol_tuple_buf_.in_memory_) {
             ol_tuple_buf_.data_ = ZstdCompress(cdict_ol, &orderline);
             num_mem_orderline++;
@@ -1061,8 +1060,10 @@ OrderLine *TPCCTables::findOrderLine(int32_t w_id, int32_t d_id, int32_t o_id, i
         int64_t key = makeOrderLineKey(w_id, d_id, o_id, number);
         Tuple<std::string> *tuple = find(ol_zstd, key);
         if (tuple) {
-            if (!tuple->in_memory_) DiskTupleRead(orderline_fd, &ol_zstd_buf_, tuple->id_pos_);
-            else ZstdDecompress(ddict_ol, &ol_zstd_buf_, tuple->data_);
+            if (!tuple->in_memory_) {
+                DiskTupleRead(orderline_fd, &ol_zstd_buf_, tuple->id_pos_);
+                stat_.SwapTuple(ol_zstd_buf_.size(), "orderline");
+            } else ZstdDecompress(ddict_ol, &ol_zstd_buf_, tuple->data_);
             return &ol_zstd_buf_;
         }
         return nullptr;
