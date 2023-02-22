@@ -15,8 +15,8 @@
 #include "tpccgenerator.h"
 #include "tpcctables.h"
 
-static const int NUM_TRANSACTIONS = 1000000;
-static const int kTxnsInterval = 50000;
+static const int NUM_TRANSACTIONS = 100000;
+static const int kTxnsInterval = 5000;
 enum Mode {
     GenerateCSV,
     Benchmark
@@ -87,7 +87,8 @@ int main(int argc, const char *argv[]) {
                     double throughput = kTxnsInterval / (double) interval_ms * 1000000.0;
                     uint64_t mem = tables->stat_.total_mem_;
                     uint64_t disk = tables->stat_.total_disk_;
-                    printf("%f, %llu, %llu\n", throughput, mem, disk);
+                    printf("%f, %lu, %lu\n", throughput, mem, disk);
+                    MemDiskSize(tables->stat_, false);
 
                     total_nanoseconds += interval_ns;
                     interval_ns = 0;
@@ -158,7 +159,6 @@ void MemDiskSize(TPCCStat &stat, bool detailed) {
     uint64_t mem_total = stat.warehouse_mem_ + stat.district_mem_ + stat.customer_mem_ +
                          stat.orderline_mem_ + stat.item_mem_ + stat.stock_mem_;
     uint64_t disk_total = stat.customer_disk_ + stat.orderline_disk_ + stat.stock_disk_;
-    std::cout << "Mem: " << mem_total << ", " << "Disk: " << disk_total << " byte" << std::endl;
     uint64_t others = stat.history_mem_ + stat.neworder_mem_ + stat.order_mem_;
     std::cout << "Mem: " << mem_total << ", " << "Disk: " << disk_total << " byte " << "Other: "
               << others << " byte" << std::endl;
