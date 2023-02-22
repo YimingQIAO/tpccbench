@@ -19,7 +19,7 @@ void Address::copy(char *street1, char *street2, char *city, char *state, char *
 const char Customer::GOOD_CREDIT[] = "GC";
 const char Customer::BAD_CREDIT[] = "BC";
 
-uint32_t Customer::size() {
+uint32_t Customer::size() const {
     uint32_t ret = 0;
     ret += 9 * 4;
     ret += stringSize(c_first, Customer::MAX_FIRST + 1);
