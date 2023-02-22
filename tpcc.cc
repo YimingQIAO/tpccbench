@@ -152,7 +152,8 @@ int main(int argc, const char *argv[]) {
                     double throughput = kTxnsInterval / (double) interval_ms * 1000000.0;
                     uint64_t mem = tables->stat_.total_mem_;
                     uint64_t disk = tables->stat_.total_disk_;
-                    printf("%f, %llu, %llu\n", throughput, mem, disk);
+                    printf("%f, %lu, %lu\n", throughput, mem, disk);
+                    MemDiskSize(tables->stat_, false);
 
                     total_nanoseconds += interval_ns;
                     interval_ns = 0;
@@ -228,6 +229,7 @@ void MemDiskSize(TPCCStat &stat, bool detailed) {
     std::cout << "Mem: " << mem_total << ", " << "Disk: " << disk_total << " byte " << "Other: "
               << others << " byte" << std::endl;
     std::cout << "Total: " << mem_total + disk_total << " byte" << std::endl;
+    std::cout << "---------------------------------------------------------------------";
 }
 
 
