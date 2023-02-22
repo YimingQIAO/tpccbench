@@ -35,8 +35,7 @@ bool CustomerByNameOrdering::operator()(const Customer *a, const Customer *b) co
     return strcmp(a->c_first, b->c_first) < 0;
 }
 
-bool
-CustomerByNameOrdering::operator()(const Tuple<Customer> *ta, const Tuple<Customer> *tb) const {
+bool CustomerByNameOrdering::operator()(const Tuple<Customer> *ta, const Tuple<Customer> *tb) const {
     if (ta->in_memory_ && tb->in_memory_) return (*this)(&ta->data_, &tb->data_);
     else if (ta->in_memory_) {
         Customer b;
@@ -96,14 +95,14 @@ TPCCTables::TPCCTables(double memory_size) : stat_(memory_size * 1000 * 1000 * 1
 TPCCTables::~TPCCTables() {
     // Clean up the b-trees with this gross hack
     deleteBTreeValues(&warehouses_);
-    deleteBTreeValues(&stock_);
+    // deleteBTreeValues(&stock_);
     deleteBTreeValues(&districts_);
     deleteBTreeValues(&orders_);
-    deleteBTreeValues(&orderlines_);
+    // deleteBTreeValues(&orderlines_);
 
     STLDeleteValues(&neworders_);
     STLDeleteElements(&customers_by_name_);
-    STLDeleteElements(&history_);
+    // STLDeleteElements(&history_);
 
     close(stock_fd);
     close(orderline_fd);
@@ -832,7 +831,7 @@ void TPCCTables::insertStock(const Stock &stock, bool is_orig, bool relearn) {
             SeqDiskTupleWrite(stock_fd, &stock);
             insert(&stock_raman, (int32_t) key, stock_tuple_disk_);
 
-            stat_.Insert(stock.size() / 5, false, "stock");
+            stat_.Insert(stock.size() / 2.5, false, "stock");
         }
     } else
         insert(&stock_, (int32_t) key, stock);
@@ -938,7 +937,7 @@ void TPCCTables::insertCustomer(const Customer &customer, bool is_orig, bool rel
             SeqDiskTupleWrite(customer_fd, &customer);
             insert(&customer_raman, (int32_t) key, customer_tuple_disk_);
 
-            stat_.Insert(customer.size() / 5, false, "customer");
+            stat_.Insert(customer.size() / 2.5, false, "customer");
         }
     } else {
         Customer *c = insert(&customers_, (int32_t) key, customer);
@@ -1181,7 +1180,7 @@ OrderLine *TPCCTables::insertOrderLine(const OrderLine &orderline, bool is_orig,
             num_disk_orderline++;
             insert(&orderline_raman, key, ol_tuple_disk_);
 
-            stat_.Insert(orderline.size() / 2.5, false, "orderline");
+            stat_.Insert(orderline.size() / 2.2, false, "orderline");
             return nullptr;
         }
     } else {
@@ -1392,6 +1391,7 @@ void TPCCTables::MountCompression(RamanCompressor *forest, const std::string &ta
         while (stock_.findLastLessThan(key, &value, &key)) {
             if (value == nullptr) throw std::runtime_error("value is nullptr in MountCompression");
             insertStock(*value, false, false);
+            delete value;
         }
     } else if (table_name == "customer") {
         forest_customer_ = forest;
@@ -1412,12 +1412,14 @@ void TPCCTables::MountCompression(RamanCompressor *forest, const std::string &ta
         while (orderlines_.findLastLessThan(key, &value, &key)) {
             if (value == nullptr) throw std::runtime_error("value is nullptr in MountCompression");
             insertOrderLine(*value, false, false);
+            delete value;
         }
     } else if (table_name == "history") {
         forest_history_ = forest;
         stat_.RamanDictAdd(forest_history_->Size());
 
         for (auto &h: history_) insertHistory(*h, false, false);
+        history_.clear();
     } else if (table_name == "order") {
         forest_order_ = forest;
         stat_.RamanDictAdd(forest_order_->Size());

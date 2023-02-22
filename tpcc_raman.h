@@ -21,7 +21,6 @@ struct RamanCompressor {
     }
 };
 
-[[maybe_unused]]
 static RamanCompressor RamanLearning(std::vector<std::vector<std::string>> &samples) {
     if (samples.empty()) throw std::runtime_error("Empty sample set in RamanLearning");
     size_t num_fields = samples[0].size();
@@ -69,9 +68,9 @@ static void RamanDecompress(RamanCompressor *compressor, T *sample, BitStream &b
 template<typename T>
 class RamanTupleBuffer {
 public:
-    const size_t kBufferSize = 1024;
+    const size_t kBufferSize = 1024 * 16;
 
-    RamanTupleBuffer() : n_tuple(0), keys_(kBufferSize) {}
+    RamanTupleBuffer() : buffer_(kBufferSize), n_tuple(0), keys_(kBufferSize) {}
 
     inline uint32_t Size() {
         uint32_t raman_dict_size = 0;
@@ -80,8 +79,7 @@ public:
     }
 
     inline void Append(const T &sample, int64_t key) {
-        buffer_.push_back(sample);
-        // buffer_[n_tuple] = sample;
+        buffer_[n_tuple] = sample;
         keys_[n_tuple] = key;
         n_tuple++;
     }
@@ -130,7 +128,6 @@ private:
     std::vector<RamanCompressor> compressors_;
 
     inline void Clear() {
-        buffer_.clear();
         n_tuple = 0;
     }
 };

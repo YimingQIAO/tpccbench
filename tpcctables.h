@@ -166,7 +166,7 @@ public:
         }
     }
 
-    void OrderToRaman(int64_t num_warehouses, std::vector<std::vector<std::string>> &samples) {
+    void OrderToRaman(std::vector<std::vector<std::string>> &samples) {
         int64_t key = std::numeric_limits<int64_t>::max();
         Order *order = nullptr;
         while (orders_.findLastLessThan(key, &order, &key)) {
@@ -174,7 +174,7 @@ public:
         }
     }
 
-    void OrderlineToRaman(int64_t num_warehouses, std::vector<std::vector<std::string>> &samples) {
+    void OrderlineToRaman(std::vector<std::vector<std::string>> &samples) {
         int64_t key = std::numeric_limits<int64_t>::max();
         OrderLine *orderline = nullptr;
         while (orderlines_.findLastLessThan(key, &orderline, &key)) {

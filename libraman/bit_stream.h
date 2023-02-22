@@ -6,7 +6,7 @@
 
 class BitStream {
 public:
-    BitStream() : bits_(128 * 8), n_bits_(0) {}
+    BitStream() : bits_(streamSize * 8), n_bits_(0) {}
 
     inline uint32_t size() const { return n_bits_ >> 3; }
 
@@ -23,7 +23,10 @@ public:
     }
 
     inline void WriteBit(bool val) {
-        if (n_bits_ == kInitSize * 8) throw std::runtime_error("BitStream is full");
+        if (n_bits_ == streamSize * 8) {
+            streamSize *= 2;
+            bits_.resize(streamSize * 8);
+        }
         bits_[n_bits_++] = val;
     }
 
@@ -111,7 +114,7 @@ public:
     }
 
 private:
-    const static size_t kInitSize = 128;
+    size_t streamSize = 8;
     std::vector<bool> bits_;
     size_t n_bits_ = 0;
 };

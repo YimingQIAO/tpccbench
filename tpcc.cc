@@ -66,6 +66,7 @@ int main(int argc, const char *argv[]) {
         case Benchmark: {
             printf("Load Compressor...");
             fflush(stdout);
+            begin = clock->getMicroseconds();
             // stock
             {
                 std::vector<std::vector<std::string>> samples;
@@ -76,26 +77,23 @@ int main(int argc, const char *argv[]) {
             // order
             {
                 std::vector<std::vector<std::string>> samples;
-                tables->OrderToRaman(num_warehouses, samples);
+                tables->OrderToRaman(samples);
                 static RamanCompressor forest = RamanLearning(samples);
                 tables->MountCompression(&forest, "order");
-
             }
             // orderline
             {
                 std::vector<std::vector<std::string>> samples;
-                tables->OrderlineToRaman(num_warehouses, samples);
+                tables->OrderlineToRaman(samples);
                 static RamanCompressor forest = RamanLearning(samples);
                 tables->MountCompression(&forest, "orderline");
             }
-
             // customer
             {
                 std::vector<std::vector<std::string>> samples;
                 tables->CustomerToRaman(num_warehouses, samples);
                 static RamanCompressor forest = RamanLearning(samples);
                 tables->MountCompression(&forest, "customer");
-
             }
             // history
             {
@@ -103,9 +101,9 @@ int main(int argc, const char *argv[]) {
                 tables->HistoryToRaman(samples);
                 static RamanCompressor forest = RamanLearning(samples);
                 tables->MountCompression(&forest, "history");
-
             }
-            printf("Done\n");
+            end = clock->getMicroseconds();
+            printf("%" PRId64 " ms\n", (end - begin + 500) / 1000);
 
             // Change the constants for run
             random = new tpcc::RealRandomGenerator();
@@ -125,12 +123,12 @@ int main(int argc, const char *argv[]) {
 
                 if (i % kTxnsInterval == 0 && i > 0) {
                     // show stat
-                    uint64_t interval_ms = interval_ns / 1000;
-                    double throughput = kTxnsInterval / (double) interval_ms * 1000000.0;
-                    uint64_t mem = tables->stat_.total_mem_;
-                    uint64_t disk = tables->stat_.total_disk_;
-                    printf("%f, %lu, %lu\n", throughput, mem, disk);
-                    MemDiskSize(tables, false);
+//                    uint64_t interval_ms = interval_ns / 1000;
+//                    double throughput = kTxnsInterval / (double) interval_ms * 1000000.0;
+//                    uint64_t mem = tables->stat_.total_mem_;
+//                    uint64_t disk = tables->stat_.total_disk_;
+//                    printf("%f, %lu, %lu\n", throughput, mem, disk);
+//                    MemDiskSize(tables, false);
 
                     total_nanoseconds += interval_ns;
                     interval_ns = 0;
@@ -140,6 +138,7 @@ int main(int argc, const char *argv[]) {
             printf("%d transactions in %" PRId64 " ms = %f txns/s\n", NUM_TRANSACTIONS,
                    (microseconds + 500) / 1000,
                    NUM_TRANSACTIONS / (double) microseconds * 1000000.0);
+            MemDiskSize(tables, true);
             break;
         }
         default:
@@ -200,11 +199,10 @@ void MemDiskSize(TPCCTables *table, bool detailed) {
         std::cout << "--------------------------------------------" << std::endl;
     }
     uint64_t others = table->stat_.history_mem_ + table->stat_.neworder_mem_ + table->stat_.order_mem_;
-    std::cout << "Raman Model Size: " << table->stat_.raman_dict << " byte" << std::endl;
-    std::cout << "Mem Data: " << table->stat_.total_mem_ << ", " << "Disk Data: " << table->stat_.total_disk_
-              << " byte " << "Other: " << others << " byte" << std::endl;
+    std::cout << "Raman Model Size: " << table->stat_.raman_dict << ", Mem Data: " << table->stat_.total_mem_ << ", "
+              << "Disk Data: " << table->stat_.total_disk_ << ", Other: " << others << " byte" << std::endl;
     std::cout << "Total: " << table->stat_.total_mem_ + table->stat_.total_disk_ + table->stat_.raman_dict << " byte"
               << std::endl;
-    std::cout << "--------------------------------------------" << std::endl;
+    std::cout << "--------------------------------------------\n" << std::endl;
 }
 
