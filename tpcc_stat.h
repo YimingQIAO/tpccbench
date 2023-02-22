@@ -83,17 +83,13 @@ struct TPCCStat {
 
         while (total_mem_ + size > total_mem_limit_) {
             total_mem_ -= last_size_;
-            total_disk_ += last_size_;
 
             if (table_name == "stock") {
                 stock_mem_ -= last_size_;
-                stock_disk_ += last_size_;
             } else if (table_name == "customer") {
                 customer_mem_ -= last_size_;
-                customer_disk_ += last_size_;
             } else if (table_name == "orderline") {
                 orderline_mem_ -= last_size_;
-                orderline_disk_ += last_size_;
             } else
                 printf("Error: table name not found!\n");
         }
@@ -106,7 +102,6 @@ struct TPCCStat {
 
     void RamanDictAdd(uint64_t size) {
         raman_dict += size;
-        total_mem_ += size;
     }
 };
 

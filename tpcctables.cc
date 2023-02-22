@@ -831,7 +831,7 @@ void TPCCTables::insertStock(const Stock &stock, bool is_orig, bool relearn) {
             SeqDiskTupleWrite(stock_fd, &stock);
             insert(&stock_raman, (int32_t) key, stock_tuple_disk_);
 
-            stat_.Insert(stock_tuple_disk_.data_.size(), false, "stock");
+            stat_.Insert(stock.size(), false, "stock");
         }
     } else
         insert(&stock_, (int32_t) key, stock);
@@ -927,7 +927,7 @@ void TPCCTables::insertCustomer(const Customer &customer, bool is_orig, bool rel
                     customer_tuple_disk_.data_ = compressed[i];
                     insert(&customer_raman, keys[i], customer_tuple_disk_);
 
-                    stat_.Insert(customer_tuple_disk_.data_.size(), false, "customer");
+                    stat_.Insert(customer_tuple_disk_.data_.size(), true, "customer");
                 }
             }
         } else {
@@ -937,7 +937,7 @@ void TPCCTables::insertCustomer(const Customer &customer, bool is_orig, bool rel
             SeqDiskTupleWrite(customer_fd, &customer);
             insert(&customer_raman, (int32_t) key, customer_tuple_disk_);
 
-            stat_.Insert(customer_tuple_disk_.data_.size(), false, "customer");
+            stat_.Insert(customer.size(), false, "customer");
         }
     } else {
         Customer *c = insert(&customers_, (int32_t) key, customer);
@@ -1072,7 +1072,7 @@ Order *TPCCTables::insertOrder(const Order &order, bool is_orig, bool relearn) {
                 tuple.data_ = compressed[i];
                 insert(&order_raman, (int32_t) keys[i], tuple);
 
-                stat_.Insert(tuple.data_.size(), false, "order");
+                stat_.Insert(tuple.data_.size(), true, "order");
             }
         }
         return nullptr;
@@ -1180,7 +1180,7 @@ OrderLine *TPCCTables::insertOrderLine(const OrderLine &orderline, bool is_orig,
             num_disk_orderline++;
             insert(&orderline_raman, key, ol_tuple_disk_);
 
-            stat_.Insert(ol_tuple_disk_.data_.size(), false, "orderline");
+            stat_.Insert(orderline.size(), false, "orderline");
             return nullptr;
         }
     } else {

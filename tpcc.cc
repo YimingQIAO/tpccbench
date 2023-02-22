@@ -199,15 +199,12 @@ void MemDiskSize(TPCCTables *table, bool detailed) {
                   << std::endl;
         std::cout << "--------------------------------------------" << std::endl;
     }
-    uint64_t mem_total =
-            table->stat_.warehouse_mem_ + table->stat_.district_mem_ + table->stat_.customer_mem_ +
-            table->stat_.raman_dict + table->stat_.orderline_mem_ + table->stat_.item_mem_ + table->stat_.stock_mem_;
-    uint64_t disk_total = table->stat_.customer_disk_ + table->stat_.orderline_disk_ + table->stat_.stock_disk_;
     uint64_t others = table->stat_.history_mem_ + table->stat_.neworder_mem_ + table->stat_.order_mem_;
     std::cout << "Raman Model Size: " << table->stat_.raman_dict << " byte" << std::endl;
-    std::cout << "Mem: " << mem_total << ", " << "Disk: " << disk_total << " byte " << "Other: "
-              << others << " byte" << std::endl;
-    std::cout << "Total: " << mem_total + disk_total << " byte" << std::endl;
+    std::cout << "Mem Data: " << table->stat_.total_mem_ << ", " << "Disk Data: " << table->stat_.total_disk_
+              << " byte " << "Other: " << others << " byte" << std::endl;
+    std::cout << "Total: " << table->stat_.total_mem_ + table->stat_.total_disk_ + table->stat_.raman_dict << " byte"
+              << std::endl;
     std::cout << "--------------------------------------------" << std::endl;
 }
 
