@@ -38,7 +38,7 @@ bool CustomerByNameOrdering::operator()(const Customer *a, const Customer *b) co
 }
 
 bool
-CustomerByNameOrdering::operator()(const Tuple<Customer> *ta, const Tuple<Customer> *tb) const {
+CustomerByNameOrdering::operator()(const Tuple <Customer> *ta, const Tuple <Customer> *tb) const {
     if (ta->in_memory_ && tb->in_memory_) return (*this)(&ta->data_, &tb->data_);
     else if (ta->in_memory_) {
         Customer b;
@@ -69,7 +69,8 @@ static void deleteBTreeValues(
 
 template<typename KeyType, typename ValueType>
 static int64_t
-BTreeSize(BPlusTree<KeyType, ValueType *, TPCCTables::KEYS_PER_INTERNAL, TPCCTables::KEYS_PER_LEAF> *btree) {
+BTreeSize(
+        BPlusTree<KeyType, ValueType *, TPCCTables::KEYS_PER_INTERNAL, TPCCTables::KEYS_PER_LEAF> *btree) {
     int64_t ret = 0;
     KeyType key = std::numeric_limits<KeyType>::max();
     ValueType *value = NULL;
@@ -80,13 +81,8 @@ BTreeSize(BPlusTree<KeyType, ValueType *, TPCCTables::KEYS_PER_INTERNAL, TPCCTab
     return ret;
 }
 
-TPCCTables::TPCCTables(double memory_size) {
-    std::cout << "Memory size: " << memory_size << "\n";
-    memory_size *= 1024 * 1024 * 1024;
-    kStockMT = memory_size / 328 * 0.95 * 0.411;
-    kCustomerMT = memory_size * 0.95 * 0.258 / 688;
-    kOrderlineMT = memory_size / 88 * 0.95 * 0.331 + 200000 * 0.45 * 10;
-
+TPCCTables::TPCCTables(double memory_size) : stat_(memory_size * 1000 * 1000 * 1000) {
+    std::cout << "Memory size: " << memory_size << " GB \n";
     srand(time(nullptr));
     int32_t file_id = rand();
     std::cout << "Random file id: " << file_id << "\n";
@@ -121,7 +117,8 @@ TPCCTables::~TPCCTables() {
 
     std::cout << "# of customer: " << num_mem_customer << " - " << num_disk_customer << std::endl;
     std::cout << "# of stock: " << num_mem_stock << " - " << num_disk_stock << std::endl;
-    std::cout << "# of orderline: " << num_mem_orderline << " - " << num_disk_orderline << std::endl;
+    std::cout << "# of orderline: " << num_mem_orderline << " - " << num_disk_orderline
+              << std::endl;
 
 }
 
@@ -764,6 +761,8 @@ erase(BPlusTree<KeyType, T *, TPCCTables::KEYS_PER_INTERNAL, TPCCTables::KEYS_PE
 void TPCCTables::insertItem(const Item &item) {
     assert(item.i_id == items_.size() + 1);
     items_.push_back(item);
+
+    stat_.Insert(item.Size(), true, "item");
 }
 
 Item *TPCCTables::findItem(int32_t id) {
@@ -775,6 +774,8 @@ Item *TPCCTables::findItem(int32_t id) {
 
 void TPCCTables::insertWarehouse(const Warehouse &w) {
     insert(&warehouses_, w.w_id, w);
+
+    stat_.Insert(w.size(), true, "warehouse");
 }
 
 Warehouse *TPCCTables::findWarehouse(int32_t id) {
@@ -790,24 +791,31 @@ static int32_t makeStockKey(int32_t w_id, int32_t s_id) {
 }
 
 void TPCCTables::insertStock(const Stock &stock) {
-    Tuple<Stock> tuple;
-    tuple.in_memory_ = num_mem_stock < kStockMT;
+    Tuple <Stock> tuple;
+    tuple.in_memory_ = stat_.ToMemory(stock.size());
     if (tuple.in_memory_) {
         tuple.data_ = stock;
         num_mem_stock++;
+
+        stat_.Insert(tuple.data_.size(), true, "stock");
     } else {
         tuple.id_pos_ = num_disk_stock;
         SeqDiskTupleWrite(stock_fd, &stock);
         num_disk_stock++;
+
+        stat_.Insert(stock.size(), false, "stock");
     }
     insert(&stock_, makeStockKey(stock.s_w_id, stock.s_i_id), tuple);
 }
 
 Stock *TPCCTables::findStock(int32_t w_id, int32_t s_id) {
     int32_t key = makeStockKey(w_id, s_id);
-    Tuple<Stock> *tuple = find(stock_, key);
+    Tuple <Stock> *tuple = find(stock_, key);
     if (tuple) {
-        if (!tuple->in_memory_) DiskTupleRead(stock_fd, &tuple->data_, tuple->id_pos_);
+        if (!tuple->in_memory_) {
+            DiskTupleRead(stock_fd, &tuple->data_, tuple->id_pos_);
+            stat_.SwapTuple(tuple->data_.size(), "stock");
+        }
         return &tuple->data_;
     }
     return nullptr;
@@ -823,6 +831,8 @@ static int32_t makeDistrictKey(int32_t w_id, int32_t d_id) {
 
 void TPCCTables::insertDistrict(const District &district) {
     insert(&districts_, makeDistrictKey(district.d_w_id, district.d_id), district);
+
+    stat_.Insert(district.size(), true, "district");
 }
 
 District *TPCCTables::findDistrict(int32_t w_id, int32_t d_id) {
@@ -840,33 +850,40 @@ static int32_t makeCustomerKey(int32_t w_id, int32_t d_id, int32_t c_id) {
 }
 
 void TPCCTables::insertCustomer(const Customer &customer) {
-    Tuple<Customer> tuple;
-    tuple.in_memory_ = num_mem_customer < kCustomerMT;
+    Tuple <Customer> tuple;
+    tuple.in_memory_ = stat_.ToMemory(customer.size());
     if (tuple.in_memory_) {
         tuple.data_ = customer;
         num_mem_customer++;
+
+        stat_.Insert(tuple.data_.size(), true, "customer");
     } else {
         tuple.id_pos_ = num_disk_customer;
         SeqDiskTupleWrite(customer_fd, &customer);
         num_disk_customer++;
+
+        stat_.Insert(customer.size(), false, "customer");
     }
     int32_t key = makeCustomerKey(customer.c_w_id, customer.c_d_id, customer.c_id);
-    Tuple<Customer> *t = insert(&customers_, key, tuple);
+    Tuple <Customer> *t = insert(&customers_, key, tuple);
     customers_by_name_.insert(t);
 }
 
 Customer *TPCCTables::findCustomer(int32_t w_id, int32_t d_id, int32_t c_id) {
     int32_t key = makeCustomerKey(w_id, d_id, c_id);
-    Tuple<Customer> *tuple = find(customers_, key);
+    Tuple <Customer> *tuple = find(customers_, key);
     if (tuple) {
-        if (!tuple->in_memory_) DiskTupleRead(customer_fd, &tuple->data_, tuple->id_pos_);
+        if (!tuple->in_memory_) {
+            DiskTupleRead(customer_fd, &tuple->data_, tuple->id_pos_);
+            stat_.SwapTuple(tuple->data_.size(), "customer");
+        }
         return &tuple->data_;
     }
     return nullptr;
 }
 
 Customer *TPCCTables::findCustomerByName(int32_t w_id, int32_t d_id, const char *c_last) {
-    Tuple<Customer> tuple;
+    Tuple <Customer> tuple;
     tuple.in_memory_ = true;
     Customer &c = tuple.data_;
     c.c_w_id = w_id;
@@ -888,7 +905,7 @@ Customer *TPCCTables::findCustomerByName(int32_t w_id, int32_t d_id, const char 
     }
     auto stop = customers_by_name_.lower_bound(&tuple);
 
-    Tuple<Customer> *t_customer = nullptr;
+    Tuple <Customer> *t_customer = nullptr;
     // Choose position n/2 rounded up (1 based addressing) = floor((n-1)/2)
     if (it != stop) {
         auto middle = it;
@@ -905,7 +922,8 @@ Customer *TPCCTables::findCustomerByName(int32_t w_id, int32_t d_id, const char 
         // There were i+1 matching last names
         t_customer = *middle;
     }
-    if (!t_customer->in_memory_) DiskTupleRead(customer_fd, &t_customer->data_, t_customer->id_pos_);
+    if (!t_customer->in_memory_)
+        DiskTupleRead(customer_fd, &t_customer->data_, t_customer->id_pos_);
     return &t_customer->data_;
 }
 
@@ -935,6 +953,8 @@ static int64_t makeOrderByCustomerKey(int32_t w_id, int32_t d_id, int32_t c_id, 
 
 Order *TPCCTables::insertOrder(const Order &order) {
     Order *tuple = insert(&orders_, makeOrderKey(order.o_w_id, order.o_d_id, order.o_id), order);
+
+    stat_.Insert(order.size(), true, "order");
     // Secondary index based on customer id
     int64_t key = makeOrderByCustomerKey(order.o_w_id, order.o_d_id, order.o_c_id, order.o_id);
     assert(!orders_by_customer_.find(key));
@@ -977,14 +997,18 @@ static int64_t makeOrderLineKey(int32_t w_id, int32_t d_id, int32_t o_id, int32_
 }
 
 OrderLine *TPCCTables::insertOrderLine(const OrderLine &orderline) {
-    ol_tuple_buf_.in_memory_ = num_mem_orderline < kOrderlineMT;
+    ol_tuple_buf_.in_memory_ = stat_.ToMemory(orderline.size());
     if (ol_tuple_buf_.in_memory_) {
         ol_tuple_buf_.data_ = orderline;
         num_mem_orderline++;
+
+        stat_.Insert(ol_tuple_buf_.data_.size(), true, "orderline");
     } else {
         ol_tuple_buf_.id_pos_ = num_disk_orderline;
         SeqDiskTupleWrite(orderline_fd, &orderline);
         num_disk_orderline++;
+
+        stat_.Insert(orderline.size(), false, "orderline");
     }
     int64_t key = makeOrderLineKey(orderline.ol_w_id, orderline.ol_d_id, orderline.ol_o_id,
                                    orderline.ol_number);
@@ -994,9 +1018,12 @@ OrderLine *TPCCTables::insertOrderLine(const OrderLine &orderline) {
 
 OrderLine *TPCCTables::findOrderLine(int32_t w_id, int32_t d_id, int32_t o_id, int32_t number) {
     int64_t key = makeOrderLineKey(w_id, d_id, o_id, number);
-    Tuple<OrderLine> *tuple = find(orderlines_, key);
+    Tuple <OrderLine> *tuple = find(orderlines_, key);
     if (tuple) {
-        if (!tuple->in_memory_) DiskTupleRead(orderline_fd, &tuple->data_, tuple->id_pos_);
+        if (!tuple->in_memory_) {
+            DiskTupleRead(orderline_fd, &tuple->data_, tuple->id_pos_);
+            stat_.SwapTuple(tuple->data_.size(), "orderline");
+        }
         return &tuple->data_;
     }
     return nullptr;
@@ -1019,6 +1046,8 @@ NewOrder *TPCCTables::insertNewOrder(int32_t w_id, int32_t d_id, int32_t o_id) {
     neworder->no_d_id = d_id;
     neworder->no_o_id = o_id;
 
+    stat_.Insert(neworder->size(), true, "neworder");
+
     return insertNewOrderObject(&neworders_, neworder);
 }
 
@@ -1032,6 +1061,8 @@ NewOrder *TPCCTables::findNewOrder(int32_t w_id, int32_t d_id, int32_t o_id) {
 History *TPCCTables::insertHistory(const History &history) {
     History *h = new History(history);
     history_.push_back(h);
+
+    stat_.Insert(history.size(), true, "history");
     return h;
 }
 
@@ -1133,77 +1164,4 @@ void TPCCTables::HistoryToCSV(int64_t num_warehouses) {
               << h->h_data << "\n";
     }
     his_f.close();
-}
-
-int64_t TPCCTables::itemSize() {
-    int32_t ret = 0;
-    for (Item &item: items_) ret += item.Size();
-    return ret;
-}
-
-int64_t TPCCTables::warehouseSize() {
-    return BTreeSize(&warehouses_);
-}
-
-int64_t TPCCTables::districtSize() {
-    return BTreeSize(&districts_);
-}
-
-int64_t TPCCTables::stockSize() {
-    int64_t ret = 0;
-    int32_t key = std::numeric_limits<int32_t>::max();
-    Tuple<Stock> *value;
-    while (stock_.findLastLessThan(key, &value, &key)) {
-        if (value == nullptr) throw std::runtime_error("null value in stockSize");
-        if (value->in_memory_) ret += value->data_.size();
-    }
-    return ret;
-}
-
-int64_t TPCCTables::diskTableSize(const std::string &file_name) {
-    if (file_name == "stock") return DiskTableSize<Stock>(stock_fd);
-    else if (file_name == "orderline") return DiskTableSize<OrderLine>(orderline_fd);
-    else if (file_name == "customer") return DiskTableSize<Customer>(customer_fd);
-    else {
-        throw std::runtime_error("Unknown file name");
-    }
-}
-
-int64_t TPCCTables::customerSize() {
-    int64_t ret = 0;
-    int32_t key = std::numeric_limits<int32_t>::max();
-    Tuple<Customer> *value;
-    while (customers_.findLastLessThan(key, &value, &key)) {
-        if (value == nullptr) throw std::runtime_error("null value in customerSize");
-        if (value->in_memory_) ret += value->data_.size();
-    }
-    return ret;
-}
-
-int64_t TPCCTables::orderSize() {
-    return BTreeSize(&orders_);
-}
-
-int64_t TPCCTables::orderlineSize() {
-    int64_t ret = 0;
-    int64_t key = std::numeric_limits<int64_t>::max();
-    Tuple<OrderLine> *value;
-    while (orderlines_.findLastLessThan(key, &value, &key)) {
-        if (value == nullptr) throw std::runtime_error("null value in orderlineSize");
-        if (value->in_memory_) ret += value->data_.size();
-    }
-    return ret;
-
-}
-
-int64_t TPCCTables::newOrderSize() {
-    int64_t ret = 0;
-    for (auto &no: neworders_) ret += no.second->size();
-    return ret;
-}
-
-int64_t TPCCTables::historySize() {
-    int64_t ret = 0;
-    for (auto &h: history_) ret += h->size();
-    return ret;
 }

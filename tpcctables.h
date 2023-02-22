@@ -8,6 +8,7 @@
 #include "btree.h"
 #include "tpccdb.h"
 #include "disk_storage.h"
+#include "tpcc_stat.h"
 
 class CustomerByNameOrdering {
 public:
@@ -127,26 +128,6 @@ public:
     // Stores order in the database. Returns a pointer to the database's tuple.
     History *insertHistory(const History &history);
 
-    int64_t itemSize();
-
-    int64_t warehouseSize();
-
-    int64_t districtSize();
-
-    int64_t stockSize();
-
-    [[nodiscard]] static int64_t diskTableSize(const std::string &file_name);
-
-    int64_t customerSize();
-
-    int64_t orderSize();
-
-    int64_t orderlineSize();
-
-    int64_t newOrderSize();
-
-    int64_t historySize();
-
     void OrderlineToCSV(int64_t num_warehouses);
 
     void StockToCSV(int64_t num_warehouses);
@@ -157,6 +138,8 @@ public:
 
     static const int KEYS_PER_INTERNAL = 8;
     static const int KEYS_PER_LEAF = 8;
+
+    TPCCStat stat_;
 
 private:
     static const int STOCK_LEVEL_ORDERS = 20;
@@ -212,9 +195,6 @@ private:
 
     // disk storage
     std::string kStockFileName, kCustomerFileName, kOrderlineFileName;
-    uint64_t kStockMT;
-    uint64_t kCustomerMT;
-    uint64_t kOrderlineMT;
 };
 
 #endif
