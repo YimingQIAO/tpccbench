@@ -15,7 +15,7 @@
 #include "tpccgenerator.h"
 #include "tpcctables.h"
 
-static const int NUM_TRANSACTIONS = 1000000;
+static const int NUM_TRANSACTIONS = 2000000;
 static const int kTxnsInterval = 50000;
 static const int kDictCapacity = 5 * 110 * 1024;
 static const int kCompressLevel = 3;
@@ -70,11 +70,14 @@ int main(int argc, const char *argv[]) {
         case Benchmark: {
             printf("Load Compressor...");
             fflush(stdout);
+            uint64_t learning_time_ms = 0;
             // stock
             {
                 std::vector<Stock> samples;
                 std::vector<size_t> sample_sizes;
                 tables->StockToZstd(num_warehouses, samples, sample_sizes);
+
+                begin = clock->getMicroseconds();
                 void *dict_buffer = malloc_orDie(kDictCapacity);
                 size_t dict_size = ZDICT_trainFromBuffer(dict_buffer, kDictCapacity,
                                                          samples.data(), sample_sizes.data(),
@@ -86,6 +89,9 @@ int main(int argc, const char *argv[]) {
                 ZSTD_CDict_s *stock_cdict = ZSTD_createCDict(dict_buffer, dict_size,
                                                              kCompressLevel);
                 ZSTD_DDict_s *stock_ddict = ZSTD_createDDict(dict_buffer, dict_size);
+                end = clock->getMicroseconds();
+                learning_time_ms += (end - begin + 500) / 1000;
+
                 tables->MountCompression(stock_cdict, stock_ddict, "stock");
             }
             // orderline
@@ -93,6 +99,8 @@ int main(int argc, const char *argv[]) {
                 std::vector<OrderLine> samples;
                 std::vector<size_t> sample_sizes;
                 tables->OrderlineToZstd(num_warehouses, samples, sample_sizes);
+
+                begin = clock->getMicroseconds();
                 void *dict_buffer = malloc_orDie(kDictCapacity);
                 size_t dict_size = ZDICT_trainFromBuffer(dict_buffer, kDictCapacity,
                                                          samples.data(), sample_sizes.data(),
@@ -104,6 +112,9 @@ int main(int argc, const char *argv[]) {
                 ZSTD_CDict_s *orderline_cdict = ZSTD_createCDict(dict_buffer, dict_size,
                                                                  kCompressLevel);
                 ZSTD_DDict_s *orderline_ddict = ZSTD_createDDict(dict_buffer, dict_size);
+                end = clock->getMicroseconds();
+                learning_time_ms += (end - begin + 500) / 1000;
+
                 tables->MountCompression(orderline_cdict, orderline_ddict, "orderline");
             }
             // customer
@@ -111,6 +122,8 @@ int main(int argc, const char *argv[]) {
                 std::vector<Customer> samples;
                 std::vector<size_t> sample_sizes;
                 tables->CustomerToZstd(num_warehouses, samples, sample_sizes);
+
+                begin = clock->getMicroseconds();
                 void *dict_buffer = malloc_orDie(kDictCapacity);
                 size_t dict_size = ZDICT_trainFromBuffer(dict_buffer, kDictCapacity,
                                                          samples.data(), sample_sizes.data(),
@@ -122,6 +135,9 @@ int main(int argc, const char *argv[]) {
                 ZSTD_CDict_s *customer_cdict = ZSTD_createCDict(dict_buffer, dict_size,
                                                                 kCompressLevel);
                 ZSTD_DDict_s *customer_ddict = ZSTD_createDDict(dict_buffer, dict_size);
+                end = clock->getMicroseconds();
+                learning_time_ms += (end - begin + 500) / 1000;
+
                 tables->MountCompression(customer_cdict, customer_ddict, "customer");
             }
             // history
@@ -129,6 +145,8 @@ int main(int argc, const char *argv[]) {
                 std::vector<History> samples;
                 std::vector<size_t> sample_sizes;
                 tables->HistoryToZstd(samples, sample_sizes);
+
+                begin = clock->getMicroseconds();
                 void *dict_buffer = malloc_orDie(kDictCapacity);
                 size_t dict_size = ZDICT_trainFromBuffer(dict_buffer, kDictCapacity,
                                                          samples.data(), sample_sizes.data(),
@@ -140,6 +158,9 @@ int main(int argc, const char *argv[]) {
                 ZSTD_CDict_s *history_cdict = ZSTD_createCDict(dict_buffer, dict_size,
                                                                kCompressLevel);
                 ZSTD_DDict_s *history_ddict = ZSTD_createDDict(dict_buffer, dict_size);
+                end = clock->getMicroseconds();
+                learning_time_ms += (end - begin + 500) / 1000;
+
                 tables->MountCompression(history_cdict, history_ddict, "history");
             }
             // order
@@ -147,6 +168,8 @@ int main(int argc, const char *argv[]) {
                 std::vector<Order> samples;
                 std::vector<size_t> sample_sizes;
                 tables->OrderToZstd(num_warehouses, samples, sample_sizes);
+
+                begin = clock->getMicroseconds();
                 void *dict_buffer = malloc_orDie(kDictCapacity);
                 size_t dict_size = ZDICT_trainFromBuffer(dict_buffer, kDictCapacity,
                                                          samples.data(), sample_sizes.data(),
@@ -158,8 +181,12 @@ int main(int argc, const char *argv[]) {
                 ZSTD_CDict_s *order_cdict = ZSTD_createCDict(dict_buffer, dict_size,
                                                              kCompressLevel);
                 ZSTD_DDict_s *order_ddict = ZSTD_createDDict(dict_buffer, dict_size);
+                end = clock->getMicroseconds();
+                learning_time_ms += (end - begin + 500) / 1000;
+
                 tables->MountCompression(order_cdict, order_ddict, "order");
             }
+            printf("Learning Time: %lu ms\t", learning_time_ms);
             printf("Done\n");
 
             // Change the constants for run
@@ -180,11 +207,11 @@ int main(int argc, const char *argv[]) {
 
                 if (i % kTxnsInterval == 0 && i > 0) {
                     // show stat
-                    uint64_t interval_ms = interval_ns / 1000;
-                    double throughput = kTxnsInterval / (double) interval_ms * 1000000.0;
-                    uint64_t mem = tables->stat_.total_mem_;
-                    uint64_t disk = tables->stat_.total_disk_;
-                    printf("%f, %llu, %llu\n", throughput, mem, disk);
+//                    uint64_t interval_ms = interval_ns / 1000;
+//                    double throughput = kTxnsInterval / (double) interval_ms * 1000000.0;
+//                    uint64_t mem = tables->stat_.total_mem_;
+//                    uint64_t disk = tables->stat_.total_disk_;
+//                    printf("%f, %llu, %llu\n", throughput, mem, disk);
 
                     total_nanoseconds += interval_ns;
                     interval_ns = 0;
