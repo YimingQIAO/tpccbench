@@ -67,14 +67,16 @@ int main(int argc, const char *argv[]) {
         case Benchmark: {
             printf("Transforming %ld warehouses... ", num_warehouses);
             fflush(stdout);
-            begin = clock->getMicroseconds();
             srand(time(nullptr));
             int32_t model_id = rand();
+            uint64_t learning_time_ms = 0;
             // orderline
             {
                 OrderLineBlitz order_line_blitz;
                 tables->OrderLineToBlitz(order_line_blitz, num_warehouses);
                 std::string ol_model_name = std::to_string(model_id) + "_ol_model.blitz";
+
+                begin = clock->getMicroseconds();
                 static db_compress::RelationCompressor ol_compressor(ol_model_name.c_str(),
                                                                      order_line_blitz.schema(),
                                                                      order_line_blitz.compressionConfig(),
@@ -84,6 +86,9 @@ int main(int argc, const char *argv[]) {
                                                                          order_line_blitz.schema(),
                                                                          kBlockSize);
                 ol_decompressor.InitWithoutIndex();
+                end = clock->getMicroseconds();
+                learning_time_ms += (end - begin + 500) / 1000;
+
                 tables->MountCompressor(ol_compressor, ol_decompressor, num_warehouses,
                                         "orderline");
                 db_compress::NextTableAttrInterpreter();
@@ -93,6 +98,8 @@ int main(int argc, const char *argv[]) {
                 StockBlitz stock_blitz;
                 tables->StockToBlitz(stock_blitz, num_warehouses);
                 std::string stock_model_name = std::to_string(model_id) + "_stock_model.blitz";
+
+                begin = clock->getMicroseconds();
                 static db_compress::RelationCompressor stock_compressor(stock_model_name.c_str(),
                                                                         stock_blitz.schema(),
                                                                         stock_blitz.compressionConfig(),
@@ -102,6 +109,9 @@ int main(int argc, const char *argv[]) {
                         stock_model_name.c_str(),
                         stock_blitz.schema(), kBlockSize);
                 stock_decompressor.InitWithoutIndex();
+                end = clock->getMicroseconds();
+                learning_time_ms += (end - begin + 500) / 1000;
+
                 tables->MountCompressor(stock_compressor, stock_decompressor, num_warehouses,
                                         "stock");
                 db_compress::NextTableAttrInterpreter();
@@ -112,22 +122,24 @@ int main(int argc, const char *argv[]) {
                 tables->CustomerToBlitz(cust_blitz, num_warehouses);
                 std::string customer_model_name =
                         std::to_string(model_id) + "_customer_model.blitz";
+
+                begin = clock->getMicroseconds();
                 static db_compress::RelationCompressor cust_compressor(customer_model_name.c_str(),
                                                                        cust_blitz.schema(),
                                                                        cust_blitz.compressionConfig(),
                                                                        kBlockSize);
                 BlitzLearning(cust_blitz, cust_compressor);
-                static db_compress::RelationDecompressor cust_decompressor(
-                        customer_model_name.c_str(),
-                        cust_blitz.schema(),
-                        kBlockSize);
+                static db_compress::RelationDecompressor cust_decompressor(customer_model_name.c_str(),
+                                                                           cust_blitz.schema(),
+                                                                           kBlockSize);
                 cust_decompressor.InitWithoutIndex();
-                tables->MountCompressor(cust_compressor, cust_decompressor, num_warehouses,
-                                        "customer");
+                end = clock->getMicroseconds();
+                learning_time_ms += (end - begin + 500) / 1000;
+
+                tables->MountCompressor(cust_compressor, cust_decompressor, num_warehouses, "customer");
                 db_compress::NextTableAttrInterpreter();
             }
-            end = clock->getMicroseconds();
-            printf("%" PRId64 " ms\n", (end - begin + 500) / 1000);
+            printf("Learning Time: %lu ms\n", learning_time_ms);
             fflush(stdout);
 
             // Change the constants for run
@@ -148,12 +160,12 @@ int main(int argc, const char *argv[]) {
 
                 if (i % kTxnsInterval == 0 && i > 0) {
                     // show stat
-                    uint64_t interval_ms = interval_ns / 1000;
-                    double throughput = kTxnsInterval / (double) interval_ms * 1000000.0;
-                    uint64_t mem = tables->stat_.total_mem_;
-                    uint64_t disk = tables->stat_.total_disk_;
-                    printf("%f, %lu, %lu\n", throughput, mem, disk);
-                    MemDiskSize(tables->stat_, false);
+//                    uint64_t interval_ms = interval_ns / 1000;
+//                    double throughput = kTxnsInterval / (double) interval_ms * 1000000.0;
+//                    uint64_t mem = tables->stat_.total_mem_;
+//                    uint64_t disk = tables->stat_.total_disk_;
+//                    printf("%f, %lu, %lu\n", throughput, mem, disk);
+//                    MemDiskSize(tables->stat_, false);
 
                     total_nanoseconds += interval_ns;
                     interval_ns = 0;
@@ -220,7 +232,7 @@ void MemDiskSize(TPCCStat &stat, bool detailed) {
         std::cout << "Stock: " << stat.stock_mem_ << " + " << stat.stock_disk_ << " byte"
                   << std::endl;
         std::cout << "History: " << stat.history_mem_ << " byte" << std::endl;
-        std::cout << "--------------------------------------------" << std::endl;
+        std::cout << "--------------------------------------------\n" << std::endl;
     }
     uint64_t mem_total = stat.warehouse_mem_ + stat.district_mem_ + stat.customer_mem_ +
                          stat.orderline_mem_ + stat.item_mem_ + stat.stock_mem_;
@@ -229,7 +241,7 @@ void MemDiskSize(TPCCStat &stat, bool detailed) {
     std::cout << "Mem: " << mem_total << ", " << "Disk: " << disk_total << " byte " << "Other: "
               << others << " byte" << std::endl;
     std::cout << "Total: " << mem_total + disk_total << " byte" << std::endl;
-    std::cout << "---------------------------------------------------------------------";
+    std::cout << "---------------------------------------------------------------------\n";
 }
 
 
