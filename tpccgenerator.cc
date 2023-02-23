@@ -197,8 +197,7 @@ void TPCCGenerator::generateOrder(int32_t id, int32_t c_id, int32_t d_id,
     order->o_d_id = d_id;
     order->o_w_id = w_id;
     if (!new_order) {
-        order->o_carrier_id =
-                random_->number(Order::MIN_CARRIER_ID, Order::MAX_CARRIER_ID);
+        order->o_carrier_id = random_->number(Order::MIN_CARRIER_ID, Order::MAX_CARRIER_ID);
     } else {
         order->o_carrier_id = Order::NULL_CARRIER_ID;
     }

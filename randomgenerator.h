@@ -75,6 +75,7 @@ namespace tpcc {
         }
 
         void historyData(char *s, int upper_length) {
+            memset(s, 0, upper_length);
             wordsData(s, upper_length, 3);
         }
 

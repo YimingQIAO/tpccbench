@@ -213,6 +213,8 @@ namespace tpcc {
     }
 
     void RandomGenerator::customerData(char *s, int upper_length, bool bad_credit) {
+        memset(s, 0, upper_length + 1);
+
         int32_t word_num = 10;
         std::vector<int> word_idx(word_num);
         int total_length = upper_length + 1;
