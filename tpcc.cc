@@ -15,7 +15,8 @@
 #include "tpccgenerator.h"
 #include "tpcctables.h"
 
-static const int NUM_TRANSACTIONS = 200000;
+static const int NUM_TRANSACTIONS = 1000000;
+static const int kTxnsInterval = 50000;
 static const int kDictCapacity = 5 * 110 * 1024;
 static const int kCompressLevel = 3;
 
@@ -27,9 +28,9 @@ static Mode mode;
 static long num_warehouses = 1;
 static double memory_size;
 
-void tableSize(TPCCTables *tables);
-
 void welcome(int argc, const char *const *argv);
+
+void MemDiskSize(TPCCStat &stat, bool detailed);
 
 int main(int argc, const char *argv[]) {
     welcome(argc, argv);
@@ -169,18 +170,31 @@ int main(int argc, const char *argv[]) {
             TPCCClient client(clock, random, tables, Item::NUM_ITEMS,
                               static_cast<int>(num_warehouses),
                               District::NUM_PER_WAREHOUSE, Customer::NUM_PER_DISTRICT);
-            printf("Running... ");
+            printf("Running...\n");
             fflush(stdout);
 
-            uint64_t nanoseconds = 0;
+            uint64_t total_nanoseconds = 0;
+            uint64_t interval_ns = 0;
             for (int i = 0; i < NUM_TRANSACTIONS; ++i) {
-                nanoseconds += client.doOne();
+                interval_ns += client.doOne();
+
+                if (i % kTxnsInterval == 0 && i > 0) {
+                    // show stat
+                    uint64_t interval_ms = interval_ns / 1000;
+                    double throughput = kTxnsInterval / (double) interval_ms * 1000000.0;
+                    uint64_t mem = tables->stat_.total_mem_;
+                    uint64_t disk = tables->stat_.total_disk_;
+                    printf("%f, %llu, %llu\n", throughput, mem, disk);
+
+                    total_nanoseconds += interval_ns;
+                    interval_ns = 0;
+                }
             }
-            uint64_t microseconds = nanoseconds / 1000;
+            uint64_t microseconds = total_nanoseconds / 1000;
             printf("%d transactions in %" PRId64 " ms = %f txns/s\n", NUM_TRANSACTIONS,
                    (microseconds + 500) / 1000,
                    NUM_TRANSACTIONS / (double) microseconds * 1000000.0);
-            tableSize(tables);
+            MemDiskSize(tables->stat_, true);
             break;
         }
         default:
@@ -221,36 +235,29 @@ void welcome(int argc, const char *const *argv) {
     }
 }
 
-void tableSize(TPCCTables *tables) {
-    // memory size
-    int64_t ini_warehouses = tables->warehouseSize();
-    int64_t ini_districts = tables->districtSize();
-    int64_t ini_customers = tables->customerSize();
-    int64_t ini_orders = tables->orderSize();
-    int64_t ini_orderline = tables->orderlineSize();
-    int64_t ini_neworders = tables->newOrderSize();
-    int64_t ini_items = tables->itemSize();
-    int64_t ini_stocks = tables->stockSize();
-    int64_t ini_history = tables->historySize();
-
-    // disk size
-    int64_t disk_stock = tables->diskTableSize("stock");
-    int64_t disk_ol = tables->diskTableSize("orderline");
-    int64_t disk_c = tables->diskTableSize("customer");
-
-    std::cout << "------------ After Transaction Size ------------ \n";
-    std::cout << "[Table Name]: " << "[Memory Size] + [Disk Size]" << std::endl;
-    std::cout << "Warehouse: " << ini_warehouses << " byte" << std::endl;
-    std::cout << "District: " << ini_districts << " byte" << std::endl;
-    std::cout << "Customer: " << ini_customers << " + " << disk_c << " byte" << std::endl;
-    std::cout << "Order: " << ini_orders << " byte" << std::endl;
-    std::cout << "Orderline: " << ini_orderline << " + " << disk_ol << " byte" << std::endl;
-    std::cout << "NewOrder: " << ini_neworders << " byte" << std::endl;
-    std::cout << "Item: " << ini_items << " byte" << std::endl;
-    std::cout << "Stock: " << ini_stocks << " + " << disk_stock << " byte" << std::endl;
-    std::cout << "History: " << ini_history << " byte" << std::endl;
-    int64_t total =
-            ini_warehouses + ini_districts + ini_customers + ini_orders + ini_orderline +
-            ini_neworders + ini_items + ini_stocks + ini_history;
-    std::cout << "Total: " << total << " byte" << std::endl;
+void MemDiskSize(TPCCStat &stat, bool detailed) {
+    if (detailed) {
+        std::cout << "[Table Name]: " << "[Memory Size] + [Disk Size]" << std::endl;
+        std::cout << "Warehouse: " << stat.warehouse_mem_ << " byte" << std::endl;
+        std::cout << "District: " << stat.district_mem_ << " byte" << std::endl;
+        std::cout << "Customer: " << stat.customer_mem_ << " + " << stat.customer_disk_ << " byte"
+                  << std::endl;
+        std::cout << "Order: " << stat.order_mem_ << " byte" << std::endl;
+        std::cout << "Orderline: " << stat.orderline_mem_ << " + " << stat.orderline_disk_
+                  << " byte" << std::endl;
+        std::cout << "NewOrder: " << stat.neworder_mem_ << " byte" << std::endl;
+        std::cout << "Item: " << stat.item_mem_ << " byte" << std::endl;
+        std::cout << "Stock: " << stat.stock_mem_ << " + " << stat.stock_disk_ << " byte"
+                  << std::endl;
+        std::cout << "History: " << stat.history_mem_ << " byte" << std::endl;
+        std::cout << "--------------------------------------------" << std::endl;
+    }
+    uint64_t mem_total =
+            stat.warehouse_mem_ + stat.district_mem_ + stat.customer_mem_ +
+            stat.orderline_mem_ + stat.item_mem_ + stat.stock_mem_;
+    uint64_t disk_total = stat.customer_disk_ + stat.orderline_disk_ + stat.stock_disk_;
+    uint64_t others = stat.history_mem_ + stat.neworder_mem_ + stat.order_mem_;
+    std::cout << "Mem: " << mem_total << ", " << "Disk: " << disk_total << " byte " << "Other: "
+              << others << " byte" << std::endl;
+    std::cout << "Total: " << mem_total + disk_total << " byte" << std::endl;
 }
