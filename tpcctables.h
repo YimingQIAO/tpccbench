@@ -204,6 +204,11 @@ public:
         }
     }
 
+    int64_t TreeSize() {
+        return stock_raman.TreeSize() + customer_raman.TreeSize() + order_raman.TreeSize() +
+               orderline_raman.TreeSize() + warehouses_.TreeSize() + districts_.TreeSize();
+    }
+
     static const int KEYS_PER_INTERNAL = 8;
     static const int KEYS_PER_LEAF = 8;
 
