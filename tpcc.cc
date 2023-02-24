@@ -284,8 +284,10 @@ void MemDiskSize(TPCCTables &table, bool detailed) {
             table.stat_.orderline_mem_ + table.stat_.item_mem_ + table.stat_.stock_mem_;
     uint64_t disk_total = table.stat_.customer_disk_ + table.stat_.orderline_disk_ + table.stat_.stock_disk_;
     uint64_t others = table.stat_.history_mem_ + table.stat_.neworder_mem_ + table.stat_.order_mem_;
-    std::cout << "Index Size: " << table.TreeSize() << " byte\t";
-    std::cout << "Mem: " << mem_total << ", " << "Disk: " << disk_total << " byte " << "Other: "
-              << others << " byte" << std::endl;
+    std::cout << "Index Size: " << table.TreeSize() << "\t"
+              << "Zstd Model Size: " << kDictCapacity * 5 << "\t"
+              << "Mem: " << mem_total << "\t"
+              << "Disk: " << disk_total << "\t"
+              << "Other: " << others << " byte" << std::endl;
     std::cout << "------------------------------------------" << std::endl;
 }
