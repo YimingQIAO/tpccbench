@@ -54,10 +54,11 @@ template<typename KEY, typename VALUE, unsigned N, unsigned M,
         unsigned NODE_ALIGNMENT = 64>
 class BPlusTree {
 public:
+    int64_t leaf_num_;
+    int64_t inner_num_;
+
     // Builds a new empty tree.
-    BPlusTree()
-            : depth(0),
-              root(new LeafNode()) {
+    BPlusTree() : leaf_num_(1), inner_num_(0), depth(0), root(new LeafNode()) {
         // Previously used BOOST_STATIC_ASSERT:
         // N must be greater than two to make the split of
         // two inner nodes sensible.
@@ -71,6 +72,10 @@ public:
 
     ~BPlusTree() {
         // TODO: Previously used boost:pool. To remove dependency, we now just leak
+    }
+
+    int64_t TreeSize() const {
+        return leaf_num_ * sizeof(LeafNode) + inner_num_ * sizeof(InnerNode);
     }
 
     // Inserts a pair (key, value). If there is a previous pair with
@@ -97,8 +102,9 @@ public:
             // We have to create a new root pointing to them
             depth++;
             root = new InnerNode();
-            InnerNode *rootProxy =
-                    reinterpret_cast<InnerNode *>(root);
+            inner_num_ += 1;
+
+            InnerNode *rootProxy = reinterpret_cast<InnerNode *>(root);
             rootProxy->num_keys = 1;
             rootProxy->keys[0] = result.key;
             rootProxy->children[0] = result.left;
@@ -241,7 +247,9 @@ private:
 
         const NodeType type;
 #else
-        LeafNode() : num_keys(0) {memset(keys,0,sizeof(keys));}
+
+        LeafNode() : num_keys(0) { memset(keys, 0, sizeof(keys)); }
+
 #endif
         unsigned num_keys;
         KEY keys[M];
@@ -257,7 +265,9 @@ private:
 
         const NodeType type;
 #else
+
         InnerNode() : num_keys(0) {}
+
 #endif
 
         unsigned num_keys;
@@ -347,6 +357,9 @@ private:
             // The node was full. We must split it
             unsigned treshold = (M + 1) / 2;
             LeafNode *new_sibling = new LeafNode();
+            leaf_num_ += 1;
+
+
             new_sibling->num_keys = node->num_keys - treshold;
             for (unsigned j = 0; j < new_sibling->num_keys; ++j) {
                 new_sibling->keys[j] = node->keys[treshold + j];
@@ -408,6 +421,8 @@ private:
             // Split
             unsigned treshold = (N + 1) / 2;
             InnerNode *new_sibling = new InnerNode();
+            inner_num_ += 1;
+
             new_sibling->num_keys = node->num_keys - treshold;
             for (unsigned i = 0; i < new_sibling->num_keys; ++i) {
                 new_sibling->keys[i] = node->keys[treshold + i];

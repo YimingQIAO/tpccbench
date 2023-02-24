@@ -136,6 +136,11 @@ public:
 
     void HistoryToCSV(int64_t num_warehouses);
 
+    int64_t TreeSize() const {
+        return stock_.TreeSize() + customers_.TreeSize() + orders_.TreeSize() +
+               orderlines_.TreeSize() + warehouses_.TreeSize() + districts_.TreeSize();
+    }
+
     static const int KEYS_PER_INTERNAL = 8;
     static const int KEYS_PER_LEAF = 8;
 
