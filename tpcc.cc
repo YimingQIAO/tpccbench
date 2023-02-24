@@ -52,7 +52,8 @@ int main(int argc, const char *argv[]) {
     generator.makeItemsTable(tables);
     for (int i = 0; i < num_warehouses; ++i) generator.makeWarehouse(tables, i + 1);
     int64_t end = clock->getMicroseconds();
-    printf("%" PRId64 " ms\n", (end - begin + 500) / 1000);
+    int64_t loading_data_ms = (end - begin + 500) / 1000;
+    std::cout << "\tLoading Data Time: " << loading_data_ms << "\n";
 
     switch (mode) {
         case GenerateCSV: {
@@ -66,7 +67,7 @@ int main(int argc, const char *argv[]) {
         case Benchmark: {
             printf("Load Compressor...");
             fflush(stdout);
-            uint64_t learning_time_ms = 0;
+            uint64_t learning_data_ms = 0;
             // stock
             {
                 std::vector<std::vector<std::string>> samples;
@@ -75,7 +76,7 @@ int main(int argc, const char *argv[]) {
                 begin = clock->getMicroseconds();
                 static RamanCompressor forest = RamanLearning(samples);
                 end = clock->getMicroseconds();
-                learning_time_ms += (end - begin + 500) / 1000;
+                learning_data_ms += (end - begin + 500) / 1000;
 
                 tables->MountCompression(&forest, "stock");
             }
@@ -87,7 +88,7 @@ int main(int argc, const char *argv[]) {
                 begin = clock->getMicroseconds();
                 static RamanCompressor forest = RamanLearning(samples);
                 end = clock->getMicroseconds();
-                learning_time_ms += (end - begin + 500) / 1000;
+                learning_data_ms += (end - begin + 500) / 1000;
 
                 tables->MountCompression(&forest, "order");
             }
@@ -99,7 +100,7 @@ int main(int argc, const char *argv[]) {
                 begin = clock->getMicroseconds();
                 static RamanCompressor forest = RamanLearning(samples);
                 end = clock->getMicroseconds();
-                learning_time_ms += (end - begin + 500) / 1000;
+                learning_data_ms += (end - begin + 500) / 1000;
 
                 tables->MountCompression(&forest, "orderline");
             }
@@ -111,7 +112,7 @@ int main(int argc, const char *argv[]) {
                 begin = clock->getMicroseconds();
                 static RamanCompressor forest = RamanLearning(samples);
                 end = clock->getMicroseconds();
-                learning_time_ms += (end - begin + 500) / 1000;
+                learning_data_ms += (end - begin + 500) / 1000;
 
                 tables->MountCompression(&forest, "customer");
             }
@@ -123,11 +124,11 @@ int main(int argc, const char *argv[]) {
                 begin = clock->getMicroseconds();
                 static RamanCompressor forest = RamanLearning(samples);
                 end = clock->getMicroseconds();
-                learning_time_ms += (end - begin + 500) / 1000;
+                learning_data_ms += (end - begin + 500) / 1000;
 
                 tables->MountCompression(&forest, "history");
             }
-            printf("Learning Time: %lu\n", learning_time_ms);
+            printf("\tLearning Data Time: %lu\n", learning_data_ms);
 
             // Change the constants for run
             random = new tpcc::RealRandomGenerator();
@@ -153,6 +154,7 @@ int main(int argc, const char *argv[]) {
 //                    uint64_t disk = tables->stat_.total_disk_;
 //                    printf("%f, %lu, %lu\n", throughput, mem, disk);
 //                    MemDiskSize(tables, false);
+//                    std::cout << "Tree Size: " << tables->TreeSize() << "\n";
 
                     total_nanoseconds += interval_ns;
                     interval_ns = 0;
@@ -223,10 +225,9 @@ void MemDiskSize(TPCCTables *table, bool detailed) {
         std::cout << "--------------------------------------------" << std::endl;
     }
     uint64_t others = table->stat_.history_mem_ + table->stat_.neworder_mem_ + table->stat_.order_mem_;
-    std::cout << "Raman Model Size: " << table->stat_.raman_dict << ", Mem Data: " << table->stat_.total_mem_ << ", "
-              << "Disk Data: " << table->stat_.total_disk_ << ", Other: " << others << " byte" << std::endl;
-    std::cout << "Total: " << table->stat_.total_mem_ + table->stat_.total_disk_ + table->stat_.raman_dict << " byte"
-              << std::endl;
+    std::cout << "Index Size: " << table->TreeSize() << ", Raman Model Size: " << table->stat_.raman_dict
+              << ", Mem Data: " << table->stat_.total_mem_ << ", Disk Data: " << table->stat_.total_disk_ << ", Other: "
+              << others << " byte" << std::endl;
     std::cout << "--------------------------------------------\n" << std::endl;
 }
 

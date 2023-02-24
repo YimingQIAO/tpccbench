@@ -88,7 +88,7 @@ public:
         return n_tuple == kBufferSize;
     }
 
-    uint64_t BlockCompress(std::vector<BitStream> &db, std::vector<int64_t> *keys, int32_t *dict_id) {
+    uint64_t BlockCompress(std::vector<BitStream> &db, [[maybe_unused]] std::vector<int64_t> **keys, int32_t *dict_id) {
         // block learning
         std::vector<std::vector<std::string>> samples;
         for (auto &sample: buffer_) samples.push_back(sample.toRamanFormat());
@@ -99,7 +99,7 @@ public:
         for (auto &sample: buffer_) db.push_back(RamanCompress(&compressor, &sample));
 
         // get keys and dict id
-        if (keys) *keys = keys_;
+        if (keys) *keys = &keys_;
         if (dict_id) *dict_id = compressors_.size() - 1;
 
         // clear block

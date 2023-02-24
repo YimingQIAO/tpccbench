@@ -809,7 +809,7 @@ void TPCCTables::insertStock(const Stock &stock, bool is_orig, bool relearn) {
             block_stock_.Append(stock, key);
             if (block_stock_.IsFull()) {
                 int32_t dict_id;
-                std::vector<int64_t> keys;
+                std::vector<int64_t> *keys = nullptr;
                 std::vector<BitStream> compressed;
 
                 uint64_t dict_size = block_stock_.BlockCompress(compressed, &keys, &dict_id);
@@ -818,7 +818,7 @@ void TPCCTables::insertStock(const Stock &stock, bool is_orig, bool relearn) {
                 stock_tuple_disk_.dict_id_ = dict_id;
                 for (int i = 0; i < compressed.size(); i++) {
                     stock_tuple_disk_.data_ = compressed[i];
-                    insert(&stock_raman, keys[i], stock_tuple_disk_);
+                    insert(&stock_raman, (*keys)[i], stock_tuple_disk_);
 
                     stat_.Insert(stock_tuple_disk_.data_.size(), true, "stock");
                 }
@@ -916,7 +916,7 @@ void TPCCTables::insertCustomer(const Customer &customer, bool is_orig, bool rel
             block_customer_.Append(customer, key);
             if (block_customer_.IsFull()) {
                 int32_t dict_id;
-                std::vector<int64_t> keys;
+                std::vector<int64_t> *keys = nullptr;
                 std::vector<BitStream> compressed;
 
                 uint64_t dict_size = block_customer_.BlockCompress(compressed, &keys, &dict_id);
@@ -925,7 +925,7 @@ void TPCCTables::insertCustomer(const Customer &customer, bool is_orig, bool rel
                 customer_tuple_disk_.dict_id_ = dict_id;
                 for (int i = 0; i < compressed.size(); i++) {
                     customer_tuple_disk_.data_ = compressed[i];
-                    insert(&customer_raman, keys[i], customer_tuple_disk_);
+                    insert(&customer_raman, (*keys)[i], customer_tuple_disk_);
 
                     stat_.Insert(customer_tuple_disk_.data_.size(), true, "customer");
                 }
@@ -1059,7 +1059,7 @@ Order *TPCCTables::insertOrder(const Order &order, bool is_orig, bool relearn) {
         // if block is full
         if (block_order_.IsFull()) {
             int32_t dict_id;
-            std::vector<int64_t> keys;
+            std::vector<int64_t> *keys = nullptr;
             std::vector<BitStream> compressed;
 
             uint64_t dict_size = block_order_.BlockCompress(compressed, &keys, &dict_id);
@@ -1070,7 +1070,7 @@ Order *TPCCTables::insertOrder(const Order &order, bool is_orig, bool relearn) {
             tuple.dict_id_ = dict_id;
             for (int i = 0; i < compressed.size(); i++) {
                 tuple.data_ = compressed[i];
-                insert(&order_raman, (int32_t) keys[i], tuple);
+                insert(&order_raman, (*keys)[i], tuple);
 
                 stat_.Insert(tuple.data_.size(), true, "order");
             }
@@ -1158,7 +1158,7 @@ OrderLine *TPCCTables::insertOrderLine(const OrderLine &orderline, bool is_orig,
             block_orderline_.Append(orderline, key);
             if (block_orderline_.IsFull()) {
                 int32_t dict_id;
-                std::vector<int64_t> keys;
+                std::vector<int64_t> *keys = nullptr;
                 std::vector<BitStream> compressed;
 
                 uint64_t dict_size = block_orderline_.BlockCompress(compressed, &keys, &dict_id);
@@ -1167,7 +1167,7 @@ OrderLine *TPCCTables::insertOrderLine(const OrderLine &orderline, bool is_orig,
                 ol_tuple_disk_.dict_id_ = dict_id;
                 for (int i = 0; i < compressed.size(); i++) {
                     ol_tuple_disk_.data_ = compressed[i];
-                    insert(&orderline_raman, keys[i], ol_tuple_disk_);
+                    insert(&orderline_raman, (*keys)[i], ol_tuple_disk_);
 
                     stat_.Insert(ol_tuple_disk_.data_.size(), true, "orderline");
                 }

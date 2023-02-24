@@ -59,7 +59,7 @@ struct Item {
     char i_name[MAX_NAME + 1];
     char i_data[MAX_DATA + 1];
 
-    uint32_t Size() const  {
+    uint32_t Size() const {
         uint32_t ret = 0;
         ret += std::to_string(i_id).size();
         ret += std::to_string(i_im_id).size();
@@ -191,8 +191,8 @@ struct Stock {
         s_order_cnt = std::stoi(sample[4]);
         s_remote_cnt = std::stoi(sample[5]);
         for (int i = 0; i < District::NUM_PER_WAREHOUSE; ++i)
-            strcpy(s_dist[i], sample[6 + i].c_str());
-        strcpy(s_data, sample[6 + District::NUM_PER_WAREHOUSE].c_str());
+            strncpy(s_dist[i], sample[6 + i].c_str(), DIST + 1);
+        strncpy(s_data, sample[6 + District::NUM_PER_WAREHOUSE].c_str(), MAX_DATA);
     }
 };
 
@@ -280,18 +280,18 @@ struct Customer {
         c_ytd_payment = std::stof(sample[6]);
         c_payment_cnt = std::stoi(sample[7]);
         c_delivery_cnt = std::stoi(sample[8]);
-        strcpy(c_first, sample[9].c_str());
-        strcpy(c_middle, sample[10].c_str());
-        strcpy(c_last, sample[11].c_str());
-        strcpy(c_street_1, sample[12].c_str());
-        strcpy(c_street_2, sample[13].c_str());
-        strcpy(c_city, sample[14].c_str());
-        strcpy(c_state, sample[15].c_str());
-        strcpy(c_zip, sample[16].c_str());
-        strcpy(c_phone, sample[17].c_str());
-        strcpy(c_since, sample[18].c_str());
-        strcpy(c_credit, sample[19].c_str());
-        strcpy(c_data, sample[20].c_str());
+        strncpy(c_first, sample[9].c_str(), MAX_FIRST);
+        strncpy(c_middle, sample[10].c_str(), MIDDLE);
+        strncpy(c_last, sample[11].c_str(), MAX_LAST);
+        strncpy(c_street_1, sample[12].c_str(), Address::MAX_STREET);
+        strncpy(c_street_2, sample[13].c_str(), Address::MAX_STREET);
+        strncpy(c_city, sample[14].c_str(), Address::MAX_CITY);
+        strncpy(c_state, sample[15].c_str(), Address::STATE);
+        strncpy(c_zip, sample[16].c_str(), Address::ZIP);
+        strncpy(c_phone, sample[17].c_str(), PHONE);
+        strncpy(c_since, sample[18].c_str(), DATETIME_SIZE);
+        strncpy(c_credit, sample[19].c_str(), CREDIT);
+        strncpy(c_data, sample[20].c_str(), MAX_DATA);
     }
 };
 
@@ -353,7 +353,7 @@ struct Order {
         o_carrier_id = std::stoi(sample[4]);
         o_ol_cnt = std::stoi(sample[5]);
         o_all_local = std::stoi(sample[6]);
-        strcpy(o_entry_d, sample[7].c_str());
+        strncpy(o_entry_d, sample[7].c_str(), DATETIME_SIZE);
     }
 };
 
@@ -409,8 +409,8 @@ struct OrderLine {
         ol_supply_w_id = std::stoi(sample[5]);
         ol_quantity = std::stoi(sample[6]);
         ol_amount = std::stof(sample[7]);
-        strcpy(ol_delivery_d, sample[8].c_str());
-        strcpy(ol_dist_info, sample[9].c_str());
+        strncpy(ol_delivery_d, sample[8].c_str(), DATETIME_SIZE);
+        strncpy(ol_dist_info, sample[9].c_str(), Stock::DIST);
     }
 };
 
@@ -421,7 +421,7 @@ struct NewOrder {
     int32_t no_d_id;
     int32_t no_o_id;
 
-    uint32_t size() const{
+    uint32_t size() const {
         uint32_t ret = 0;
         ret += std::to_string(no_w_id).size();
         ret += std::to_string(no_d_id).size();
@@ -476,9 +476,9 @@ struct History {
         h_c_w_id = std::stoi(sample[2]);
         h_d_id = std::stoi(sample[3]);
         h_w_id = std::stoi(sample[4]);
-        strcpy(h_date, sample[5].c_str());
+        strncpy(h_date, sample[5].c_str(), DATETIME_SIZE + 1);
         h_amount = std::stof(sample[6]);
-        strcpy(h_data, sample[7].c_str());
+        strncpy(h_data, sample[7].c_str(), MAX_DATA + 1);
     }
 };
 
