@@ -15,7 +15,7 @@
 #include "tpccgenerator.h"
 #include "tpcctables.h"
 
-static const int NUM_TRANSACTIONS = 200000;
+static const int NUM_TRANSACTIONS = 1000000;
 static const int kTxnsInterval = 5000;
 enum Mode {
     GenerateCSV,
