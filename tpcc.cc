@@ -15,7 +15,7 @@
 #include "tpccgenerator.h"
 #include "tpcctables.h"
 
-static const int NUM_TRANSACTIONS = 1000000;
+static const int NUM_TRANSACTIONS = 100000;
 static const int kTxnsInterval = 50000;
 enum Mode {
     GenerateCSV,
@@ -27,7 +27,7 @@ static double memory_size;
 
 void welcome(int argc, const char *const *argv);
 
-void MemDiskSize(TPCCStat &stat, bool detailed);
+void MemDiskSize(TPCCTables &table, bool detailed);
 
 int main(int argc, const char *argv[]) {
     welcome(argc, argv);
@@ -52,7 +52,8 @@ int main(int argc, const char *argv[]) {
     generator.makeItemsTable(tables);
     for (int i = 0; i < num_warehouses; ++i) generator.makeWarehouse(tables, i + 1);
     int64_t end = clock->getMicroseconds();
-    printf("%" PRId64 " ms\n", (end - begin + 500) / 1000);
+    int64_t load_data_ms = (end - begin + 500) / 1000;
+    printf("\tLoading Data Time: %lu\n", load_data_ms);
     // tableSize(tables, true, false);
 
     switch (mode) {
@@ -69,7 +70,7 @@ int main(int argc, const char *argv[]) {
             fflush(stdout);
             srand(time(nullptr));
             int32_t model_id = rand();
-            uint64_t learning_time_ms = 0;
+            uint64_t learning_data_ms = 0;
             // orderline
             {
                 OrderLineBlitz order_line_blitz;
@@ -87,7 +88,7 @@ int main(int argc, const char *argv[]) {
                                                                          kBlockSize);
                 ol_decompressor.InitWithoutIndex();
                 end = clock->getMicroseconds();
-                learning_time_ms += (end - begin + 500) / 1000;
+                learning_data_ms += (end - begin + 500) / 1000;
 
                 tables->MountCompressor(ol_compressor, ol_decompressor, num_warehouses,
                                         "orderline");
@@ -105,12 +106,11 @@ int main(int argc, const char *argv[]) {
                                                                         stock_blitz.compressionConfig(),
                                                                         kBlockSize);
                 BlitzLearning(stock_blitz, stock_compressor);
-                static db_compress::RelationDecompressor stock_decompressor(
-                        stock_model_name.c_str(),
-                        stock_blitz.schema(), kBlockSize);
+                static db_compress::RelationDecompressor stock_decompressor(stock_model_name.c_str(),
+                                                                            stock_blitz.schema(), kBlockSize);
                 stock_decompressor.InitWithoutIndex();
                 end = clock->getMicroseconds();
-                learning_time_ms += (end - begin + 500) / 1000;
+                learning_data_ms += (end - begin + 500) / 1000;
 
                 tables->MountCompressor(stock_compressor, stock_decompressor, num_warehouses,
                                         "stock");
@@ -134,12 +134,12 @@ int main(int argc, const char *argv[]) {
                                                                            kBlockSize);
                 cust_decompressor.InitWithoutIndex();
                 end = clock->getMicroseconds();
-                learning_time_ms += (end - begin + 500) / 1000;
+                learning_data_ms += (end - begin + 500) / 1000;
 
                 tables->MountCompressor(cust_compressor, cust_decompressor, num_warehouses, "customer");
                 db_compress::NextTableAttrInterpreter();
             }
-            printf("Learning Time: %lu ms\n", learning_time_ms);
+            printf("Learning Data Time: %lu ms\n", learning_data_ms);
             fflush(stdout);
 
             // Change the constants for run
@@ -175,7 +175,7 @@ int main(int argc, const char *argv[]) {
             printf("%d transactions in %" PRId64 " ms = %f txns/s\n", NUM_TRANSACTIONS,
                    (microseconds + 500) / 1000,
                    NUM_TRANSACTIONS / (double) microseconds * 1000000.0);
-            MemDiskSize(tables->stat_, true);
+            MemDiskSize(*tables, true);
             break;
         }
         default:
@@ -217,30 +217,30 @@ void welcome(int argc, const char *const *argv) {
     }
 }
 
-void MemDiskSize(TPCCStat &stat, bool detailed) {
+void MemDiskSize(TPCCTables &table, bool detailed) {
     if (detailed) {
         std::cout << "[Table Name]: " << "[Memory Size] + [Disk Size]" << std::endl;
-        std::cout << "Warehouse: " << stat.warehouse_mem_ << " byte" << std::endl;
-        std::cout << "District: " << stat.district_mem_ << " byte" << std::endl;
-        std::cout << "Customer: " << stat.customer_mem_ << " + " << stat.customer_disk_ << " byte"
+        std::cout << "Warehouse: " << table.stat_.warehouse_mem_ << " byte" << std::endl;
+        std::cout << "District: " << table.stat_.district_mem_ << " byte" << std::endl;
+        std::cout << "Customer: " << table.stat_.customer_mem_ << " + " << table.stat_.customer_disk_ << " byte"
                   << std::endl;
-        std::cout << "Order: " << stat.order_mem_ << " byte" << std::endl;
-        std::cout << "Orderline: " << stat.orderline_mem_ << " + " << stat.orderline_disk_
+        std::cout << "Order: " << table.stat_.order_mem_ << " byte" << std::endl;
+        std::cout << "Orderline: " << table.stat_.orderline_mem_ << " + " << table.stat_.orderline_disk_
                   << " byte" << std::endl;
-        std::cout << "NewOrder: " << stat.neworder_mem_ << " byte" << std::endl;
-        std::cout << "Item: " << stat.item_mem_ << " byte" << std::endl;
-        std::cout << "Stock: " << stat.stock_mem_ << " + " << stat.stock_disk_ << " byte"
+        std::cout << "NewOrder: " << table.stat_.neworder_mem_ << " byte" << std::endl;
+        std::cout << "Item: " << table.stat_.item_mem_ << " byte" << std::endl;
+        std::cout << "Stock: " << table.stat_.stock_mem_ << " + " << table.stat_.stock_disk_ << " byte"
                   << std::endl;
-        std::cout << "History: " << stat.history_mem_ << " byte" << std::endl;
-        std::cout << "--------------------------------------------\n" << std::endl;
+        std::cout << "History: " << table.stat_.history_mem_ << " byte" << std::endl;
+        std::cout << "--------------------------------------------\n";
     }
-    uint64_t mem_total = stat.warehouse_mem_ + stat.district_mem_ + stat.customer_mem_ +
-                         stat.orderline_mem_ + stat.item_mem_ + stat.stock_mem_;
-    uint64_t disk_total = stat.customer_disk_ + stat.orderline_disk_ + stat.stock_disk_;
-    uint64_t others = stat.history_mem_ + stat.neworder_mem_ + stat.order_mem_;
+    uint64_t mem_total = table.stat_.warehouse_mem_ + table.stat_.district_mem_ + table.stat_.customer_mem_ +
+                         table.stat_.orderline_mem_ + table.stat_.item_mem_ + table.stat_.stock_mem_;
+    uint64_t disk_total = table.stat_.customer_disk_ + table.stat_.orderline_disk_ + table.stat_.stock_disk_;
+    uint64_t others = table.stat_.history_mem_ + table.stat_.neworder_mem_ + table.stat_.order_mem_;
+    std::cout << "Index Size: " << table.TreeSize() << ", ";
     std::cout << "Mem: " << mem_total << ", " << "Disk: " << disk_total << " byte " << "Other: "
               << others << " byte" << std::endl;
-    std::cout << "Total: " << mem_total + disk_total << " byte" << std::endl;
     std::cout << "---------------------------------------------------------------------\n";
 }
 
