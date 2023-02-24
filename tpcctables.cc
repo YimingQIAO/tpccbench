@@ -1132,9 +1132,9 @@ static int64_t makeOrderLineKey(int32_t w_id, int32_t d_id, int32_t o_id, int32_
     // TODO: This may be bad for locality since o_id is in the most significant position. However,
     // Order status fetches all rows for one (w_id, d_id, o_id) tuple, so it may be fine,
     // but stock level fetches order lines for a range of (w_id, d_id, o_id) values
-    int64_t id = ((o_id * District::NUM_PER_WAREHOUSE + d_id)
+    int64_t id = ((int64_t(o_id) * District::NUM_PER_WAREHOUSE + d_id)
                   * Warehouse::MAX_WAREHOUSE_ID + w_id) * Order::MAX_OL_CNT + number;
-    // if (id < 0) throw std::runtime_error("id < 0 in makeOrderLineKey");
+    if (id < 0) throw std::runtime_error("id < 0 in makeOrderLineKey");
     return id;
 }
 
