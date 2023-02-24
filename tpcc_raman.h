@@ -70,7 +70,7 @@ class RamanTupleBuffer {
 public:
     const size_t kBufferSize = 1024 * 16;
 
-    RamanTupleBuffer() : buffer_(kBufferSize), n_tuple(0), keys_(kBufferSize) {}
+    RamanTupleBuffer() : n_tuple(0), buffer_(kBufferSize), keys_(kBufferSize) {}
 
     inline uint32_t Size() {
         uint32_t raman_dict_size = 0;

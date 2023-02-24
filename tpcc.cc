@@ -66,44 +66,68 @@ int main(int argc, const char *argv[]) {
         case Benchmark: {
             printf("Load Compressor...");
             fflush(stdout);
-            begin = clock->getMicroseconds();
+            uint64_t learning_time_ms = 0;
             // stock
             {
                 std::vector<std::vector<std::string>> samples;
                 tables->StockToRaman(num_warehouses, samples);
+
+                begin = clock->getMicroseconds();
                 static RamanCompressor forest = RamanLearning(samples);
+                end = clock->getMicroseconds();
+                learning_time_ms += (end - begin + 500) / 1000;
+
                 tables->MountCompression(&forest, "stock");
             }
             // order
             {
                 std::vector<std::vector<std::string>> samples;
                 tables->OrderToRaman(samples);
+
+                begin = clock->getMicroseconds();
                 static RamanCompressor forest = RamanLearning(samples);
+                end = clock->getMicroseconds();
+                learning_time_ms += (end - begin + 500) / 1000;
+
                 tables->MountCompression(&forest, "order");
             }
             // orderline
             {
                 std::vector<std::vector<std::string>> samples;
                 tables->OrderlineToRaman(samples);
+
+                begin = clock->getMicroseconds();
                 static RamanCompressor forest = RamanLearning(samples);
+                end = clock->getMicroseconds();
+                learning_time_ms += (end - begin + 500) / 1000;
+
                 tables->MountCompression(&forest, "orderline");
             }
             // customer
             {
                 std::vector<std::vector<std::string>> samples;
                 tables->CustomerToRaman(num_warehouses, samples);
+
+                begin = clock->getMicroseconds();
                 static RamanCompressor forest = RamanLearning(samples);
+                end = clock->getMicroseconds();
+                learning_time_ms += (end - begin + 500) / 1000;
+
                 tables->MountCompression(&forest, "customer");
             }
             // history
             {
                 std::vector<std::vector<std::string>> samples;
                 tables->HistoryToRaman(samples);
+
+                begin = clock->getMicroseconds();
                 static RamanCompressor forest = RamanLearning(samples);
+                end = clock->getMicroseconds();
+                learning_time_ms += (end - begin + 500) / 1000;
+
                 tables->MountCompression(&forest, "history");
             }
-            end = clock->getMicroseconds();
-            printf("%" PRId64 " ms\n", (end - begin + 500) / 1000);
+            printf("Learning Time: %lu\n", learning_time_ms);
 
             // Change the constants for run
             random = new tpcc::RealRandomGenerator();
