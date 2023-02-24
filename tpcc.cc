@@ -15,7 +15,7 @@
 #include "tpccgenerator.h"
 #include "tpcctables.h"
 
-static const int NUM_TRANSACTIONS = 100000;
+static const int NUM_TRANSACTIONS = 1000000;
 static const int kTxnsInterval = 50000;
 enum Mode {
     GenerateCSV,
@@ -27,7 +27,9 @@ static double memory_size;
 
 void welcome(int argc, const char *const *argv);
 
-void MemDiskSize(TPCCTables &table, bool detailed);
+void MemDiskSize(TPCCTables &table, bool detailed, uint64_t blitz_model_size);
+
+std::ifstream::pos_type filesize(const char *filename);
 
 int main(int argc, const char *argv[]) {
     welcome(argc, argv);
@@ -71,6 +73,7 @@ int main(int argc, const char *argv[]) {
             srand(time(nullptr));
             int32_t model_id = rand();
             uint64_t learning_data_ms = 0;
+            uint64_t blitz_model_size = 0;
             // orderline
             {
                 OrderLineBlitz order_line_blitz;
@@ -93,6 +96,8 @@ int main(int argc, const char *argv[]) {
                 tables->MountCompressor(ol_compressor, ol_decompressor, num_warehouses,
                                         "orderline");
                 db_compress::NextTableAttrInterpreter();
+
+                blitz_model_size += filesize(ol_model_name.c_str()) * 2.5;
             }
             // stock
             {
@@ -115,6 +120,8 @@ int main(int argc, const char *argv[]) {
                 tables->MountCompressor(stock_compressor, stock_decompressor, num_warehouses,
                                         "stock");
                 db_compress::NextTableAttrInterpreter();
+
+                blitz_model_size += filesize(stock_model_name.c_str());
             }
             // customer
             {
@@ -138,6 +145,8 @@ int main(int argc, const char *argv[]) {
 
                 tables->MountCompressor(cust_compressor, cust_decompressor, num_warehouses, "customer");
                 db_compress::NextTableAttrInterpreter();
+
+                blitz_model_size += filesize(customer_model_name.c_str());
             }
             printf("Learning Data Time: %lu ms\n", learning_data_ms);
             fflush(stdout);
@@ -175,7 +184,7 @@ int main(int argc, const char *argv[]) {
             printf("%d transactions in %" PRId64 " ms = %f txns/s\n", NUM_TRANSACTIONS,
                    (microseconds + 500) / 1000,
                    NUM_TRANSACTIONS / (double) microseconds * 1000000.0);
-            MemDiskSize(*tables, true);
+            MemDiskSize(*tables, true, blitz_model_size);
             break;
         }
         default:
@@ -217,7 +226,7 @@ void welcome(int argc, const char *const *argv) {
     }
 }
 
-void MemDiskSize(TPCCTables &table, bool detailed) {
+void MemDiskSize(TPCCTables &table, bool detailed, uint64_t blitz_model_size) {
     if (detailed) {
         std::cout << "[Table Name]: " << "[Memory Size] + [Disk Size]" << std::endl;
         std::cout << "Warehouse: " << table.stat_.warehouse_mem_ << " byte" << std::endl;
@@ -238,10 +247,17 @@ void MemDiskSize(TPCCTables &table, bool detailed) {
                          table.stat_.orderline_mem_ + table.stat_.item_mem_ + table.stat_.stock_mem_;
     uint64_t disk_total = table.stat_.customer_disk_ + table.stat_.orderline_disk_ + table.stat_.stock_disk_;
     uint64_t others = table.stat_.history_mem_ + table.stat_.neworder_mem_ + table.stat_.order_mem_;
-    std::cout << "Index Size: " << table.TreeSize() << ", ";
-    std::cout << "Mem: " << mem_total << ", " << "Disk: " << disk_total << " byte " << "Other: "
-              << others << " byte" << std::endl;
+    std::cout << "Index Size: " << table.TreeSize() << "\t";
+    std::cout << "Blitz Model Size: " << blitz_model_size << "\t";
+    std::cout << "Mem: " << mem_total << "\t"
+              << "Disk: " << disk_total << "\t"
+              << "Other: " << others << " byte" << std::endl;
     std::cout << "---------------------------------------------------------------------\n";
+}
+
+std::ifstream::pos_type filesize(const char *filename) {
+    std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
+    return in.tellg();
 }
 
 

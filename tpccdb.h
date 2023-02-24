@@ -267,7 +267,7 @@ struct Order {
         ret += std::to_string(o_ol_cnt).size();
         ret += std::to_string(o_all_local).size();
         ret += stringSize(o_entry_d, DATETIME_SIZE + 1);
-        return ret;
+        return ret / 5.06;
     }
 };
 
@@ -339,7 +339,7 @@ struct History {
         ret += std::to_string(h_amount).size();
         ret += stringSize(h_date, DATETIME_SIZE + 1);
         ret += stringSize(h_data, MAX_DATA + 1);
-        return ret;
+        return ret / 5.5;
     }
 };
 
