@@ -38,7 +38,7 @@ bool CustomerByNameOrdering::operator()(const Customer *a, const Customer *b) co
 }
 
 bool
-CustomerByNameOrdering::operator()(const Tuple <Customer> *ta, const Tuple <Customer> *tb) const {
+CustomerByNameOrdering::operator()(const Tuple<Customer> *ta, const Tuple<Customer> *tb) const {
     if (ta->in_memory_ && tb->in_memory_) return (*this)(&ta->data_, &tb->data_);
     else if (ta->in_memory_) {
         Customer b;
@@ -791,7 +791,7 @@ static int32_t makeStockKey(int32_t w_id, int32_t s_id) {
 }
 
 void TPCCTables::insertStock(const Stock &stock) {
-    Tuple <Stock> tuple;
+    Tuple<Stock> tuple;
     tuple.in_memory_ = stat_.ToMemory(stock.size());
     if (tuple.in_memory_) {
         tuple.data_ = stock;
@@ -810,7 +810,7 @@ void TPCCTables::insertStock(const Stock &stock) {
 
 Stock *TPCCTables::findStock(int32_t w_id, int32_t s_id) {
     int32_t key = makeStockKey(w_id, s_id);
-    Tuple <Stock> *tuple = find(stock_, key);
+    Tuple<Stock> *tuple = find(stock_, key);
     if (tuple) {
         if (!tuple->in_memory_) {
             DiskTupleRead(stock_fd, &tuple->data_, tuple->id_pos_);
@@ -850,7 +850,7 @@ static int32_t makeCustomerKey(int32_t w_id, int32_t d_id, int32_t c_id) {
 }
 
 void TPCCTables::insertCustomer(const Customer &customer) {
-    Tuple <Customer> tuple;
+    Tuple<Customer> tuple;
     tuple.in_memory_ = stat_.ToMemory(customer.size());
     if (tuple.in_memory_) {
         tuple.data_ = customer;
@@ -865,13 +865,13 @@ void TPCCTables::insertCustomer(const Customer &customer) {
         stat_.Insert(customer.size(), false, "customer");
     }
     int32_t key = makeCustomerKey(customer.c_w_id, customer.c_d_id, customer.c_id);
-    Tuple <Customer> *t = insert(&customers_, key, tuple);
+    Tuple<Customer> *t = insert(&customers_, key, tuple);
     customers_by_name_.insert(t);
 }
 
 Customer *TPCCTables::findCustomer(int32_t w_id, int32_t d_id, int32_t c_id) {
     int32_t key = makeCustomerKey(w_id, d_id, c_id);
-    Tuple <Customer> *tuple = find(customers_, key);
+    Tuple<Customer> *tuple = find(customers_, key);
     if (tuple) {
         if (!tuple->in_memory_) {
             DiskTupleRead(customer_fd, &tuple->data_, tuple->id_pos_);
@@ -883,7 +883,7 @@ Customer *TPCCTables::findCustomer(int32_t w_id, int32_t d_id, int32_t c_id) {
 }
 
 Customer *TPCCTables::findCustomerByName(int32_t w_id, int32_t d_id, const char *c_last) {
-    Tuple <Customer> tuple;
+    Tuple<Customer> tuple;
     tuple.in_memory_ = true;
     Customer &c = tuple.data_;
     c.c_w_id = w_id;
@@ -905,7 +905,7 @@ Customer *TPCCTables::findCustomerByName(int32_t w_id, int32_t d_id, const char 
     }
     auto stop = customers_by_name_.lower_bound(&tuple);
 
-    Tuple <Customer> *t_customer = nullptr;
+    Tuple<Customer> *t_customer = nullptr;
     // Choose position n/2 rounded up (1 based addressing) = floor((n-1)/2)
     if (it != stop) {
         auto middle = it;
@@ -990,9 +990,9 @@ static int64_t makeOrderLineKey(int32_t w_id, int32_t d_id, int32_t o_id, int32_
     // TODO: This may be bad for locality since o_id is in the most significant position. However,
     // Order status fetches all rows for one (w_id, d_id, o_id) tuple, so it may be fine,
     // but stock level fetches order lines for a range of (w_id, d_id, o_id) values
-    int64_t id = ((o_id * District::NUM_PER_WAREHOUSE + d_id)
+    int64_t id = ((int64_t(o_id) * District::NUM_PER_WAREHOUSE + d_id)
                   * Warehouse::MAX_WAREHOUSE_ID + w_id) * Order::MAX_OL_CNT + number;
-    // if (id < 0) throw std::runtime_error("id < 0 in makeOrderLineKey");
+    if (id < 0) throw std::runtime_error("id < 0 in makeOrderLineKey");
     return id;
 }
 
@@ -1018,7 +1018,7 @@ OrderLine *TPCCTables::insertOrderLine(const OrderLine &orderline) {
 
 OrderLine *TPCCTables::findOrderLine(int32_t w_id, int32_t d_id, int32_t o_id, int32_t number) {
     int64_t key = makeOrderLineKey(w_id, d_id, o_id, number);
-    Tuple <OrderLine> *tuple = find(orderlines_, key);
+    Tuple<OrderLine> *tuple = find(orderlines_, key);
     if (tuple) {
         if (!tuple->in_memory_) {
             DiskTupleRead(orderline_fd, &tuple->data_, tuple->id_pos_);
