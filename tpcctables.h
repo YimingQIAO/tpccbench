@@ -210,6 +210,11 @@ public:
 
     void MountCompression(ZSTD_CDict_s *cdict, ZSTD_DDict_s *ddict, const std::string &table_name);
 
+    int64_t TreeSize() const {
+        return stock_zstd.TreeSize() + customer_zstd.TreeSize() + order_zstd.TreeSize() +
+               ol_zstd.TreeSize() + warehouses_.TreeSize() + districts_.TreeSize();
+    }
+
 
     static const int KEYS_PER_INTERNAL = 8;
     static const int KEYS_PER_LEAF = 8;
