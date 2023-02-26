@@ -141,6 +141,12 @@ int main(int argc, const char *argv[]) {
             printf("Running...\n");
             fflush(stdout);
 
+            std::vector<double> throughput;
+            std::vector<uint64_t> table_mem_size;
+            std::vector<uint64_t> table_disk_size;
+            std::vector<uint64_t> model_size;
+            std::vector<uint64_t> bplus_tree_size;
+
             uint64_t total_nanoseconds = 0;
             uint64_t interval_ns = 0;
             for (int i = 0; i < NUM_TRANSACTIONS; ++i) {
@@ -148,16 +154,18 @@ int main(int argc, const char *argv[]) {
 
                 if (i % kTxnsInterval == 0 && i > 0) {
                     // show stat
-//                    uint64_t interval_ms = interval_ns / 1000;
-//                    double throughput = kTxnsInterval / (double) interval_ms * 1000000.0;
-//                    uint64_t mem = tables->stat_.total_mem_;
-//                    uint64_t disk = tables->stat_.total_disk_;
-//                    printf("%f, %lu, %lu\n", throughput, mem, disk);
-//                    MemDiskSize(tables, false);
-//                    std::cout << "Tree Size: " << tables->TreeSize() << "\n";
+                    uint64_t interval_ms = interval_ns / 1000;
+                    throughput.push_back(kTxnsInterval / (double) interval_ms * 1000000.0);
+                    table_mem_size.push_back(tables->stat_.total_mem_);
+                    table_disk_size.push_back(tables->stat_.total_disk_);
+                    model_size.push_back(tables->stat_.raman_dict);
+                    bplus_tree_size.push_back(tables->TreeSize());
 
                     total_nanoseconds += interval_ns;
                     interval_ns = 0;
+
+                    printf("%d\t%f\t%lu\t%lu\t%lu\t%lu\n", i, throughput.back(), table_mem_size.back(),
+                           table_disk_size.back(), model_size.back(), bplus_tree_size.back());
                 }
             }
             uint64_t microseconds = total_nanoseconds / 1000;

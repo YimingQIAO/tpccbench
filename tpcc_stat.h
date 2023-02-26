@@ -34,7 +34,7 @@ struct TPCCStat {
 
     uint64_t total_mem_limit_;
 
-    uint64_t last_size_{};
+    const int32_t kPageSize = 4096;
 
     explicit TPCCStat(uint64_t total_mem_limit) : total_mem_limit_(total_mem_limit) {}
 
@@ -74,22 +74,20 @@ struct TPCCStat {
         } else {
             printf("Error: table name not found!\n");
         }
-
-        last_size_ = size;
     }
 
     inline void SwapTuple(uint64_t size, const std::string &table_name) {
-        if (total_mem_ + size < total_mem_limit_) return;
+        if (total_mem_ + raman_dict + size < total_mem_limit_) return;
 
-        while (total_mem_ + size > total_mem_limit_) {
-            total_mem_ -= last_size_;
+        while (total_mem_ + raman_dict + size > total_mem_limit_) {
+            total_mem_ -= kPageSize;
 
             if (table_name == "stock") {
-                stock_mem_ -= last_size_;
+                stock_mem_ -= kPageSize;
             } else if (table_name == "customer") {
-                customer_mem_ -= last_size_;
+                customer_mem_ -= kPageSize;
             } else if (table_name == "orderline") {
-                orderline_mem_ -= last_size_;
+                orderline_mem_ -= kPageSize;
             } else
                 printf("Error: table name not found!\n");
         }
@@ -97,7 +95,7 @@ struct TPCCStat {
     }
 
     inline bool ToMemory(uint64_t size) const {
-        return total_mem_limit_ > total_mem_ + size;
+        return total_mem_limit_ > raman_dict + total_mem_ + size;
     }
 
     void RamanDictAdd(uint64_t size) {
