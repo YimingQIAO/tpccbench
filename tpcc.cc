@@ -15,8 +15,8 @@
 #include "tpccgenerator.h"
 #include "tpcctables.h"
 
-static const int NUM_TRANSACTIONS = 1000000;
-static const int kTxnsInterval = 5000;
+static const int NUM_TRANSACTIONS = 100 * 1e6;
+static const int kTxnsInterval = 0.1 * 1e5;
 enum Mode {
     GenerateCSV,
     Benchmark
@@ -24,6 +24,7 @@ enum Mode {
 static Mode mode;
 static long num_warehouses = 1;
 static double memory_size;
+static int running_time;
 
 void welcome(int argc, const char *const *argv);
 
@@ -85,18 +86,12 @@ int main(int argc, const char *argv[]) {
 
             uint64_t total_nanoseconds = 0;
             uint64_t interval_ns = 0;
-            for (int i = 0; i < NUM_TRANSACTIONS; ++i) {
+            int executed_txns;
+            for (executed_txns = 0; executed_txns < NUM_TRANSACTIONS; ++executed_txns) {
                 interval_ns += client.doOne();
 
-                if (i % kTxnsInterval == 0 && i > 0) {
+                if (executed_txns % kTxnsInterval == 0 && executed_txns > 0) {
                     // show stat
-//                    uint64_t interval_ms = interval_ns / 1000;
-//                    double throughput = kTxnsInterval / (double) interval_ms * 1000000.0;
-//                    uint64_t mem = tables->stat_.total_mem_;
-//                    uint64_t disk = tables->stat_.total_disk_;
-//                    printf("%f, %lu, %lu\n", throughput, mem, disk);
-//                    MemDiskSize(*tables, false);
-
                     uint64_t interval_ms = interval_ns / 1000;
                     throughput.push_back(kTxnsInterval / (double) interval_ms * 1000000.0);
                     table_mem_size.push_back(tables->stat_.total_mem_);
@@ -106,14 +101,16 @@ int main(int argc, const char *argv[]) {
                     total_nanoseconds += interval_ns;
                     interval_ns = 0;
 
-                    printf("%d\t%f\t%lu\t%lu\t%d\t%lu\n", i, throughput.back(), table_mem_size.back(),
+                    printf("%d\t%f\t%lu\t%lu\t%d\t%lu\n", executed_txns, throughput.back(), table_mem_size.back(),
                            table_disk_size.back(), 0, bplus_tree_size.back());
+
+                    int sec = total_nanoseconds / 1000 / 1000 / 1000;
+                    if (sec > running_time * 60) break;
                 }
             }
             uint64_t microseconds = total_nanoseconds / 1000;
-            printf("%d transactions in %" PRId64 " ms = %f txns/s\n", NUM_TRANSACTIONS,
-                   (microseconds + 500) / 1000,
-                   NUM_TRANSACTIONS / (double) microseconds * 1000000.0);
+            printf("%d transactions in %" PRId64 " ms = %f txns/s\n", executed_txns, (microseconds + 500) / 1000,
+                   executed_txns / (double) microseconds * 1000000.0);
             MemDiskSize(*tables, true);
             break;
         }
@@ -124,18 +121,16 @@ int main(int argc, const char *argv[]) {
 }
 
 void welcome(int argc, const char *const *argv) {
-    if (argc == 3) {
+    if (argc == 5) {
         num_warehouses = strtol(argv[1], NULL, 10);
         memory_size = strtod(argv[2], NULL);
-    } else if (argc == 4) {
-        num_warehouses = strtol(argv[1], NULL, 10);
-        memory_size = strtod(argv[2], NULL);
-        bool is_download = std::stoi(argv[3]);
+        running_time = strtol(argv[3], NULL, 10);
+        bool is_download = std::stoi(argv[4]);
         if (is_download) mode = GenerateCSV;
         else mode = Benchmark;
     } else {
         fprintf(stderr,
-                "tpcc [num warehouses] [mode]\n Option: mode = 0 (default) for running test, mode = 1 for generating data\n");
+                "tpcc [num warehouses] [memory size (GB)] [running time (min)] [mode]\n Option: mode = 0 (default) for running test, mode = 1 for generating data\n");
         exit(1);
     }
 
