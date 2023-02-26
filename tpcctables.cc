@@ -243,8 +243,7 @@ void TPCCTables::internalOrderStatusBlitz(db_compress::AttrVector *customer,
     // retrieve from customer: balance, first, middle, last
     output->c_balance = customer->attr_[6].Double();
     strcpy(output->c_first, customer->attr_[11].String().c_str());
-    strcpy(output->c_middle,
-           EnumIdToStr(customer->attr_[12].Int(), 12, "customer").c_str());
+    strcpy(output->c_middle, EnumIdToStr(customer->attr_[12].Int(), 12, "customer").c_str());
     strcpy(output->c_last, customer->attr_[10].String().c_str());
 
     // Find the row in the order table with largest o_id
@@ -366,7 +365,6 @@ bool TPCCTables::newOrderHome(int32_t warehouse_id, int32_t district_id,
     }
 
     // Replace orderline with db_compress::AttrVector
-    ol_buffer_.attr_[7].value_ = output->o_id;
     ol_buffer_.attr_[8].value_ = district_id;
     ol_buffer_.attr_[9].value_ = warehouse_id;
     ol_buffer_.attr_[5].value_ = "";
@@ -380,6 +378,7 @@ bool TPCCTables::newOrderHome(int32_t warehouse_id, int32_t district_id,
         ol_buffer_.attr_[0].value_ = items[i].i_id;
         ol_buffer_.attr_[3].value_ = items[i].ol_supply_w_id;
         ol_buffer_.attr_[4].value_ = items[i].ol_quantity;
+        ol_buffer_.attr_[7].value_ = output->o_id;
 
         db_compress::AttrVector *stock_av = findStockBlitz(items[i].ol_supply_w_id, items[i].i_id,
                                                            5);
@@ -929,7 +928,7 @@ Stock *TPCCTables::findStock(int32_t w_id, int32_t s_id) {
 db_compress::AttrVector *TPCCTables::findStockBlitz(int32_t w_id, int32_t s_id,
                                                     int32_t stop_idx) {
     int32_t key = makeStockKey(w_id, s_id);
-    Tuple <std::vector<uint8_t>> *tuple = find(stock_blitz_, key);
+    Tuple<std::vector<uint8_t>> *tuple = find(stock_blitz_, key);
     if (tuple) {
         if (!tuple->in_memory_) {
             Stock s;
@@ -1019,7 +1018,7 @@ db_compress::AttrVector *TPCCTables::findCustomerBlitz(int32_t w_id,
                                                        int32_t c_id,
                                                        int32_t stop_idx) {
     int32_t key = makeCustomerKey(w_id, d_id, c_id);
-    Tuple <std::vector<uint8_t>> *tuple = find(customers_blitz_, key);
+    Tuple<std::vector<uint8_t>> *tuple = find(customers_blitz_, key);
     if (tuple) {
         if (!tuple->in_memory_) {
             Customer c;
@@ -1112,8 +1111,7 @@ static int64_t makeOrderByCustomerKey(int32_t w_id, int32_t d_id, int32_t c_id,
 }
 
 Order *TPCCTables::insertOrder(const Order &order) {
-    Order *tuple = insert(
-            &orders_, makeOrderKey(order.o_w_id, order.o_d_id, order.o_id), order);
+    Order *tuple = insert(&orders_, makeOrderKey(order.o_w_id, order.o_d_id, order.o_id), order);
     stat_.Insert(order.size(), true, "order");
     // Secondary index based on customer id
     int64_t key = makeOrderByCustomerKey(order.o_w_id, order.o_d_id, order.o_c_id,
@@ -1184,10 +1182,13 @@ OrderLine *TPCCTables::insertOrderLine(const OrderLine &orderline) {
 void TPCCTables::insertOrderLineBlitz(db_compress::AttrVector &orderline, int32_t stop_idx) {
     // sub-tuple should not be written to B+-tree
     if (stop_idx == OrderLineBlitz::kNumAttrs) {
+        int64_t key = makeOrderLineKey(orderline.attr_[9].Int(), orderline.attr_[8].Int(),
+                                       orderline.attr_[7].Int(), orderline.attr_[2].Int());
         disk_tuple_buf_.in_memory_ = stat_.ToMemory(88);
         if (disk_tuple_buf_.in_memory_) {
-            disk_tuple_buf_.data_ = orderline_compressor_->TransformTupleToBits(orderline,
-                                                                                stop_idx);
+            // this is a hack to make sure that the order id cannot overflow.
+            orderline.attr_[7].value_ = orderline.attr_[7].Int() % 2999 + 1;
+            disk_tuple_buf_.data_ = orderline_compressor_->TransformTupleToBits(orderline, stop_idx);
             num_mem_orderline++;
 
             stat_.Insert(disk_tuple_buf_.data_.size(), true, "orderline");
@@ -1199,8 +1200,6 @@ void TPCCTables::insertOrderLineBlitz(db_compress::AttrVector &orderline, int32_
 
             stat_.Insert(ol.size(), false, "orderline");
         }
-        int64_t key = makeOrderLineKey(orderline.attr_[9].Int(), orderline.attr_[8].Int(),
-                                       orderline.attr_[7].Int(), orderline.attr_[2].Int());
         insert(&orderlines_blitz_, key, disk_tuple_buf_);
     } else {
         orderline_compressor_->TransformTupleToBits(orderline, stop_idx);
@@ -1217,7 +1216,7 @@ db_compress::AttrVector *
 TPCCTables::findOrderLineBlitz(int32_t w_id, int32_t d_id, int32_t o_id,
                                int32_t number, int32_t stop_idx) {
     int64_t key = makeOrderLineKey(w_id, d_id, o_id, number);
-    Tuple <std::vector<uint8_t>> *tuple = find(orderlines_blitz_, key);
+    Tuple<std::vector<uint8_t>> *tuple = find(orderlines_blitz_, key);
     if (tuple) {
         if (!tuple->in_memory_) {
             OrderLine ol;
