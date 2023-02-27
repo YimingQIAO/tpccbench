@@ -78,26 +78,29 @@ struct TPCCStat {
     }
 
     inline void SwapTuple(uint64_t size, const std::string &table_name) {
-        if (total_mem_ + raman_dict + size < total_mem_limit_) Insert(size, true, table_name);
-
-        mem_is_full_ = true;
-        while (total_mem_ + raman_dict + size > total_mem_limit_) {
-            total_mem_ -= kPageSize;
-            total_disk_ += kPageSize;
-
-            if (table_name == "stock") {
-                stock_mem_ -= kPageSize;
-                stock_disk_ += kPageSize;
-            } else if (table_name == "customer") {
-                customer_mem_ -= kPageSize;
-                customer_mem_ += kPageSize;
-            } else if (table_name == "orderline") {
-                orderline_mem_ -= kPageSize;
-                orderline_disk_ += kPageSize;
-            } else
-                printf("Error: table name not found!\n");
-        }
-        Insert(size, true, table_name);
+//        if (total_mem_ + raman_dict + size < total_mem_limit_) {
+//            Insert(size, true, table_name);
+//            return;
+//        }
+//
+//        mem_is_full_ = true;
+//        while (total_mem_ + raman_dict + size > total_mem_limit_) {
+//            total_mem_ -= kPageSize;
+//            total_disk_ += kPageSize;
+//
+//            if (table_name == "stock") {
+//                stock_mem_ -= kPageSize;
+//                stock_disk_ += kPageSize;
+//            } else if (table_name == "customer") {
+//                customer_mem_ -= kPageSize;
+//                customer_mem_ += kPageSize;
+//            } else if (table_name == "orderline") {
+//                orderline_mem_ -= kPageSize;
+//                orderline_disk_ += kPageSize;
+//            } else
+//                printf("Error: table name not found!\n");
+//        }
+//        Insert(size, true, table_name);
     }
 
     inline bool ToMemory(uint64_t size) const {
