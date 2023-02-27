@@ -88,15 +88,14 @@ struct TPCCStat {
             }
             else if (table_name == "customer") {
                 customer_mem_ -= kPageSize;
-                stock_disk_ += kPageSize;
+                customer_disk_ += kPageSize;
             }
             else if (table_name == "orderline") {
                 orderline_mem_ -= kPageSize;
-                stock_disk_ += kPageSize;
+                orderline_disk_ += kPageSize;
             }
             else
                 printf("Error: table name not found!\n");
-
         }
         Insert(size, true, table_name);
     }
