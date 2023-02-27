@@ -199,7 +199,7 @@ private:
     uint32_t num_disk_customer = 0;
 
     // disk storage
-    std::string kStockFileName, kCustomerFileName, kOrderlineFileName;
+    std::string kStockFileName, kCustomerFileName, kOrderlineFileName, kHistoryFileName;
 };
 
 #endif
