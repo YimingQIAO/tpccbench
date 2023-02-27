@@ -33,6 +33,7 @@ struct TPCCStat {
     uint64_t total_disk_{};
 
     uint64_t total_mem_limit_;
+    bool mem_is_full_ = false;
 
     const int32_t kPageSize = 4096;
 
@@ -77,8 +78,9 @@ struct TPCCStat {
     }
 
     inline void SwapTuple(uint64_t size, const std::string &table_name) {
-        if (total_mem_ + raman_dict + size < total_mem_limit_) return;
+        if (total_mem_ + raman_dict + size < total_mem_limit_) Insert(size, true, table_name);
 
+        mem_is_full_ = true;
         while (total_mem_ + raman_dict + size > total_mem_limit_) {
             total_mem_ -= kPageSize;
 
@@ -95,7 +97,7 @@ struct TPCCStat {
     }
 
     inline bool ToMemory(uint64_t size) const {
-        return total_mem_limit_ > raman_dict + total_mem_ + size;
+        return (total_mem_limit_ > raman_dict + total_mem_ + size) && !mem_is_full_;
     }
 
     void RamanDictAdd(uint64_t size) {

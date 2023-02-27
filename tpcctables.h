@@ -258,6 +258,10 @@ private:
     uint32_t num_disk_stock = 0;
     Tuple<BitStream> stock_tuple_disk_;
 
+    uint32_t num_mem_order = 0;
+    uint32_t num_disk_order = 0;
+    Tuple<BitStream> order_tuple_disk_;
+
     uint32_t num_mem_orderline = 0;
     uint32_t num_disk_orderline = 0;
     Tuple<BitStream> ol_tuple_disk_;
@@ -266,8 +270,11 @@ private:
     uint32_t num_disk_customer = 0;
     Tuple<BitStream> customer_tuple_disk_;
 
+    uint32_t num_disk_history = 0;
+    BitStream history_tuple_disk_;
+
     // disk storage
-    std::string kStockFileName, kCustomerFileName, kOrderlineFileName;
+    std::string kStockFileName, kCustomerFileName, kOrderlineFileName, kOrderFileName, kHistoryFileName;
 
     // raman
     RamanCompressor *forest_stock_;

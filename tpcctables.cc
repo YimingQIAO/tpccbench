@@ -15,6 +15,8 @@ namespace {
     int stock_fd;
     int orderline_fd;
     int customer_fd;
+    int order_fd;
+    int history_fd;
 }
 
 bool CustomerByNameOrdering::operator()(const Customer *a, const Customer *b) const {
@@ -86,10 +88,14 @@ TPCCTables::TPCCTables(double memory_size) : stat_(memory_size * 1000 * 1000 * 1
     kStockFileName = std::to_string(file_id) + "_stock.disk";
     kCustomerFileName = std::to_string(file_id) + "_customer.disk";
     kOrderlineFileName = std::to_string(file_id) + "_orderline.disk";
+    kOrderFileName = std::to_string(file_id) + "_order.disk";
+    kHistoryFileName = std::to_string(file_id) + "_history.disk";
 
     stock_fd = DirectIOFile(kStockFileName);
     orderline_fd = DirectIOFile(kOrderlineFileName);
     customer_fd = DirectIOFile(kCustomerFileName);
+    order_fd = DirectIOFile(kOrderFileName);
+    history_fd = DirectIOFile(kHistoryFileName);
 }
 
 TPCCTables::~TPCCTables() {
@@ -958,6 +964,7 @@ Customer *TPCCTables::findCustomer(int32_t w_id, int32_t d_id, int32_t c_id, boo
         // find it on disk
         if (!tuple->in_memory_) {
             DiskTupleRead(customer_fd, &customer_raman_buf_, tuple->id_pos_);
+
             stat_.SwapTuple(customer_raman_buf_.size(), "customer");
             return &customer_raman_buf_;
         }
@@ -1044,38 +1051,46 @@ static int64_t makeOrderByCustomerKey(int32_t w_id, int32_t d_id, int32_t c_id, 
 Order *TPCCTables::insertOrder(const Order &order, bool is_orig, bool relearn) {
     int64_t key = makeOrderKey(order.o_w_id, order.o_d_id, order.o_id);
     if (!is_orig) {
-        if (!relearn) {
-            Tuple<BitStream> tuple;
-            tuple.in_memory_ = true;
-            tuple.data_ = RamanCompress(forest_order_, &order);
-            tuple.dict_id_ = -1;
-            insert(&order_raman, key, tuple);
+        order_tuple_disk_.in_memory_ = stat_.ToMemory(order.size());
+        if (order_tuple_disk_.in_memory_) {
+            if (!relearn) {
+                order_tuple_disk_.data_ = RamanCompress(forest_order_, &order);
+                order_tuple_disk_.dict_id_ = -1;
+                insert(&order_raman, key, order_tuple_disk_);
 
-            stat_.Insert(tuple.data_.size(), true, "order");
+                stat_.Insert(order_tuple_disk_.data_.size(), true, "order");
+                return nullptr;
+            }
+
+            block_order_.Append(order, key);
+            // if block is full
+            if (block_order_.IsFull()) {
+                int32_t dict_id;
+                std::vector<int64_t> *keys = nullptr;
+                std::vector<BitStream> compressed;
+
+                uint64_t dict_size = block_order_.BlockCompress(compressed, &keys, &dict_id);
+                stat_.RamanDictAdd(dict_size);
+
+                order_tuple_disk_.dict_id_ = dict_id;
+                for (int i = 0; i < compressed.size(); i++) {
+                    order_tuple_disk_.data_ = compressed[i];
+                    insert(&order_raman, (*keys)[i], order_tuple_disk_);
+
+                    stat_.Insert(order_tuple_disk_.data_.size(), true, "order");
+                }
+            }
+            return nullptr;
+        } else {
+            // on disk
+            order_tuple_disk_.id_pos_ = num_disk_orderline;
+            SeqDiskTupleWrite(order_fd, &order);
+            num_disk_order++;
+            insert(&order_raman, key, order_tuple_disk_);
+
+            stat_.Insert(order.size(), false, "order");
             return nullptr;
         }
-
-        block_order_.Append(order, key);
-        // if block is full
-        if (block_order_.IsFull()) {
-            int32_t dict_id;
-            std::vector<int64_t> *keys = nullptr;
-            std::vector<BitStream> compressed;
-
-            uint64_t dict_size = block_order_.BlockCompress(compressed, &keys, &dict_id);
-            stat_.RamanDictAdd(dict_size);
-
-            Tuple<BitStream> tuple;
-            tuple.in_memory_ = true;
-            tuple.dict_id_ = dict_id;
-            for (int i = 0; i < compressed.size(); i++) {
-                tuple.data_ = compressed[i];
-                insert(&order_raman, (*keys)[i], tuple);
-
-                stat_.Insert(tuple.data_.size(), true, "order");
-            }
-        }
-        return nullptr;
     } else {
         Order *tuple = insert(&orders_, key, order);
         // Secondary index based on customer id
@@ -1095,6 +1110,14 @@ Order *TPCCTables::findOrder(int32_t w_id, int32_t d_id, int32_t o_id, bool is_o
 
         Tuple<BitStream> *tuple = find(order_raman, key);
         if (tuple == nullptr) return nullptr;
+
+        // find it on disk
+        if (!tuple->in_memory_) {
+            DiskTupleRead(orderline_fd, &order_raman_buf_, tuple->id_pos_);
+
+            stat_.SwapTuple(order_raman_buf_.size(), "orderline");
+            return &order_raman_buf_;
+        }
 
         // in memory
         if (tuple->dict_id_ < 0)
@@ -1213,7 +1236,7 @@ OrderLine *TPCCTables::findOrderLine(int32_t w_id, int32_t d_id, int32_t o_id, i
         if (!tuple->in_memory_) {
             DiskTupleRead(orderline_fd, &orderline_raman_buf_, tuple->id_pos_);
 
-            stat_.SwapTuple(orderline_raman_buf_.size() << 2, "orderline");
+            stat_.SwapTuple(orderline_raman_buf_.size(), "orderline");
             return &orderline_raman_buf_;
         }
 
@@ -1262,18 +1285,27 @@ NewOrder *TPCCTables::findNewOrder(int32_t w_id, int32_t d_id, int32_t o_id) {
 
 History *TPCCTables::insertHistory(const History &history, bool is_orig, bool relearn) {
     if (!is_orig) {
-        if (!relearn) {
-            BitStream bits = RamanCompress(forest_history_, &history);
-            history_raman.push_back(bits);
-            stat_.Insert(bits.size(), true, "history");
-        } else {
-            block_history_.Append(history, 0);
-            if (block_history_.IsFull()) {
-                uint64_t dict_size = block_history_.BlockCompress(history_raman, nullptr, nullptr);
-                stat_.RamanDictAdd(dict_size);
+        if (stat_.ToMemory(history.size())) {
+            if (!relearn) {
+                BitStream bits = RamanCompress(forest_history_, &history);
+                history_raman.push_back(bits);
+                stat_.Insert(bits.size(), true, "history");
+            } else {
+                block_history_.Append(history, 0);
+                if (block_history_.IsFull()) {
+                    uint64_t dict_size = block_history_.BlockCompress(history_raman, nullptr, nullptr);
+                    stat_.RamanDictAdd(dict_size);
+                }
             }
+            return nullptr;
+        } else {
+            // on disk
+            SeqDiskTupleWrite(history_fd, &history);
+            num_disk_history++;
+
+            stat_.Insert(history.size(), false, "history");
+            return nullptr;
         }
-        return nullptr;
     } else {
         History *h = new History(history);
         history_.push_back(h);

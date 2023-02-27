@@ -243,7 +243,6 @@ private:
         // check to see if we need to overwrite or insert
         LeafNode() : type(NODE_LEAF), num_keys(0) {
             memset(keys, 0, sizeof(keys));
-            leaf_num += 1;
         }
 
         const NodeType type;
