@@ -40,7 +40,7 @@ struct TPCCStat {
     explicit TPCCStat(uint64_t total_mem_limit) : total_mem_limit_(total_mem_limit) {}
 
     inline void Insert(uint64_t size, bool is_mem, const std::string &table_name) {
-        if (table_name != "history" && table_name != "order" && table_name != "neworder") {
+        if (table_name != "order" && table_name != "neworder") {
             if (is_mem) total_mem_ += size;
             else total_disk_ += size;
         }
@@ -93,7 +93,7 @@ struct TPCCStat {
 //                stock_disk_ += kPageSize;
 //            } else if (table_name == "customer") {
 //                customer_mem_ -= kPageSize;
-//                customer_mem_ += kPageSize;
+//                customer_disk_ += kPageSize;
 //            } else if (table_name == "orderline") {
 //                orderline_mem_ -= kPageSize;
 //                orderline_disk_ += kPageSize;
