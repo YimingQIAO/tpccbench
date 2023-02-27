@@ -97,7 +97,7 @@ struct TPCCStat {
     }
 
     inline bool ToMemory(uint64_t size) const {
-        return total_mem_limit_ > kPageSize + total_mem_ + size;
+        return total_mem_limit_ > blitz_model_ + total_mem_ + size;
     }
 
     inline void LoadBlitzModelSize(uint64_t model_size) {
