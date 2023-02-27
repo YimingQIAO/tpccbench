@@ -15,6 +15,7 @@ namespace {
     int stock_fd;
     int orderline_fd;
     int customer_fd;
+    int history_fd;
 }
 
 bool CustomerByNameOrdering::operator()(const Customer *a,
@@ -80,10 +81,12 @@ TPCCTables::TPCCTables(double memory_size) : stat_(memory_size * 1000 * 1000 * 1
     kStockFileName = std::to_string(file_id) + "_stock.disk";
     kCustomerFileName = std::to_string(file_id) + "_customer.disk";
     kOrderlineFileName = std::to_string(file_id) + "_orderline.disk";
+    kHistoryFileName = std::to_string(file_id) + "_history.disk";
 
     stock_fd = DirectIOFile(kStockFileName);
     orderline_fd = DirectIOFile(kOrderlineFileName);
     customer_fd = DirectIOFile(kCustomerFileName);
+    history_fd = DirectIOFile(kHistoryFileName);
 }
 
 TPCCTables::~TPCCTables() {
@@ -1279,11 +1282,17 @@ void TPCCTables::eraseNewOrder(const NewOrder *new_order) {
 }
 
 History *TPCCTables::insertHistory(const History &history) {
-    History *h = new History(history);
-    history_.push_back(h);
+    if (stat_.ToMemory(history.size())) {
+        History *h = new History(history);
+        history_.push_back(h);
 
-    stat_.Insert(history.size(), true, "history");
-    return h;
+        stat_.Insert(history.size(), true, "history");
+        return h;
+    } else {
+        SeqDiskTupleWrite(orderline_fd, &history);
+        stat_.Insert(history.size(), false, "orderline");
+        return nullptr;
+    }
 }
 
 void TPCCTables::eraseHistory(const History *history) {

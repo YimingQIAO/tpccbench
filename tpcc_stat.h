@@ -40,7 +40,7 @@ struct TPCCStat {
     explicit TPCCStat(uint64_t total_mem_limit) : total_mem_limit_(total_mem_limit) {}
 
     inline void Insert(uint64_t size, bool is_mem, const std::string &table_name) {
-        if (table_name != "history" && table_name != "order" && table_name != "neworder") {
+        if (table_name != "order" && table_name != "neworder") {
             if (is_mem) total_mem_ += size;
             else total_disk_ += size;
         }
@@ -56,7 +56,7 @@ struct TPCCStat {
             else customer_disk_ += size;
         } else if (table_name == "history") {
             if (is_mem) history_mem_ += size;
-            else history_disk_ += size;
+            else history_disk_ += size * 3.5;
         } else if (table_name == "order") {
             if (is_mem) order_mem_ += size;
             else order_disk_ += size;
@@ -78,28 +78,28 @@ struct TPCCStat {
     }
 
     inline void SwapTuple(uint64_t size, const std::string &table_name) {
-        if (total_mem_ + blitz_model_ + size < total_mem_limit_) {
-            Insert(size, true, table_name);
-            return;
-        }
-
-        while (total_mem_ + blitz_model_ + size > total_mem_limit_) {
-            total_mem_ -= kPageSize;
-            total_disk_ += kPageSize;
-
-            if (table_name == "stock") {
-                stock_mem_ -= kPageSize;
-                stock_disk_ += kPageSize;
-            } else if (table_name == "customer") {
-                customer_mem_ -= kPageSize;
-                customer_disk_ += kPageSize;
-            } else if (table_name == "orderline") {
-                orderline_mem_ -= kPageSize;
-                orderline_disk_ += kPageSize;
-            } else
-                printf("Error: table name not found!\n");
-        }
-        Insert(size, true, table_name);
+//        if (total_mem_ + blitz_model_ + size < total_mem_limit_) {
+//            Insert(size, true, table_name);
+//            return;
+//        }
+//
+//        while (total_mem_ + blitz_model_ + size > total_mem_limit_) {
+//            total_mem_ -= kPageSize;
+//            total_disk_ += kPageSize;
+//
+//            if (table_name == "stock") {
+//                stock_mem_ -= kPageSize;
+//                stock_disk_ += kPageSize;
+//            } else if (table_name == "customer") {
+//                customer_mem_ -= kPageSize;
+//                customer_disk_ += kPageSize;
+//            } else if (table_name == "orderline") {
+//                orderline_mem_ -= kPageSize;
+//                orderline_disk_ += kPageSize;
+//            } else
+//                printf("Error: table name not found!\n");
+//        }
+//        Insert(size, true, table_name);
     }
 
     inline bool ToMemory(uint64_t size) const {

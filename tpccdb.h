@@ -339,7 +339,7 @@ struct History {
         ret += std::to_string(h_amount).size();
         ret += stringSize(h_date, DATETIME_SIZE + 1);
         ret += stringSize(h_data, MAX_DATA + 1);
-        return ret / 5.5;
+        return ret / 3.5;
     }
 };
 

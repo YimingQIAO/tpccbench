@@ -277,7 +277,7 @@ private:
     Tuple<std::vector<uint8_t>> disk_tuple_buf_;
 
     // disk storage
-    std::string kStockFileName, kCustomerFileName, kOrderlineFileName;
+    std::string kStockFileName, kCustomerFileName, kOrderlineFileName, kHistoryFileName;
 };
 
 #endif
