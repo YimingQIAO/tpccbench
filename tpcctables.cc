@@ -15,6 +15,7 @@ namespace {
     int stock_fd;
     int orderline_fd;
     int customer_fd;
+    int history_fd;
 }
 
 bool CustomerByNameOrdering::operator()(const Customer *a, const Customer *b) const {
@@ -87,10 +88,12 @@ TPCCTables::TPCCTables(double memory_size) : stat_(memory_size * 1000 * 1000 * 1
     kStockFileName = std::to_string(file_id) + "_stock.disk";
     kCustomerFileName = std::to_string(file_id) + "_customer.disk";
     kOrderlineFileName = std::to_string(file_id) + "_orderline.disk";
+    kHistoryFileName = std::to_string(file_id) + "_history.disk";
 
     stock_fd = DirectIOFile(kStockFileName);
     orderline_fd = DirectIOFile(kOrderlineFileName);
     customer_fd = DirectIOFile(kCustomerFileName);
+    history_fd = DirectIOFile(kHistoryFileName);
 }
 
 TPCCTables::~TPCCTables() {
@@ -1026,13 +1029,12 @@ static int64_t makeOrderLineKey(int32_t w_id, int32_t d_id, int32_t o_id, int32_
     return id;
 }
 
-OrderLine *TPCCTables::insertOrderLine(const OrderLine &orderline, bool is_orig) {
+OrderLine *TPCCTables::insertOrderLine(OrderLine &orderline, bool is_orig) {
     if (!is_orig) {
         ol_tuple_buf_.in_memory_ = stat_.ToMemory(orderline.size());
         if (ol_tuple_buf_.in_memory_) {
             ol_tuple_buf_.data_ = ZstdCompress(cdict_ol, &orderline);
             num_mem_orderline++;
-
             stat_.Insert(ol_tuple_buf_.data_.size(), true, "orderline");
         } else {
             ol_tuple_buf_.id_pos_ = num_disk_orderline;
@@ -1103,10 +1105,16 @@ NewOrder *TPCCTables::findNewOrder(int32_t w_id, int32_t d_id, int32_t o_id) {
 
 History *TPCCTables::insertHistory(const History &history, bool is_orig) {
     if (!is_orig) {
-        std::string compressed = ZstdCompress(cdict_h, &history);
-        history_zstd.push_back(compressed);
-        stat_.Insert(compressed.size(), true, "history");
-        return nullptr;
+        if (stat_.ToMemory(history.size())) {
+            std::string compressed = ZstdCompress(cdict_h, &history);
+            history_zstd.push_back(compressed);
+            stat_.Insert(compressed.size(), true, "history");
+            return nullptr;
+        } else {
+            SeqDiskTupleWrite(orderline_fd, &history);
+            stat_.Insert(history.size(), false, "orderline");
+            return nullptr;
+        }
     } else {
         History *h = new History(history);
         history_.push_back(h);

@@ -16,7 +16,7 @@
 #include "tpcctables.h"
 
 static const int NUM_TRANSACTIONS = 100 * 1e6;
-static const int kTxnsInterval = 0.5 * 1e5;
+static const int kTxnsInterval = 0.1 * 1e5;
 static const int kDictCapacity = 5 * 110 * 1024;
 static const int kCompressLevel = 3;
 

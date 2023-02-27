@@ -115,7 +115,7 @@ public:
     Order *findLastOrderByCustomer(int32_t w_id, int32_t d_id, int32_t c_id);
 
     // Stores orderline in the database. Returns a pointer to the database's tuple.
-    OrderLine *insertOrderLine(const OrderLine &orderline, bool is_orig);
+    OrderLine *insertOrderLine(OrderLine &orderline, bool is_orig);
 
     OrderLine *
     findOrderLine(int32_t w_id, int32_t d_id, int32_t o_id, int32_t number, bool is_orig);
@@ -272,7 +272,7 @@ private:
     uint32_t num_disk_customer = 0;
 
     // disk storage
-    std::string kStockFileName, kCustomerFileName, kOrderlineFileName;
+    std::string kStockFileName, kCustomerFileName, kOrderlineFileName, kHistoryFileName;
 
     // zstd
     Stock stock_zstd_buf_;
