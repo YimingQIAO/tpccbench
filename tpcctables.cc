@@ -1222,7 +1222,7 @@ TPCCTables::findOrderLineBlitz(int32_t w_id, int32_t d_id, int32_t o_id,
             OrderLine ol;
             DiskTupleRead(orderline_fd, &ol, tuple->id_pos_);
             orderlineToAttrVector(ol, ol_buffer_);
-            stat_.SwapTuple(ol.size() << 2, "orderline");
+            stat_.SwapTuple(ol.size(), "orderline");
         } else {
             orderline_decompressor_->TransformBytesToTuple(&tuple->data_, &ol_buffer_, stop_idx);
         }
