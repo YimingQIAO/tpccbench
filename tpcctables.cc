@@ -1287,7 +1287,7 @@ History *TPCCTables::insertHistory(const History &history) {
         stat_.Insert(history.size(), true, "history");
         return h;
     } else {
-        SeqDiskTupleWrite(orderline_fd, &history);
+        SeqDiskTupleWrite(history_fd, &history);
         stat_.Insert(history.size(), false, "orderline");
         return nullptr;
     }
