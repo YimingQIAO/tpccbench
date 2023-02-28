@@ -1110,7 +1110,7 @@ History *TPCCTables::insertHistory(const History &history, bool is_orig) {
             stat_.Insert(compressed.size(), true, "history");
             return nullptr;
         } else {
-            SeqDiskTupleWrite(orderline_fd, &history);
+            SeqDiskTupleWrite(history_fd, &history);
             stat_.Insert(history.size(), false, "orderline");
             return nullptr;
         }
