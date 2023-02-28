@@ -943,13 +943,12 @@ Customer *TPCCTables::findCustomerByName(int32_t w_id, int32_t d_id, const char 
     return t_customer;
 }
 
-static int32_t makeOrderKey(int32_t w_id, int32_t d_id, int32_t o_id) {
+static int64_t makeOrderKey(int32_t w_id, int32_t d_id, int32_t o_id) {
     assert(1 <= w_id && w_id <= Warehouse::MAX_WAREHOUSE_ID);
     assert(1 <= d_id && d_id <= District::NUM_PER_WAREHOUSE);
     assert(1 <= o_id && o_id <= Order::MAX_ORDER_ID);
     // TODO: This is bad for locality since o_id is in the most significant position. Larger keys?
-    int32_t id = (o_id * District::NUM_PER_WAREHOUSE + d_id)
-                 * Warehouse::MAX_WAREHOUSE_ID + w_id;
+    int64_t id = (int64_t(o_id) * District::NUM_PER_WAREHOUSE + d_id) * Warehouse::MAX_WAREHOUSE_ID + w_id;
     assert(id >= 0);
     return id;
 }
@@ -959,7 +958,7 @@ static int64_t makeOrderByCustomerKey(int32_t w_id, int32_t d_id, int32_t c_id, 
     assert(1 <= d_id && d_id <= District::NUM_PER_WAREHOUSE);
     assert(1 <= c_id && c_id <= Customer::NUM_PER_DISTRICT);
     assert(1 <= o_id && o_id <= Order::MAX_ORDER_ID);
-    int32_t top_id = (w_id * District::NUM_PER_WAREHOUSE + d_id) * Customer::NUM_PER_DISTRICT
+    int64_t top_id = (int64_t(w_id) * District::NUM_PER_WAREHOUSE + d_id) * Customer::NUM_PER_DISTRICT
                      + c_id;
     assert(top_id >= 0);
     int64_t id = (((int64_t) top_id) << 32) | o_id;
@@ -969,7 +968,7 @@ static int64_t makeOrderByCustomerKey(int32_t w_id, int32_t d_id, int32_t c_id, 
 
 Order *TPCCTables::insertOrder(const Order &order, bool is_orig) {
     if (!is_orig) {
-        int32_t key = makeOrderKey(order.o_w_id, order.o_d_id, order.o_id);
+        int64_t key = makeOrderKey(order.o_w_id, order.o_d_id, order.o_id);
         std::string compressed = ZstdCompress(cdict_o, &order);
         insert(&order_zstd, key, compressed);
 
@@ -989,13 +988,13 @@ Order *TPCCTables::insertOrder(const Order &order, bool is_orig) {
 
 Order *TPCCTables::findOrder(int32_t w_id, int32_t d_id, int32_t o_id, bool is_orig) {
     if (!is_orig) {
-        int32_t key = makeOrderKey(w_id, d_id, o_id);
+        int64_t key = makeOrderKey(w_id, d_id, o_id);
         std::string *compressed = find(order_zstd, key);
         if (compressed == nullptr) return nullptr;
         ZstdDecompress(ddict_o, &order_zstd_buf_, *find(order_zstd, key));
         return &order_zstd_buf_;
     } else {
-        int32_t key = makeOrderKey(w_id, d_id, o_id);
+        int64_t key = makeOrderKey(w_id, d_id, o_id);
         if (key < 0) return nullptr;
         return find(orders_, key);
     }
