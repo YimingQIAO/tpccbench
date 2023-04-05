@@ -165,6 +165,7 @@ int main(int argc, const char *argv[]) {
                               static_cast<int>(num_warehouses),
                               District::NUM_PER_WAREHOUSE, Customer::NUM_PER_DISTRICT, now);
             printf("Running...\n");
+            printf("[Executed Txns]\t[Throughput]\t[Table Mem Size]\t[Table Disk Size]\t[Model Size]\t[B+Tree Size]\n");
             fflush(stdout);
 
             std::vector<double> throughput;

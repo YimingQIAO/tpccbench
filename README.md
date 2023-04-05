@@ -1,44 +1,72 @@
-# tpccbench
+# TPCC-Benchmark For Blitzcrank
 
-Stand-alone in-memory TPC-C implementation. This is based on the prototype
-used for the following VLDB 2007 paper:
+## How to Compile:
 
-http://www.vldb.org/conf/2007/papers/industrial/p1150-stonebraker.pdf
+We use CMake to build the project. To build the project, run the following commands:
 
-However it was rewritten and follows the spec more closely.
+```shell
+mkdir ./build-release
+cd ./build-release
+cmake -DCMAKE_BUILD_TYPE=Release ..
+make
+```
 
-Evan Jones
-ej@evanjones.ca
+## How to Run:
+
+To run the benchmark, run the following commands:
+
+` ./tpcc [number of warehouse] [allowed memory size (GB)] [running time (min)] [data generation mode]`
+
+    [number warehouse]: The number of warehouses to load.
+
+    [allowed memory size (GB)]: The maximum memory size allowed for the database.
+
+    [running time (min)]: The running time of the benchmark.
+
+    [data generation mode]: The mode of data generation. 0 for benchmark, 1 for data generation.
+
+### Benchmark Example:
+
+```shell
+./tpcc 10 1 1 0 # Run the benchmark with 10 warehouses, 1GB memory, 1 minute running time.
+```
+
+Output:
+```
+Memory size: 1 GB
+Random file id: 863194263
+Loading 10 warehouses...        Loading Data Time: 3515
+Transforming 10 warehouses... Learning Data Time: 4452 ms
+Running...
+[Executed Txns] [Throughput]    [Table Mem Size]        [Table Disk Size]       [Model Size]    [B+Tree Size]
+10000   37898.167624    114632789       0       1364149 179511312
+20000   37379.684142    115329584       0       1364149 181213000
+30000   36082.976413    116030637       0       1364149 182915200
+40000   39079.597324    116726852       0       1364149 184614128
+50000   34898.167148    117434604       0       1364149 186361792
+60000   35789.571635    118149065       0       1364149 188130640
+70000   37316.217628    118853019       0       1364149 189884456
+80000   38956.131500    119567036       0       1364149 191647728
+90000   34920.834468    120269037       0       1364149 193372856
+100000  35010.695768    120964427       0       1364149 195063984
+110000  38626.891269    121678419       0       1364149 196800880
+```
 
 
-The benchmark program is "tpcc". This loads the TPC-C database with the
-specified number of warehouses, then executes a number of transactions
-(currently 200000). This benchmark is, I believe, a complete and correct TPC-C
-implementation. There are a few noted discrepancies noted in "CHEATS". If there
-are bugs, problems, fixes, or questions, please let me know.
+### Data Generation Example:
 
-I have another implementation that supports "locking." If you are interested
-in this, talk to me.
+```shell
+./tpcc 10 1 1 1 # Generate data with 10 warehouses.
+```
+The generated data will be stored in the same directory.
 
 
 ## Overview of the code:
 
-Everything that ends in _test is a unit test to verify that the code is correct.
-
 tpccgenerate.cc: Code for loading the database.
+
 tpccclient.cc: Code for generating client requests.
+
 tpccdb.h: Definitions of the tuple types and constant
-tpcctables.cc: Actual implementation of the in-memory data structures and
-    TPC-C stored procedures.
 
-
-Type "make", then you can run ./tpcc. I get output like:
-
-Loading 2 warehouses... 4504 ms
-Running... 200000 transactions in 6630 ms = 30167.577878 txns/s
-
-
-## Licensing
-
-This was written during my PhD at MIT. However, I did go through MIT's open
-source office to release it under a BSD license. See the LICENSE file.
+tpcctables.cc: Actual implementation of the in-memory data structures and TPC-C stored procedures.

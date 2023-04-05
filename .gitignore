@@ -4,4 +4,7 @@ cmake-build-release
 workspace/*.csv
 workspace/*.blitz
 workspace/temp.index
+build-release/CMakeFiles
+build-release/*.csv
+build-release/libblitz
 build
