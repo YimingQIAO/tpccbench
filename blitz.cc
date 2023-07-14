@@ -1,7 +1,3 @@
-//
-// Created by Qiao Yiming on 2023/1/11.
-//
-
 #include "blitz.h"
 
 db_compress::CompressionConfig BlitzTable::compressionConfig() {

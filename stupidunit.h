@@ -1,6 +1,3 @@
-// A stupid and simple unit test framework for C++ code.
-// Evan Jones <ej@evanjones.ca>
-
 #ifndef STUPIDUNIT_H__
 #define STUPIDUNIT_H__
 

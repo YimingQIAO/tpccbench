@@ -2,18 +2,6 @@
 // https://en.wikibooks.org/wiki/Algorithm_Implementation/Trees/B%2B_tree
 // It has been modified from its original form somewhat.
 
-/* Copyright (C) 2006 David Garcia
- * You may use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of this software subject to the following conditions:
- * THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
- * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
-
 
 #if !defined BPLUSTREE_HPP_227824
 #define BPLUSTREE_HPP_227824

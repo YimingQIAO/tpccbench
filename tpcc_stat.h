@@ -1,7 +1,3 @@
-//
-// Created by Qiao Yiming on 2023/2/22.
-//
-
 #ifndef TPCC_TPCC_STAT_H
 #define TPCC_TPCC_STAT_H
 

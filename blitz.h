@@ -1,7 +1,3 @@
-//
-// Created by Qiao Yiming on 2023/1/11.
-//
-
 #ifndef TPCC_BLITZ_H
 #define TPCC_BLITZ_H
 

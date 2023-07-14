@@ -1,6 +1,3 @@
-// A stupid and simple unit test framework for C++ code.
-// Evan Jones <ej@evanjones.ca>
-
 #include "stupidunit.h"
 
 #include <dirent.h>
