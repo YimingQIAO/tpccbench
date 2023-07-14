@@ -8,7 +8,6 @@ To clone this project successfully, please install [git-lfs](https://git-lfs.com
 We use CMake to build the project. To build the project, run the following commands:
 
 ```shell
-mkdir ./build-release
 cd ./build-release
 cmake -DCMAKE_BUILD_TYPE=Release ..
 make
