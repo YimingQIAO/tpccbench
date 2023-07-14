@@ -7,4 +7,3 @@ workspace/temp.index
 build-release/CMakeFiles
 build-release/*.csv
 build-release/libblitz
-build
