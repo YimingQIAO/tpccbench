@@ -3,6 +3,74 @@
 ## Clone Instruction
 To clone this project successfully, please install [git-lfs](https://git-lfs.com/). We use it to manage large dataset files.
 
+## Project Structure
+```
+├── CMakeLists.txt
+├── README.md
+├── libblitz    # Blitzcrank is included as a library.
+│   ├── CMakeLists.txt
+│   ├── include
+│   │   ├── base.h
+│   │   ├── blitzcrank_exception.h
+│   │   ├── categorical_model.h
+│   │   ├── categorical_tree_model.h
+│   │   ├── compression.h
+│   │   ├── data_io.h
+│   │   ├── decompression.h
+│   │   ├── index.h
+│   │   ├── markov_model.h
+│   │   ├── model.h
+│   │   ├── model_learner.h
+│   │   ├── numerical_model.h
+│   │   ├── simple_prob_interval_pool.h
+│   │   ├── string_model.h
+│   │   ├── string_squid.h
+│   │   ├── string_tools.h
+│   │   ├── timeseries_model.h
+│   │   └── utility.h
+│   └── src
+│       ├── categorical_model.cpp
+│       ├── categorical_tree_model.cpp
+│       ├── compression.cpp
+│       ├── data_io.cpp
+│       ├── decompression.cpp
+│       ├── markov_model.cpp
+│       ├── model.cpp
+│       ├── model_learner.cpp
+│       ├── numerical_model.cpp
+│       ├── simple_prob_interval_pool.cpp
+│       ├── string_model.cpp
+│       ├── string_squid.cpp
+│       ├── string_tools.cpp
+│       ├── timeseries_model.cpp
+│       └── utility.cpp
+├── build-release
+│   ├── corpus
+│   └── data_dist
+├── assert.h
+├── blitz.cc
+├── blitz.h
+├── btree.h
+├── clock.cc
+├── clock.h
+├── disk_storage.h
+├── randomgenerator.cc
+├── randomgenerator.h
+├── stlutil.h
+├── stupidunit.cc
+├── stupidunit.h
+├── tpcc.cc
+├── tpcc_stat.h
+├── tpccclient.cc
+├── tpccclient.h
+├── tpccdb.cc
+├── tpccdb.h
+├── tpccgenerator.cc
+├── tpccgenerator.h
+├── tpcctables.cc
+└── tpcctables.h
+```
+
 ## How to Compile:
 
 We use CMake to build the project. To build the project, run the following commands:
@@ -62,14 +130,3 @@ Running...
 ./tpcc 10 1 1 1 # Generate data with 10 warehouses.
 ```
 The generated data will be stored in the same directory.
-
-
-## Overview of the code:
-
-tpccgenerate.cc: Code for loading the database.
-
-tpccclient.cc: Code for generating client requests.
-
-tpccdb.h: Definitions of the tuple types and constant
-
-tpcctables.cc: Actual implementation of the in-memory data structures and TPC-C stored procedures.
