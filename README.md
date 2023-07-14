@@ -1,5 +1,8 @@
 # TPCC-Benchmark For Blitzcrank
 
+## Clone Instruction
+To clone this project successfully, please install [git-lfs](https://git-lfs.com/). We use it to manage large dataset files.
+
 ## How to Compile:
 
 We use CMake to build the project. To build the project, run the following commands:
